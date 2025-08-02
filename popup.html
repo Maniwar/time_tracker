@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body {
+      width: 400px;
+      min-height: 500px;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+    
+    .header {
+      background: #0078d4;
+      color: white;
+      padding: 15px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .header h1 {
+      margin: 0;
+      font-size: 18px;
+    }
+    
+    .auth-status {
+      font-size: 12px;
+      opacity: 0.9;
+    }
+    
+    .container {
+      padding: 15px;
+    }
+    
+    .section {
+      margin-bottom: 20px;
+    }
+    
+    .section-title {
+      font-weight: 600;
+      margin-bottom: 10px;
+      color: #323130;
+    }
+    
+    .button {
+      background: #0078d4;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      margin-right: 10px;
+      margin-bottom: 10px;
+    }
+    
+    .button:hover {
+      background: #106ebe;
+    }
+    
+    .button.secondary {
+      background: #f3f2f1;
+      color: #323130;
+    }
+    
+    .button.secondary:hover {
+      background: #e1dfdd;
+    }
+    
+    .button.danger {
+      background: #d83b01;
+    }
+    
+    .button.danger:hover {
+      background: #b92b00;
+    }
+    
+    .timer-display {
+      font-size: 24px;
+      font-weight: 600;
+      text-align: center;
+      padding: 20px;
+      background: #f3f2f1;
+      border-radius: 8px;
+      margin-bottom: 15px;
+    }
+    
+    .meeting-item,     .task-item {
+      background: #f8f8f8;
+      padding: 12px;
+      margin-bottom: 8px;
+      border-radius: 4px;
+      border-left: 4px solid #0078d4;
+      position: relative;
+    }
+    
+    .task-actions {
+      position: absolute;
+      right: 8px;
+      top: 8px;
+      display: none;
+    }
+    
+    .task-item:hover .task-actions {
+      display: flex;
+      gap: 4px;
+    }
+    
+    .task-action-btn {
+      background: #f3f2f1;
+      border: none;
+      padding: 4px 8px;
+      border-radius: 3px;
+      cursor: pointer;
+      font-size: 11px;
+      color: #605e5c;
+    }
+    
+    .task-action-btn:hover {
+      background: #e1dfdd;
+    }
+    
+    .task-action-btn.delete {
+      color: #d83b01;
+    }
+    
+    .meeting-title, .task-title {
+      font-weight: 500;
+      margin-bottom: 4px;
+    }
+    
+    .meeting-time, .task-time {
+      font-size: 12px;
+      color: #605e5c;
+    }
+    
+    .quick-task-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    
+    .quick-task-btn {
+      background: #e1dfdd;
+      border: none;
+      padding: 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 13px;
+      transition: all 0.2s;
+    }
+    
+    .quick-task-btn:hover {
+      background: #d2d0ce;
+      transform: translateY(-1px);
+    }
+    
+    .stats {
+      display: flex;
+      justify-content: space-around;
+      margin-top: 15px;
+      padding-top: 15px;
+      border-top: 1px solid #edebe9;
+    }
+    
+    .stat-item {
+      text-align: center;
+    }
+    
+    .stat-value {
+      font-size: 20px;
+      font-weight: 600;
+      color: #0078d4;
+    }
+    
+    .stat-label {
+      font-size: 12px;
+      color: #605e5c;
+    }
+    
+    .loading {
+      text-align: center;
+      padding: 20px;
+      color: #605e5c;
+    }
+    
+    .error {
+      background: #fde7e9;
+      color: #a80000;
+      padding: 10px;
+      border-radius: 4px;
+      margin-bottom: 10px;
+    }
+    
+    .manual-entry-form {
+      background: #f3f2f1;
+      padding: 15px;
+      border-radius: 8px;
+      margin-top: 15px;
+      display: none;
+    }
+    
+    .form-group {
+      margin-bottom: 12px;
+    }
+    
+    .form-group label {
+      display: block;
+      font-size: 12px;
+      color: #605e5c;
+      margin-bottom: 4px;
+    }
+    
+    .form-group input, .form-group select {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #d2d0ce;
+      border-radius: 4px;
+      font-size: 13px;
+    }
+    
+    .form-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    
+    #loginSection, #mainContent {
+      display: none;
+    }
+    
+    .info-message {
+      background: #e1f5fe;
+      color: #0277bd;
+      padding: 12px;
+      border-radius: 4px;
+      margin-bottom: 15px;
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Time Tracker</h1>
+    <div class="auth-status" id="authStatus"></div>
+  </div>
+  
+  <div class="container">
+    <div id="loginSection" class="info-message">
+      <p><strong>Optional:</strong> Connect your Outlook calendar to automatically import meetings.</p>
+      <button class="button" id="connectBtn">Connect to Outlook</button>
+    </div>
+    
+    <div id="mainContent">
+      <div class="timer-display" id="timerDisplay">00:00:00</div>
+      
+      <div class="section">
+        <div class="section-title">Quick Actions</div>
+        <div class="quick-task-grid">
+          <button class="quick-task-btn" data-task="Email">📧 Email</button>
+          <button class="quick-task-btn" data-task="Meeting">👥 Meeting</button>
+          <button class="quick-task-btn" data-task="Project Work">💻 Project Work</button>
+          <button class="quick-task-btn" data-task="Break">☕ Break</button>
+          <button class="quick-task-btn" data-task="Admin">📋 Admin</button>
+          <button class="quick-task-btn" data-task="Other">📝 Other</button>
+        </div>
+      </div>
+      
+      <div class="section">
+        <button class="button" id="syncBtn" style="display:none;">🔄 Sync Calendar</button>
+        <button class="button secondary" id="exportBtn">📊 Export Excel/CSV</button>
+        <button class="button secondary" id="manualEntryBtn">➕ Add Manual Entry</button>
+      </div>
+      
+      <div class="manual-entry-form" id="manualEntryForm">
+        <div class="section-title">Add Time Entry</div>
+        <div class="form-group">
+          <label>Task Category</label>
+          <select id="manualCategory">
+            <option value="Email">Email</option>
+            <option value="Meeting">Meeting</option>
+            <option value="Project Work">Project Work</option>
+            <option value="Admin">Admin</option>
+            <option value="Break">Break</option>
+            <option value="Training">Training</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Description (optional)</label>
+          <input type="text" id="manualDescription" placeholder="What did you work on?">
+        </div>
+        <div class="form-group">
+          <label>Duration (minutes)</label>
+          <input type="number" id="manualDuration" min="1" value="30">
+        </div>
+        <div class="form-group">
+          <label>When?</label>
+          <select id="manualWhen">
+            <option value="now">Just now</option>
+            <option value="earlier">Earlier today</option>
+          </select>
+        </div>
+        <div class="form-actions">
+          <button class="button" id="saveManualBtn">Save</button>
+          <button class="button secondary" id="cancelManualBtn">Cancel</button>
+        </div>
+      </div>
+      
+      <div class="section" id="meetingsSection">
+        <div class="section-title">Today's Meetings</div>
+        <div id="meetingsList" class="loading">Loading meetings...</div>
+      </div>
+      
+      <div class="section">
+        <div class="section-title">Today's Logged Tasks</div>
+        <div id="tasksList">No tasks logged yet</div>
+      </div>
+      
+      <div class="section">
+        <div class="section-title">Today's Stats</div>
+        <div class="stats">
+          <div class="stat-item">
+            <div class="stat-value" id="totalTime">0h</div>
+            <div class="stat-label">Total Time</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value" id="meetingTime">0h</div>
+            <div class="stat-label">In Meetings</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value" id="taskTime">0h</div>
+            <div class="stat-label">Tasks</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <script src="xlsx.min.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>
