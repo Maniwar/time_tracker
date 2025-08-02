@@ -221,10 +221,56 @@
       font-size: 13px;
     }
     
+    .form-group input[type="datetime-local"] {
+      width: 100%;
+      padding: 6px 8px;
+      border: 1px solid #d2d0ce;
+      border-radius: 4px;
+      font-size: 13px;
+    }
+    
     .form-actions {
       display: flex;
       gap: 8px;
       margin-top: 12px;
+    }
+    
+    .date-controls {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    
+    .date-controls select {
+      padding: 8px;
+      border: 1px solid #d2d0ce;
+      border-radius: 4px;
+      font-size: 13px;
+      background: white;
+    }
+    
+    .date-controls input[type="date"] {
+      padding: 6px;
+      border: 1px solid #d2d0ce;
+      border-radius: 4px;
+      font-size: 13px;
+    }
+    
+    #customDateRange {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      flex-wrap: wrap;
+    }
+    
+    .date-summary {
+      background: #f8f9fa;
+      padding: 10px;
+      border-radius: 4px;
+      margin-bottom: 10px;
+      text-align: center;
+      font-size: 14px;
+      color: #495057;
     }
     
     #loginSection, #mainContent {
@@ -269,6 +315,26 @@
       </div>
       
       <div class="section">
+        <div class="section-title">View Date Range</div>
+        <div class="date-controls">
+          <select id="dateRangeSelect">
+            <option value="today">Today</option>
+            <option value="yesterday">Yesterday</option>
+            <option value="week">This Week</option>
+            <option value="lastweek">Last Week</option>
+            <option value="month">This Month</option>
+            <option value="custom">Custom Range</option>
+          </select>
+          <div id="customDateRange" style="display: none; margin-top: 10px;">
+            <input type="date" id="startDate" style="margin-right: 5px;">
+            <span>to</span>
+            <input type="date" id="endDate" style="margin-left: 5px;">
+            <button class="button secondary" id="applyDateRange" style="margin-left: 10px;">Apply</button>
+          </div>
+        </div>
+      </div>
+      
+      <div class="section">
         <button class="button" id="syncBtn" style="display:none;">🔄 Sync Calendar</button>
         <button class="button secondary" id="exportBtn">📊 Export Excel/CSV</button>
         <button class="button secondary" id="manualEntryBtn">➕ Add Manual Entry</button>
@@ -301,7 +367,12 @@
           <select id="manualWhen">
             <option value="now">Just now</option>
             <option value="earlier">Earlier today</option>
+            <option value="custom">Specific time</option>
           </select>
+        </div>
+        <div class="form-group" id="customTimeGroup" style="display: none;">
+          <label>Date and Time</label>
+          <input type="datetime-local" id="customDateTime">
         </div>
         <div class="form-actions">
           <button class="button" id="saveManualBtn">Save</button>
@@ -310,17 +381,18 @@
       </div>
       
       <div class="section" id="meetingsSection">
-        <div class="section-title">Today's Meetings</div>
-        <div id="meetingsList" class="loading">Loading meetings...</div>
+        <div class="section-title">Meetings</div>
+        <div id="meetingsList">Loading meetings...</div>
       </div>
       
       <div class="section">
-        <div class="section-title">Today's Logged Tasks</div>
+        <div class="section-title">Logged Tasks</div>
         <div id="tasksList">No tasks logged yet</div>
       </div>
       
       <div class="section">
-        <div class="section-title">Today's Stats</div>
+        <div class="section-title">Stats</div>
+        <div class="date-summary" id="dateSummary">Showing: Today</div>
         <div class="stats">
           <div class="stat-item">
             <div class="stat-value" id="totalTime">0h</div>
