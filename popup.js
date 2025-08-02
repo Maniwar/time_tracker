@@ -2,13 +2,17 @@ let currentTimer = null;
 let startTime = null;
 let currentTask = null;
 let currentTaskDescription = null;
+let currentDateRange = 'today'; // Track current date range
+let customStartDate = null;
+let customEndDate = null;
 
 // Initialize popup
 document.addEventListener('DOMContentLoaded', async function() {
   checkAuthStatus();
   setupEventListeners();
   loadCategories();
-  loadTodayData();
+  initializeDateInputs();
+  loadDataForDateRange();
   updateTimer();
 });
 
@@ -60,6 +64,10 @@ function setupEventListeners() {
   document.getElementById('saveManualBtn').addEventListener('click', saveManualEntry);
   document.getElementById('cancelManualBtn').addEventListener('click', hideManualEntry);
   
+  // Date range selector
+  document.getElementById('dateRangeSelect').addEventListener('change', handleDateRangeChange);
+  document.getElementById('applyDateRange').addEventListener('click', applyCustomDateRange);
+  
   // Quick task buttons
   document.querySelectorAll('.quick-task-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
@@ -107,6 +115,19 @@ function setupEventListeners() {
       document.getElementById('manualDescription').focus();
     } else {
       document.getElementById('manualDescription').placeholder = 'What did you work on? (optional)';
+    }
+  });
+  
+  // Manual entry time selection
+  document.getElementById('manualWhen').addEventListener('change', function() {
+    if (this.value === 'custom') {
+      document.getElementById('customTimeGroup').style.display = 'block';
+      // Set default to current time
+      const now = new Date();
+      now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+      document.getElementById('customDateTime').value = now.toISOString().slice(0, 16);
+    } else {
+      document.getElementById('customTimeGroup').style.display = 'none';
     }
   });
   
@@ -188,7 +209,7 @@ function stopTimer() {
   });
   
   document.getElementById('timerDisplay').textContent = '00:00:00';
-  loadTodayData();
+  loadDataForDateRange(); // Use current date range instead of just today
 }
 
 // Update timer display
@@ -279,7 +300,7 @@ function saveMeetings(meetings) {
     timeEntries[today].push(...meetingEntries);
     
     chrome.storage.local.set({ timeEntries }, () => {
-      loadTodayData();
+      loadDataForDateRange(); // Use current date range instead of just today
     });
   });
 }
@@ -288,34 +309,151 @@ function saveMeetings(meetings) {
 function saveTimeEntry(entry) {
   chrome.storage.local.get(['timeEntries'], (result) => {
     const timeEntries = result.timeEntries || {};
-    const today = new Date().toDateString();
+    const entryDate = entry.date || new Date().toDateString();
     
-    if (!timeEntries[today]) {
-      timeEntries[today] = [];
+    if (!timeEntries[entryDate]) {
+      timeEntries[entryDate] = [];
     }
     
-    timeEntries[today].push(entry);
+    timeEntries[entryDate].push(entry);
     chrome.storage.local.set({ timeEntries });
   });
 }
 
-// Load today's data
-function loadTodayData() {
-  const today = new Date().toDateString();
+// Initialize date inputs with today's date
+function initializeDateInputs() {
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('startDate').value = today;
+  document.getElementById('endDate').value = today;
+}
+
+// Handle date range selection change
+function handleDateRangeChange(e) {
+  currentDateRange = e.target.value;
+  
+  if (currentDateRange === 'custom') {
+    document.getElementById('customDateRange').style.display = 'flex';
+  } else {
+    document.getElementById('customDateRange').style.display = 'none';
+    loadDataForDateRange();
+  }
+}
+
+// Apply custom date range
+function applyCustomDateRange() {
+  const startDate = document.getElementById('startDate').value;
+  const endDate = document.getElementById('endDate').value;
+  
+  if (!startDate || !endDate) {
+    alert('Please select both start and end dates');
+    return;
+  }
+  
+  if (new Date(startDate) > new Date(endDate)) {
+    alert('Start date must be before end date');
+    return;
+  }
+  
+  customStartDate = startDate;
+  customEndDate = endDate;
+  loadDataForDateRange();
+}
+
+// Get date range based on selection
+function getDateRange() {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  let startDate, endDate;
+  
+  switch (currentDateRange) {
+    case 'today':
+      startDate = new Date(today);
+      endDate = new Date(today);
+      endDate.setHours(23, 59, 59, 999);
+      break;
+      
+    case 'yesterday':
+      startDate = new Date(today);
+      startDate.setDate(startDate.getDate() - 1);
+      endDate = new Date(startDate);
+      endDate.setHours(23, 59, 59, 999);
+      break;
+      
+    case 'week':
+      startDate = new Date(today);
+      startDate.setDate(today.getDate() - today.getDay()); // Start of week (Sunday)
+      endDate = new Date(today);
+      endDate.setDate(startDate.getDate() + 6);
+      endDate.setHours(23, 59, 59, 999);
+      break;
+      
+    case 'lastweek':
+      startDate = new Date(today);
+      startDate.setDate(today.getDate() - today.getDay() - 7); // Start of last week
+      endDate = new Date(startDate);
+      endDate.setDate(startDate.getDate() + 6);
+      endDate.setHours(23, 59, 59, 999);
+      break;
+      
+    case 'month':
+      startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+      endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+      endDate.setHours(23, 59, 59, 999);
+      break;
+      
+    case 'custom':
+      if (customStartDate && customEndDate) {
+        startDate = new Date(customStartDate);
+        endDate = new Date(customEndDate);
+        endDate.setHours(23, 59, 59, 999);
+      } else {
+        startDate = new Date(today);
+        endDate = new Date(today);
+        endDate.setHours(23, 59, 59, 999);
+      }
+      break;
+      
+    default:
+      startDate = new Date(today);
+      endDate = new Date(today);
+      endDate.setHours(23, 59, 59, 999);
+  }
+  
+  return { startDate, endDate };
+}
+
+// Load data for selected date range
+function loadDataForDateRange() {
+  const { startDate, endDate } = getDateRange();
+  
   chrome.storage.local.get(['timeEntries'], (result) => {
     const timeEntries = result.timeEntries || {};
-    const todayEntries = timeEntries[today] || [];
+    const rangeEntries = [];
     
+    // Collect entries within date range
+    Object.keys(timeEntries).forEach(dateStr => {
+      const entryDate = new Date(dateStr);
+      entryDate.setHours(12, 0, 0, 0); // Set to noon to avoid timezone issues
+      
+      if (entryDate >= startDate && entryDate <= endDate) {
+        timeEntries[dateStr].forEach(entry => {
+          rangeEntries.push({...entry, date: dateStr});
+        });
+      }
+    });
+    
+    // Calculate stats
     let totalTime = 0;
     let meetingTime = 0;
     let taskTime = 0;
-    
-    // Separate tasks from meetings
     const tasks = [];
+    const meetings = [];
     
-    todayEntries.forEach(entry => {
+    rangeEntries.forEach(entry => {
       if (entry.type === 'meeting') {
         meetingTime += entry.duration;
+        meetings.push(entry);
       } else {
         taskTime += entry.duration;
         tasks.push(entry);
@@ -328,9 +466,109 @@ function loadTodayData() {
     document.getElementById('meetingTime').textContent = formatDuration(meetingTime);
     document.getElementById('taskTime').textContent = formatDuration(taskTime);
     
-    // Display tasks
+    // Update section titles with date range
+    updateSectionTitles(startDate, endDate);
+    
+    // Display tasks and meetings
     displayTasks(tasks);
+    displayRangeMeetings(meetings);
   });
+}
+
+// Update section titles to show current date range
+function updateSectionTitles(startDate, endDate) {
+  const formatDate = (date) => {
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  };
+  
+  let dateRangeText = '';
+  let summaryText = '';
+  
+  if (currentDateRange === 'today') {
+    dateRangeText = "Today's";
+    summaryText = "Showing: Today";
+  } else if (currentDateRange === 'yesterday') {
+    dateRangeText = "Yesterday's";
+    summaryText = "Showing: Yesterday";
+  } else if (currentDateRange === 'week') {
+    dateRangeText = "This Week's";
+    summaryText = `Showing: This Week (${formatDate(startDate)} - ${formatDate(endDate)})`;
+  } else if (currentDateRange === 'lastweek') {
+    dateRangeText = "Last Week's";
+    summaryText = `Showing: Last Week (${formatDate(startDate)} - ${formatDate(endDate)})`;
+  } else if (currentDateRange === 'month') {
+    dateRangeText = "This Month's";
+    summaryText = `Showing: ${startDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`;
+  } else if (startDate.toDateString() === endDate.toDateString()) {
+    const shortDate = startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    dateRangeText = shortDate;
+    summaryText = `Showing: ${formatDate(startDate)}`;
+  } else {
+    const shortStart = startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const shortEnd = endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    dateRangeText = `${shortStart} - ${shortEnd}`;
+    summaryText = `Showing: ${formatDate(startDate)} - ${formatDate(endDate)}`;
+  }
+  
+  // Update date summary
+  const dateSummary = document.getElementById('dateSummary');
+  if (dateSummary) {
+    dateSummary.textContent = summaryText;
+  }
+  
+  // Update section titles
+  const taskSection = document.querySelector('#tasksList').parentElement.querySelector('.section-title');
+  if (taskSection) {
+    taskSection.textContent = `${dateRangeText} Logged Tasks`;
+  }
+  
+  const meetingsSection = document.querySelector('#meetingsList').parentElement.querySelector('.section-title');
+  if (meetingsSection) {
+    meetingsSection.textContent = `${dateRangeText} Meetings`;
+  }
+}
+
+// Display meetings for date range
+function displayRangeMeetings(meetings) {
+  const meetingsList = document.getElementById('meetingsList');
+  
+  if (!document.getElementById('meetingsSection').style.display || 
+      document.getElementById('meetingsSection').style.display === 'none') {
+    return; // Don't display if not connected to Outlook
+  }
+  
+  if (meetings.length === 0) {
+    meetingsList.innerHTML = '<p style="text-align: center; color: #605e5c;">No meetings in this period</p>';
+    return;
+  }
+  
+  // Sort meetings by date and time
+  meetings.sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
+  
+  meetingsList.innerHTML = meetings.map(meeting => {
+    const start = new Date(meeting.startTime);
+    const end = new Date(meeting.endTime);
+    const duration = meeting.duration / 60000; // minutes
+    
+    return `
+      <div class="meeting-item">
+        <div class="meeting-title">${meeting.subject || meeting.description || 'Meeting'}</div>
+        <div class="meeting-time">
+          ${start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} 
+          ${start.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - 
+          ${end.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} 
+          (${Math.round(duration)} min)
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// Load today's data (keeping for backward compatibility)
+function loadTodayData() {
+  currentDateRange = 'today';
+  document.getElementById('dateRangeSelect').value = 'today';
+  loadDataForDateRange();
 }
 
 // Display tasks - NO inline onclick handlers
@@ -338,12 +576,15 @@ function displayTasks(tasks) {
   const tasksList = document.getElementById('tasksList');
   
   if (tasks.length === 0) {
-    tasksList.innerHTML = '<p style="text-align: center; color: #605e5c;">No tasks logged yet</p>';
+    tasksList.innerHTML = '<p style="text-align: center; color: #605e5c;">No tasks logged in this period</p>';
     return;
   }
   
   // Sort tasks by start time (most recent first)
   tasks.sort((a, b) => new Date(b.startTime) - new Date(a.startTime));
+  
+  // Check if we're showing multiple days
+  const showDate = currentDateRange !== 'today' && currentDateRange !== 'yesterday';
   
   tasksList.innerHTML = tasks.map((task, index) => {
     const start = new Date(task.startTime);
@@ -357,6 +598,10 @@ function displayTasks(tasks) {
       displayTitle = `${task.category}: ${task.description}`;
     }
     
+    // Add date if showing multiple days
+    const dateDisplay = showDate ? 
+      `${start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} ` : '';
+    
     return `
       <div class="task-item" data-index="${index}">
         <div class="task-actions">
@@ -365,7 +610,7 @@ function displayTasks(tasks) {
         </div>
         <div class="task-title">${displayTitle}</div>
         <div class="task-time">
-          ${start.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} 
+          ${dateDisplay}${start.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} 
           (${Math.round(duration)} min)
         </div>
       </div>
@@ -373,20 +618,37 @@ function displayTasks(tasks) {
   }).join('');
 }
 
-// Edit task - now a regular function, not window.editTask
+// Edit task - now works with date ranges
 function editTask(index) {
-  const today = new Date().toDateString();
+  const { startDate, endDate } = getDateRange();
+  
   chrome.storage.local.get(['timeEntries', 'categories'], (result) => {
     const timeEntries = result.timeEntries || {};
-    const todayEntries = timeEntries[today] || [];
-    const tasks = todayEntries.filter(e => e.type === 'task');
     const categories = result.categories || [
       'Email', 'Meeting', 'Project Work', 'Admin', 
       'Break', 'Training', 'Planning', 'Other'
     ];
     
-    if (tasks[index]) {
-      const task = tasks[index];
+    // Collect tasks from date range
+    const allTasks = [];
+    Object.keys(timeEntries).forEach(dateStr => {
+      const entryDate = new Date(dateStr);
+      entryDate.setHours(12, 0, 0, 0);
+      
+      if (entryDate >= startDate && entryDate <= endDate) {
+        timeEntries[dateStr].forEach(entry => {
+          if (entry.type === 'task') {
+            allTasks.push({ ...entry, date: dateStr });
+          }
+        });
+      }
+    });
+    
+    // Sort tasks by start time (most recent first) to match display order
+    allTasks.sort((a, b) => new Date(b.startTime) - new Date(a.startTime));
+    
+    if (allTasks[index]) {
+      const task = allTasks[index];
       
       // Create a simple dialog for editing
       const categoryList = categories.join('\n');
@@ -402,22 +664,23 @@ function editTask(index) {
       if (newDuration && !isNaN(newDuration)) {
         const newDescription = prompt('Description:', task.description || '');
         
-        // Find the original entry in todayEntries
-        const originalIndex = todayEntries.findIndex(e => 
-          e === task || (e.startTime === task.startTime && e.category === task.category)
+        // Find and update the original entry
+        const dateEntries = timeEntries[task.date];
+        const originalIndex = dateEntries.findIndex(e => 
+          e.startTime === task.startTime && e.category === task.category
         );
         
         if (originalIndex !== -1) {
-          todayEntries[originalIndex].category = newCategory || task.category;
-          todayEntries[originalIndex].duration = parseInt(newDuration) * 60000;
-          todayEntries[originalIndex].description = newDescription;
+          dateEntries[originalIndex].category = newCategory || task.category;
+          dateEntries[originalIndex].duration = parseInt(newDuration) * 60000;
+          dateEntries[originalIndex].description = newDescription;
           
           // Recalculate end time based on new duration
-          const startTime = new Date(todayEntries[originalIndex].startTime);
-          todayEntries[originalIndex].endTime = new Date(startTime.getTime() + todayEntries[originalIndex].duration).toISOString();
+          const startTime = new Date(dateEntries[originalIndex].startTime);
+          dateEntries[originalIndex].endTime = new Date(startTime.getTime() + dateEntries[originalIndex].duration).toISOString();
           
           chrome.storage.local.set({ timeEntries }, () => {
-            loadTodayData();
+            loadDataForDateRange();
           });
         }
       }
@@ -425,28 +688,46 @@ function editTask(index) {
   });
 }
 
-// Delete task - now a regular function, not window.deleteTask
+// Delete task - now works with date ranges
 function deleteTask(index) {
   if (!confirm('Are you sure you want to delete this entry?')) return;
   
-  const today = new Date().toDateString();
+  const { startDate, endDate } = getDateRange();
+  
   chrome.storage.local.get(['timeEntries'], (result) => {
     const timeEntries = result.timeEntries || {};
-    const todayEntries = timeEntries[today] || [];
-    const tasks = todayEntries.filter(e => e.type === 'task');
     
-    if (tasks[index]) {
-      const taskToDelete = tasks[index];
+    // Collect tasks from date range
+    const allTasks = [];
+    Object.keys(timeEntries).forEach(dateStr => {
+      const entryDate = new Date(dateStr);
+      entryDate.setHours(12, 0, 0, 0);
+      
+      if (entryDate >= startDate && entryDate <= endDate) {
+        timeEntries[dateStr].forEach(entry => {
+          if (entry.type === 'task') {
+            allTasks.push({ ...entry, date: dateStr });
+          }
+        });
+      }
+    });
+    
+    // Sort tasks by start time (most recent first) to match display order
+    allTasks.sort((a, b) => new Date(b.startTime) - new Date(a.startTime));
+    
+    if (allTasks[index]) {
+      const taskToDelete = allTasks[index];
       
       // Find and remove the entry
-      const originalIndex = todayEntries.findIndex(e => 
-        e === taskToDelete || (e.startTime === taskToDelete.startTime && e.category === taskToDelete.category)
+      const dateEntries = timeEntries[taskToDelete.date];
+      const originalIndex = dateEntries.findIndex(e => 
+        e.startTime === taskToDelete.startTime && e.category === taskToDelete.category
       );
       
       if (originalIndex !== -1) {
-        todayEntries.splice(originalIndex, 1);
+        dateEntries.splice(originalIndex, 1);
         chrome.storage.local.set({ timeEntries }, () => {
-          loadTodayData();
+          loadDataForDateRange();
         });
       }
     }
@@ -479,81 +760,101 @@ function exportToExcel() {
     return;
   }
   
+  const { startDate, endDate } = getDateRange();
+  
   chrome.storage.local.get(['timeEntries'], (result) => {
     const timeEntries = result.timeEntries || {};
     
-    // Check if there's any data to export
-    if (Object.keys(timeEntries).length === 0) {
-      alert('No time entries to export. Start tracking your time first!');
+    // Prepare data for Excel - filtered by date range
+    const data = [];
+    const filteredEntries = {};
+    
+    Object.keys(timeEntries).forEach(dateStr => {
+      const entryDate = new Date(dateStr);
+      entryDate.setHours(12, 0, 0, 0);
+      
+      if (entryDate >= startDate && entryDate <= endDate) {
+        filteredEntries[dateStr] = timeEntries[dateStr];
+        
+        timeEntries[dateStr].forEach(entry => {
+          data.push({
+            Date: dateStr,
+            Type: entry.type,
+            Category: entry.category || entry.subject || 'N/A',
+            Description: entry.description || entry.subject || '',
+            'Start Time': new Date(entry.startTime).toLocaleTimeString(),
+            'End Time': new Date(entry.endTime).toLocaleTimeString(),
+            'Duration (min)': Math.round(entry.duration / 60000),
+            'Duration (hours)': (entry.duration / 3600000).toFixed(2),
+            Notes: entry.notes || ''
+          });
+        });
+      }
+    });
+    
+    if (data.length === 0) {
+      alert('No time entries found for the selected date range.');
       return;
     }
-    
-    // Prepare data for Excel
-    const data = [];
-    
-    Object.keys(timeEntries).sort().forEach(date => {
-      const entries = timeEntries[date];
-      entries.forEach(entry => {
-        data.push({
-          Date: date,
-          Type: entry.type,
-          Category: entry.category || entry.subject || 'N/A',
-          Description: entry.description || entry.subject || '',
-          'Start Time': new Date(entry.startTime).toLocaleTimeString(),
-          'End Time': new Date(entry.endTime).toLocaleTimeString(),
-          'Duration (min)': Math.round(entry.duration / 60000),
-          'Duration (hours)': (entry.duration / 3600000).toFixed(2),
-          Notes: entry.notes || ''
-        });
-      });
-    });
     
     // Create workbook
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.json_to_sheet(data);
     
     // Add summary sheet
-    const summary = calculateSummary(timeEntries);
+    const summary = calculateSummary(filteredEntries);
     const ws2 = XLSX.utils.json_to_sheet(summary);
     
     XLSX.utils.book_append_sheet(wb, ws, 'Time Log');
     XLSX.utils.book_append_sheet(wb, ws2, 'Summary');
     
-    // Generate file
-    const filename = `TimeTracker_${new Date().toISOString().split('T')[0]}.xlsx`;
+    // Generate filename with date range
+    const dateRangeStr = currentDateRange === 'custom' ? 
+      `${customStartDate}_to_${customEndDate}` : currentDateRange;
+    const filename = `TimeTracker_${dateRangeStr}_${new Date().toISOString().split('T')[0]}.xlsx`;
     XLSX.writeFile(wb, filename);
   });
 }
 
 // Export to CSV (fallback when XLSX is not available)
 function exportToCSV() {
+  const { startDate, endDate } = getDateRange();
+  
   chrome.storage.local.get(['timeEntries'], (result) => {
     const timeEntries = result.timeEntries || {};
     
-    if (Object.keys(timeEntries).length === 0) {
-      alert('No time entries to export. Start tracking your time first!');
-      return;
-    }
-    
-    // Prepare CSV data
+    // Prepare CSV data - filtered by date range
     const csvRows = [];
     csvRows.push(['Date', 'Type', 'Category', 'Description', 'Start Time', 'End Time', 'Duration (min)', 'Duration (hours)']);
     
-    Object.keys(timeEntries).sort().forEach(date => {
-      const entries = timeEntries[date];
-      entries.forEach(entry => {
-        csvRows.push([
-          date,
-          entry.type,
-          entry.category || entry.subject || 'N/A',
-          entry.description || entry.subject || '',
-          new Date(entry.startTime).toLocaleTimeString(),
-          new Date(entry.endTime).toLocaleTimeString(),
-          Math.round(entry.duration / 60000),
-          (entry.duration / 3600000).toFixed(2)
-        ]);
-      });
+    let hasData = false;
+    
+    Object.keys(timeEntries).sort().forEach(dateStr => {
+      const entryDate = new Date(dateStr);
+      entryDate.setHours(12, 0, 0, 0);
+      
+      if (entryDate >= startDate && entryDate <= endDate) {
+        hasData = true;
+        const entries = timeEntries[dateStr];
+        entries.forEach(entry => {
+          csvRows.push([
+            dateStr,
+            entry.type,
+            entry.category || entry.subject || 'N/A',
+            entry.description || entry.subject || '',
+            new Date(entry.startTime).toLocaleTimeString(),
+            new Date(entry.endTime).toLocaleTimeString(),
+            Math.round(entry.duration / 60000),
+            (entry.duration / 3600000).toFixed(2)
+          ]);
+        });
+      }
     });
+    
+    if (!hasData) {
+      alert('No time entries found for the selected date range.');
+      return;
+    }
     
     // Convert to CSV string
     const csvContent = csvRows.map(row => 
@@ -569,7 +870,11 @@ function exportToCSV() {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `TimeTracker_${new Date().toISOString().split('T')[0]}.csv`;
+    
+    // Generate filename with date range
+    const dateRangeStr = currentDateRange === 'custom' ? 
+      `${customStartDate}_to_${customEndDate}` : currentDateRange;
+    a.download = `TimeTracker_${dateRangeStr}_${new Date().toISOString().split('T')[0]}.csv`;
     a.click();
     window.URL.revokeObjectURL(url);
   });
@@ -581,6 +886,12 @@ function showManualEntry() {
   document.getElementById('manualDescription').value = '';
   document.getElementById('manualDuration').value = '30';
   document.getElementById('manualWhen').value = 'now';
+  document.getElementById('customTimeGroup').style.display = 'none';
+  
+  // Set default custom time to now
+  const now = new Date();
+  now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+  document.getElementById('customDateTime').value = now.toISOString().slice(0, 16);
 }
 
 // Hide manual entry form
@@ -609,7 +920,23 @@ function saveManualEntry() {
     }
   }
   
-  const endTime = when === 'now' ? new Date() : new Date();
+  let endTime;
+  
+  if (when === 'custom') {
+    const customTime = document.getElementById('customDateTime').value;
+    if (!customTime) {
+      alert('Please select a date and time');
+      return;
+    }
+    endTime = new Date(customTime);
+  } else if (when === 'earlier') {
+    // Set to a few hours ago as default for "earlier today"
+    endTime = new Date();
+    endTime.setHours(endTime.getHours() - 2);
+  } else {
+    endTime = new Date();
+  }
+  
   const startTime = new Date(endTime.getTime() - duration);
   
   const entry = {
@@ -619,12 +946,12 @@ function saveManualEntry() {
     startTime: startTime.toISOString(),
     endTime: endTime.toISOString(),
     duration: duration,
-    date: new Date().toDateString()
+    date: startTime.toDateString() // Use start time's date in case it spans midnight
   };
   
   saveTimeEntry(entry);
   hideManualEntry();
-  loadTodayData();
+  loadDataForDateRange(); // Use current date range instead of just today
   
   // Show success feedback
   const btn = document.getElementById('manualEntryBtn');
