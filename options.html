@@ -1,72 +1,35 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="utf-8">
+  <meta charset="UTF-8">
   <title>Time Tracker Settings</title>
   <style>
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       max-width: 800px;
       margin: 0 auto;
       padding: 20px;
       background: #f3f2f1;
     }
     
-    .card {
-      background: white;
-      padding: 20px;
-      margin-bottom: 20px;
-      border-radius: 8px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-    
     h1 {
       color: #323130;
-      margin-bottom: 30px;
+      border-bottom: 2px solid #0078d4;
+      padding-bottom: 10px;
     }
     
     h2 {
       color: #323130;
       font-size: 18px;
-      margin-bottom: 15px;
+      margin-top: 30px;
     }
     
-    .button {
-      background: #0078d4;
-      color: white;
-      border: none;
-      padding: 10px 20px;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 14px;
-      margin-right: 10px;
-    }
-    
-    .button:hover {
-      background: #106ebe;
-    }
-    
-    .button.danger {
-      background: #d83b01;
-    }
-    
-    .button.danger:hover {
-      background: #b92b00;
-    }
-    
-    .category-list {
-      list-style: none;
-      padding: 0;
-    }
-    
-    .category-item {
-      background: #f8f8f8;
-      padding: 10px;
-      margin-bottom: 8px;
-      border-radius: 4px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+    .card {
+      background: white;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
     }
     
     .input-group {
@@ -78,112 +41,429 @@
       margin-bottom: 5px;
       color: #605e5c;
       font-size: 14px;
+      font-weight: 600;
     }
     
-    .input-group input {
-      width: 100%;
-      padding: 8px;
-      border: 1px solid #d2d0ce;
-      border-radius: 4px;
-      font-size: 14px;
-    }
-    
+    .input-group input[type="text"],
     .input-group select {
       width: 100%;
-      padding: 8px;
+      padding: 8px 12px;
       border: 1px solid #d2d0ce;
       border-radius: 4px;
       font-size: 14px;
-      background: white;
+      box-sizing: border-box;
     }
     
     .input-group small {
+      color: #a19f9d;
+      font-size: 12px;
       display: block;
       margin-top: 5px;
-      color: #666;
-      font-size: 12px;
+    }
+    
+    .button {
+      background: #0078d4;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      margin-right: 10px;
+      transition: background 0.2s;
+    }
+    
+    .button:hover {
+      background: #106ebe;
+    }
+    
+    .button.danger {
+      background: #d83b01;
+    }
+    
+    .button.danger:hover {
+      background: #a52a00;
+    }
+    
+    .button.secondary {
+      background: #605e5c;
+    }
+    
+    .button.secondary:hover {
+      background: #4a4847;
     }
     
     .success-message {
-      background: #dff6dd;
-      color: #0b6a0b;
+      display: none;
+      background: #d4edda;
+      color: #155724;
       padding: 10px;
       border-radius: 4px;
       margin-bottom: 15px;
-      display: none;
+      font-size: 14px;
     }
     
-    .checkbox-list label {
+    .success-message.show {
       display: block;
-      margin: 5px 0;
+      animation: fadeIn 0.3s;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    
+    .category-list {
+      list-style: none;
+      padding: 0;
+      margin: 15px 0;
+    }
+    
+    .category-item {
+      background: #f8f9fa;
+      padding: 10px 15px;
+      margin-bottom: 8px;
+      border-radius: 4px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: move;
+      transition: background 0.2s;
+    }
+    
+    .category-item:hover {
+      background: #e1dfdd;
+    }
+    
+    .category-item.dragging {
+      opacity: 0.5;
+    }
+    
+    .category-name {
+      flex: 1;
+      font-size: 14px;
+    }
+    
+    .delete-category {
+      background: #fde7e9;
+      color: #a80000;
+      border: none;
+      padding: 4px 10px;
+      border-radius: 3px;
+      cursor: pointer;
+      font-size: 12px;
+      transition: background 0.2s;
+    }
+    
+    .delete-category:hover {
+      background: #fdc5c9;
+    }
+    
+    .checkbox-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin: 15px 0;
+    }
+    
+    .checkbox-item {
+      display: flex;
+      align-items: center;
+      background: #f8f9fa;
+      padding: 8px 12px;
+      border-radius: 4px;
+      min-width: 140px;
+    }
+    
+    .checkbox-item input[type="checkbox"] {
+      margin-right: 8px;
+    }
+    
+    .checkbox-item label {
+      font-size: 14px;
       cursor: pointer;
     }
     
-    .checkbox-list input[type="checkbox"] {
-      margin-right: 8px;
+    .stats-card {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 20px;
+      margin-top: 15px;
+    }
+    
+    .stat-item {
+      text-align: center;
+    }
+    
+    .stat-value {
+      font-size: 32px;
+      font-weight: bold;
+      display: block;
+    }
+    
+    .stat-label {
+      font-size: 14px;
+      opacity: 0.9;
+      margin-top: 5px;
+    }
+    
+    .section-description {
+      color: #605e5c;
+      font-size: 14px;
+      margin-bottom: 15px;
+      line-height: 1.5;
+    }
+    
+    .feature-badge {
+      display: inline-block;
+      background: #d83b01;
+      color: white;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      margin-left: 8px;
+      font-weight: 600;
+    }
+    
+    .import-export-buttons {
+      display: flex;
+      gap: 10px;
+      margin-top: 15px;
+    }
+    
+    .import-export-buttons button {
+      flex: 1;
     }
   </style>
 </head>
 <body>
-  <h1>⏱️ Time Tracker Settings</h1>
+  <h1>Time Tracker Settings</h1>
   
+  <!-- Statistics Overview -->
+  <div class="stats-card">
+    <h2 style="color: white; margin-top: 0;">Your Tracking Statistics</h2>
+    <div class="stats-grid">
+      <div class="stat-item">
+        <span class="stat-value" id="totalTrackedHours">0</span>
+        <span class="stat-label">Total Hours Tracked</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-value" id="totalEntries">0</span>
+        <span class="stat-label">Time Entries</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-value" id="multitaskPercent">0%</span>
+        <span class="stat-label">Multi-tasking Rate</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-value" id="avgDailyHours">0</span>
+        <span class="stat-label">Avg Daily Hours</span>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Microsoft Account Settings -->
   <div class="card">
-    <h2>Microsoft Account</h2>
+    <h2>Microsoft Account <span class="feature-badge">Optional</span></h2>
+    <p class="section-description">
+      Connect your Outlook calendar to automatically import meetings. This requires an Azure App registration.
+    </p>
     <div id="accountInfo">
-      <p>Status: <span id="accountStatus">Checking...</span></p>
+      <p>Status: <span id="accountStatus" style="font-weight: 600;">Checking...</span></p>
       <div class="input-group">
-        <label>Azure App Client ID (for Outlook integration):</label>
+        <label>Azure App Client ID:</label>
         <input type="text" id="clientIdInput" placeholder="Enter your Azure App Client ID">
-        <small style="color: #666; display: block; margin-top: 5px;">
-          Get this from Azure Portal → App registrations → Your app → Overview
+        <small>
+          To get a Client ID:<br>
+          1. Go to <a href="https://portal.azure.com" target="_blank">Azure Portal</a><br>
+          2. Navigate to App registrations → New registration<br>
+          3. Set redirect URI to: <code id="redirectUri">Loading...</code><br>
+          4. Copy the Application (client) ID
         </small>
       </div>
       <button class="button" id="saveClientIdBtn">Save Client ID</button>
-      <button class="button" id="reconnectBtn">Reconnect Account</button>
+      <button class="button secondary" id="reconnectBtn">Reconnect Account</button>
       <button class="button danger" id="disconnectBtn">Disconnect</button>
     </div>
   </div>
   
+  <!-- Multi-tasking Settings -->
+  <div class="card">
+    <h2>Multi-tasking Settings <span class="feature-badge">New!</span></h2>
+    <p class="section-description">
+      Configure how multi-tasking is tracked and analyzed in your time reports.
+    </p>
+    <div class="input-group">
+      <label>Productivity Score Weight:</label>
+      <select id="productivityWeight">
+        <option value="25">Light (25% penalty for multi-tasking)</option>
+        <option value="50" selected>Medium (50% penalty for multi-tasking)</option>
+        <option value="75">Heavy (75% penalty for multi-tasking)</option>
+        <option value="100">Strict (100% penalty for multi-tasking)</option>
+      </select>
+      <small>How much multi-tasking affects your productivity score in reports</small>
+    </div>
+    <div class="input-group">
+      <label>
+        <input type="checkbox" id="autoEndMeeting" checked>
+        Warn before ending meetings with active tasks
+      </label>
+    </div>
+    <div class="input-group">
+      <label>
+        <input type="checkbox" id="showMultitaskWarning">
+        Show warning when starting multi-tasking
+      </label>
+    </div>
+    <button class="button" id="saveMultitaskingBtn">Save Multi-tasking Settings</button>
+    <div class="success-message" id="multitaskingSuccess">Multi-tasking settings saved!</div>
+  </div>
+  
+  <!-- Auto-Tracking Settings -->
+  <div class="card">
+    <h2>Auto-Tracking Settings <span class="feature-badge">Auto!</span></h2>
+    <p class="section-description">
+      Automatically start tracking meetings when their scheduled time begins.
+    </p>
+    <div class="input-group">
+      <label>
+        <input type="checkbox" id="autoTrackMeetings">
+        <strong>Enable auto-tracking for Outlook meetings</strong>
+      </label>
+      <small>Meetings will automatically start tracking at their scheduled time and stop at the scheduled end time. You can always end them early if needed.</small>
+    </div>
+    <div class="input-group">
+      <label>Auto-start grace period:</label>
+      <select id="autoTrackGracePeriod">
+        <option value="0">Start exactly on time</option>
+        <option value="2" selected>2 minutes before</option>
+        <option value="5">5 minutes before</option>
+        <option value="10">10 minutes before</option>
+      </select>
+      <small>Start tracking meetings slightly before their scheduled time</small>
+    </div>
+    <div class="input-group">
+      <label>
+        <input type="checkbox" id="autoTrackNotifications" checked>
+        Show notifications when auto-tracking starts/ends
+      </label>
+    </div>
+    <div class="input-group">
+      <label>
+        <input type="checkbox" id="autoEndMeetings" checked>
+        Automatically end meetings at scheduled time
+      </label>
+      <small>If unchecked, meetings will continue until manually stopped</small>
+    </div>
+    <button class="button" id="saveAutoTrackingBtn">Save Auto-Tracking Settings</button>
+    <div class="success-message" id="autoTrackingSuccess">Auto-tracking settings saved!</div>
+  </div>
+  
+  <!-- Quick Actions Configuration -->
   <div class="card">
     <h2>Quick Actions</h2>
-    <p>Select which categories appear as quick action buttons (max 6):</p>
-    <div class="success-message" id="quickActionSuccess">Quick actions updated!</div>
-    <div id="quickActionsList" style="margin: 15px 0;"></div>
+    <p class="section-description">
+      Select which categories appear as quick action buttons in the popup (maximum 6).
+    </p>
+    <div class="checkbox-group" id="quickActionsList">
+      <!-- Will be populated dynamically -->
+    </div>
     <button class="button" id="saveQuickActionsBtn">Save Quick Actions</button>
+    <div class="success-message" id="quickActionSuccess">Quick actions updated!</div>
   </div>
   
+  <!-- Category Management -->
   <div class="card">
     <h2>Task Categories</h2>
-    <p>Drag to reorder categories. The order affects quick actions and dropdowns.</p>
-    <div class="success-message" id="categorySuccess">Categories updated!</div>
-    <ul class="category-list" id="categoryList"></ul>
-    <div class="input-group">
-      <input type="text" id="newCategoryInput" placeholder="Add new category">
+    <p class="section-description">
+      Manage your task categories. Drag to reorder, which affects the order in quick actions and dropdowns.
+    </p>
+    <ul class="category-list" id="categoryList">
+      <!-- Will be populated dynamically -->
+    </ul>
+    <div class="input-group" style="display: flex; gap: 10px;">
+      <input type="text" id="newCategoryInput" placeholder="Add new category" style="flex: 1;">
       <button class="button" id="addCategoryBtn">Add Category</button>
     </div>
+    <div class="success-message" id="categorySuccess">Categories updated!</div>
   </div>
   
+  <!-- Export Settings -->
   <div class="card">
     <h2>Export Settings</h2>
+    <p class="section-description">
+      Configure default settings for data exports.
+    </p>
     <div class="input-group">
       <label>Default date range for exports:</label>
       <select id="dateRangeSelect">
         <option value="today">Today</option>
         <option value="yesterday">Yesterday</option>
-        <option value="week">This Week</option>
+        <option value="week" selected>This Week</option>
         <option value="lastweek">Last Week</option>
         <option value="month">This Month</option>
         <option value="all">All Time</option>
       </select>
     </div>
-    <button class="button" id="saveSettingsBtn">Save Settings</button>
+    <div class="input-group">
+      <label>
+        <input type="checkbox" id="includeMultitaskAnalysis" checked>
+        Include multi-tasking analysis sheet in exports
+      </label>
+    </div>
+    <div class="input-group">
+      <label>
+        <input type="checkbox" id="includeSummarySheet" checked>
+        Include summary sheet in exports
+      </label>
+    </div>
+    <button class="button" id="saveExportSettingsBtn">Save Export Settings</button>
+    <div class="success-message" id="exportSuccess">Export settings saved!</div>
   </div>
   
+  <!-- Data Management -->
   <div class="card">
     <h2>Data Management</h2>
-    <p>Export all your time tracking data or clear local storage.</p>
-    <button class="button" id="exportAllBtn">Export All Data</button>
-    <button class="button danger" id="clearDataBtn">Clear All Data</button>
+    <p class="section-description">
+      Export, import, or clear your time tracking data. Use with caution - clearing data cannot be undone.
+    </p>
+    <div class="import-export-buttons">
+      <button class="button" id="exportAllBtn">📊 Export All Data</button>
+      <button class="button secondary" id="backupBtn">💾 Create Backup</button>
+      <button class="button secondary" id="importBtn">📥 Import Data</button>
+    </div>
+    <input type="file" id="importFile" accept=".json" style="display: none;">
+    <hr style="margin: 20px 0; border: none; border-top: 1px solid #edebe9;">
+    <button class="button danger" id="clearDataBtn">🗑️ Clear All Data</button>
+    <div class="success-message" id="dataSuccess">Operation completed successfully!</div>
+  </div>
+  
+  <!-- About Section -->
+  <div class="card">
+    <h2>About</h2>
+    <p class="section-description">
+      <strong>Time Tracker with Multi-tasking Support</strong><br>
+      Version 2.0.0<br><br>
+      
+      This extension helps you track your time accurately, including when you're multi-tasking during meetings. 
+      Use the insights to optimize your schedule and improve productivity.<br><br>
+      
+      <strong>New Features:</strong><br>
+      • Meeting mode with multi-tasking support<br>
+      • Dual timer display for simultaneous tracking<br>
+      • Multi-tasking analysis in exports<br>
+      • Productivity scoring based on focus time<br><br>
+      
+      <strong>Privacy:</strong> All data is stored locally in your browser. No information is sent to external servers.
+    </p>
   </div>
   
   <script src="xlsx.min.js"></script>

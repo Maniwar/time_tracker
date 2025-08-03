@@ -1,269 +1,144 @@
-const defaultCategories = [
-  'Email',
-  'Meeting',
-  'Project Work',
-  'Admin',
-  'Break',
-  'Training',
-  'Planning',
-  'Other'
-];
+// Complete options.js - Settings Page Logic with Multi-tasking Support
 
+// Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
-  loadSettings();
+  loadStatistics();
+  loadAccountStatus();
+  loadCategories();
+  loadQuickActions();
+  loadExportSettings();
+  loadMultitaskingSettings();
+  loadAutoTrackingSettings();
   setupEventListeners();
-  checkAccountStatus();
+  
+  // Show redirect URI for Azure setup
+  const redirectUri = chrome.identity.getRedirectURL();
+  document.getElementById('redirectUri').textContent = redirectUri;
 });
 
-function setupEventListeners() {
-  document.getElementById('reconnectBtn').addEventListener('click', reconnectAccount);
-  document.getElementById('disconnectBtn').addEventListener('click', disconnectAccount);
-  document.getElementById('addCategoryBtn').addEventListener('click', addCategory);
-  document.getElementById('saveSettingsBtn').addEventListener('click', saveSettings);
-  document.getElementById('exportAllBtn').addEventListener('click', exportAllData);
-  document.getElementById('clearDataBtn').addEventListener('click', clearAllData);
-  document.getElementById('saveClientIdBtn').addEventListener('click', saveClientId);
-  document.getElementById('saveQuickActionsBtn').addEventListener('click', saveQuickActions);
-  
-  // Add drag and drop for category reordering
-  setupCategoryDragDrop();
+// Load and display statistics
+function loadStatistics() {
+  chrome.storage.local.get(['timeEntries'], (result) => {
+    const timeEntries = result.timeEntries || {};
+    
+    let totalHours = 0;
+    let totalEntries = 0;
+    let multitaskingHours = 0;
+    let daysTracked = Object.keys(timeEntries).length;
+    
+    Object.values(timeEntries).forEach(dayEntries => {
+      dayEntries.forEach(entry => {
+        totalHours += entry.duration / 3600000;
+        totalEntries++;
+        if (entry.wasMultitasking) {
+          multitaskingHours += entry.duration / 3600000;
+        }
+      });
+    });
+    
+    document.getElementById('totalTrackedHours').textContent = totalHours.toFixed(0);
+    document.getElementById('totalEntries').textContent = totalEntries;
+    document.getElementById('multitaskPercent').textContent = 
+      totalHours > 0 ? Math.round((multitaskingHours / totalHours) * 100) + '%' : '0%';
+    document.getElementById('avgDailyHours').textContent = 
+      daysTracked > 0 ? (totalHours / daysTracked).toFixed(1) : '0';
+  });
 }
 
-function loadSettings() {
-  chrome.storage.local.get(['categories', 'exportSettings', 'clientId', 'quickActions'], (result) => {
-    const categories = result.categories || defaultCategories;
-    displayCategories(categories);
-    displayQuickActions(categories, result.quickActions);
-    
-    if (result.exportSettings) {
-      document.getElementById('dateRangeSelect').value = result.exportSettings.dateRange || 'week';
-    }
+// Load account status
+function loadAccountStatus() {
+  chrome.storage.local.get(['accessToken', 'userEmail', 'tokenExpiry', 'clientId'], (result) => {
+    const statusElement = document.getElementById('accountStatus');
     
     if (result.clientId) {
       document.getElementById('clientIdInput').value = result.clientId;
     }
-  });
-}
-
-function displayCategories(categories) {
-  const list = document.getElementById('categoryList');
-  list.innerHTML = categories.map((cat, index) => `
-    <li class="category-item" draggable="true" data-index="${index}">
-      <span class="drag-handle" style="cursor: move; margin-right: 10px;">☰</span>
-      <span>${cat}</span>
-      <button class="button danger remove-category-btn" data-index="${index}">Remove</button>
-    </li>
-  `).join('');
-  
-  // Add event listeners to remove buttons
-  document.querySelectorAll('.remove-category-btn').forEach(btn => {
-    btn.addEventListener('click', function() {
-      const index = parseInt(this.getAttribute('data-index'));
-      removeCategory(index);
-    });
-  });
-  
-  // Re-setup drag and drop
-  setupCategoryDragDrop();
-}
-
-function addCategory() {
-  const input = document.getElementById('newCategoryInput');
-  const category = input.value.trim();
-  
-  if (!category) return;
-  
-  chrome.storage.local.get(['categories'], (result) => {
-    const categories = result.categories || defaultCategories;
-    if (!categories.includes(category)) {
-      categories.push(category);
-      chrome.storage.local.set({ categories }, () => {
-        displayCategories(categories);
-        displayQuickActions(categories, null); // Refresh quick actions list
-        input.value = '';
-        showSuccess('categorySuccess');
-      });
-    }
-  });
-}
-
-function removeCategory(index) {
-  chrome.storage.local.get(['categories', 'quickActions'], (result) => {
-    const categories = result.categories || defaultCategories;
-    const removedCategory = categories[index];
-    categories.splice(index, 1);
     
-    // Also remove from quick actions if present
-    let quickActions = result.quickActions || [];
-    quickActions = quickActions.filter(qa => qa !== removedCategory);
-    
-    chrome.storage.local.set({ categories, quickActions }, () => {
-      displayCategories(categories);
-      displayQuickActions(categories, quickActions);
-      showSuccess('categorySuccess');
-    });
-  });
-}
-
-function saveSettings() {
-  const exportSettings = {
-    dateRange: document.getElementById('dateRangeSelect').value
-  };
-  
-  chrome.storage.local.set({ exportSettings }, () => {
-    showSuccess('categorySuccess');
-  });
-}
-
-function checkAccountStatus() {
-  chrome.storage.local.get(['accessToken'], (result) => {
-    const status = document.getElementById('accountStatus');
-    if (result.accessToken) {
-      status.textContent = 'Connected';
-      status.style.color = '#0b6a0b';
+    if (result.accessToken && result.tokenExpiry) {
+      const expiry = new Date(result.tokenExpiry);
+      if (new Date() < expiry) {
+        statusElement.textContent = `Connected as ${result.userEmail || 'Unknown'}`;
+        statusElement.style.color = '#107c10';
+      } else {
+        statusElement.textContent = 'Token expired - Reconnect required';
+        statusElement.style.color = '#d83b01';
+      }
     } else {
-      status.textContent = 'Not connected';
-      status.style.color = '#a80000';
+      statusElement.textContent = 'Not connected';
+      statusElement.style.color = '#605e5c';
     }
   });
 }
 
-function reconnectAccount() {
-  chrome.runtime.sendMessage({ action: 'authenticate' }, (response) => {
-    if (response.success) {
-      checkAccountStatus();
-      showSuccess('categorySuccess');
-    }
+// Load categories
+function loadCategories() {
+  chrome.storage.local.get(['categories'], (result) => {
+    const categories = result.categories || [
+      'Email', 'Meeting', 'Project Work', 'Admin', 
+      'Break', 'Training', 'Planning', 'Other'
+    ];
+    
+    const categoryList = document.getElementById('categoryList');
+    categoryList.innerHTML = '';
+    
+    categories.forEach((category, index) => {
+      const li = document.createElement('li');
+      li.className = 'category-item';
+      li.draggable = true;
+      li.dataset.index = index;
+      
+      li.innerHTML = `
+        <span class="category-name">${category}</span>
+        ${category !== 'Meeting' ? `<button class="delete-category" data-category="${category}">Delete</button>` : ''}
+      `;
+      
+      categoryList.appendChild(li);
+    });
+    
+    setupDragAndDrop();
   });
 }
 
-function disconnectAccount() {
-  if (confirm('Are you sure you want to disconnect your Microsoft account?')) {
-    chrome.runtime.sendMessage({ action: 'logout' }, () => {
-      checkAccountStatus();
-    });
-  }
-}
-
-function exportAllData() {
-  // Check if XLSX library is loaded
-  if (typeof XLSX === 'undefined') {
-    alert('Excel export library not loaded. Please ensure xlsx.min.js is in your extension folder.\n\nDownload from: https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js\nSave as: xlsx.min.js');
-    return;
-  }
+// Setup drag and drop for categories
+function setupDragAndDrop() {
+  const categoryItems = document.querySelectorAll('.category-item');
+  let draggedItem = null;
   
-  chrome.storage.local.get(['timeEntries'], (result) => {
-    const timeEntries = result.timeEntries || {};
-    const allData = [];
-    
-    Object.keys(timeEntries).forEach(date => {
-      timeEntries[date].forEach(entry => {
-        allData.push({
-          Date: date,
-          Type: entry.type,
-          Category: entry.category || entry.subject || 'N/A',
-          Description: entry.description || entry.subject || '',
-          StartTime: new Date(entry.startTime).toLocaleString(),
-          EndTime: new Date(entry.endTime).toLocaleString(),
-          DurationMinutes: Math.round(entry.duration / 60000),
-          DurationHours: (entry.duration / 3600000).toFixed(2)
-        });
-      });
+  categoryItems.forEach(item => {
+    item.addEventListener('dragstart', function(e) {
+      draggedItem = this;
+      this.classList.add('dragging');
     });
     
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.json_to_sheet(allData);
-    XLSX.utils.book_append_sheet(wb, ws, 'All Time Data');
-    XLSX.writeFile(wb, `TimeTracker_AllData_${new Date().toISOString().split('T')[0]}.xlsx`);
+    item.addEventListener('dragend', function(e) {
+      this.classList.remove('dragging');
+    });
+    
+    item.addEventListener('dragover', function(e) {
+      e.preventDefault();
+      const afterElement = getDragAfterElement(document.getElementById('categoryList'), e.clientY);
+      const categoryList = document.getElementById('categoryList');
+      
+      if (afterElement == null) {
+        categoryList.appendChild(draggedItem);
+      } else {
+        categoryList.insertBefore(draggedItem, afterElement);
+      }
+    });
   });
-}
-
-function clearAllData() {
-  if (confirm('Are you sure you want to clear all time tracking data? This cannot be undone.')) {
-    chrome.storage.local.remove(['timeEntries'], () => {
-      alert('All data has been cleared.');
-    });
-  }
-}
-
-function showSuccess(elementId) {
-  const element = document.getElementById(elementId);
-  element.style.display = 'block';
-  setTimeout(() => {
-    element.style.display = 'none';
-  }, 3000);
-}
-
-// Save client ID
-function saveClientId() {
-  const clientId = document.getElementById('clientIdInput').value.trim();
   
-  if (!clientId) {
-    alert('Please enter a valid Client ID');
-    return;
-  }
-  
-  chrome.storage.local.set({ clientId }, () => {
-    // Send message to background script to update client ID
-    chrome.runtime.sendMessage({ action: 'updateClientId', clientId }, (response) => {
-      if (response && response.success) {
-        showSuccess('categorySuccess');
-        alert('Client ID saved! You may need to reconnect to Outlook.');
+  // Delete category buttons
+  document.querySelectorAll('.delete-category').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const category = this.dataset.category;
+      if (confirm(`Delete category "${category}"?`)) {
+        deleteCategory(category);
       }
     });
   });
 }
 
-// Setup drag and drop for category reordering
-function setupCategoryDragDrop() {
-  const list = document.getElementById('categoryList');
-  let draggedItem = null;
-  
-  list.addEventListener('dragstart', (e) => {
-    if (e.target.classList.contains('category-item')) {
-      draggedItem = e.target;
-      e.target.style.opacity = '0.5';
-      e.target.classList.add('dragging');
-    }
-  });
-  
-  list.addEventListener('dragend', (e) => {
-    if (e.target.classList.contains('category-item')) {
-      e.target.style.opacity = '';
-      e.target.classList.remove('dragging');
-    }
-  });
-  
-  list.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    const afterElement = getDragAfterElement(list, e.clientY);
-    if (afterElement == null) {
-      list.appendChild(draggedItem);
-    } else {
-      list.insertBefore(draggedItem, afterElement);
-    }
-  });
-  
-  list.addEventListener('drop', (e) => {
-    e.preventDefault();
-    
-    // Save new order
-    const newOrder = [];
-    document.querySelectorAll('.category-item span:not(.drag-handle):not(:last-child)').forEach(span => {
-      newOrder.push(span.textContent);
-    });
-    
-    chrome.storage.local.set({ categories: newOrder }, () => {
-      // Refresh quick actions with new order
-      chrome.storage.local.get(['quickActions'], (result) => {
-        displayQuickActions(newOrder, result.quickActions);
-      });
-      showSuccess('categorySuccess');
-    });
-  });
-}
-
-// Get element after which to insert dragged item
+// Get element after drag position
 function getDragAfterElement(container, y) {
   const draggableElements = [...container.querySelectorAll('.category-item:not(.dragging)')];
   
@@ -279,35 +154,439 @@ function getDragAfterElement(container, y) {
   }, { offset: Number.NEGATIVE_INFINITY }).element;
 }
 
-// Display quick actions checkboxes
-function displayQuickActions(categories, selectedActions) {
-  const selected = selectedActions || categories.slice(0, 6);
-  const container = document.getElementById('quickActionsList');
-  
-  container.innerHTML = categories.map(cat => `
-    <label style="display: block; margin: 5px 0;">
-      <input type="checkbox" value="${cat}" ${selected.includes(cat) ? 'checked' : ''}>
-      ${cat}
-    </label>
-  `).join('');
+// Delete category
+function deleteCategory(categoryToDelete) {
+  chrome.storage.local.get(['categories', 'quickActions'], (result) => {
+    let categories = result.categories || [];
+    let quickActions = result.quickActions || [];
+    
+    categories = categories.filter(cat => cat !== categoryToDelete);
+    quickActions = quickActions.filter(cat => cat !== categoryToDelete);
+    
+    chrome.storage.local.set({ categories, quickActions }, () => {
+      loadCategories();
+      loadQuickActions();
+      showSuccess('categorySuccess');
+    });
+  });
 }
 
-// Save quick actions selection
+// Load quick actions
+function loadQuickActions() {
+  chrome.storage.local.get(['categories', 'quickActions'], (result) => {
+    const categories = result.categories || [
+      'Email', 'Meeting', 'Project Work', 'Admin', 
+      'Break', 'Training', 'Planning', 'Other'
+    ];
+    const quickActions = result.quickActions || categories.slice(0, 6);
+    
+    const quickActionsList = document.getElementById('quickActionsList');
+    quickActionsList.innerHTML = '';
+    
+    categories.forEach(category => {
+      const div = document.createElement('div');
+      div.className = 'checkbox-item';
+      
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.id = `quick-${category}`;
+      checkbox.value = category;
+      checkbox.checked = quickActions.includes(category);
+      
+      const label = document.createElement('label');
+      label.htmlFor = `quick-${category}`;
+      label.textContent = category;
+      
+      div.appendChild(checkbox);
+      div.appendChild(label);
+      quickActionsList.appendChild(div);
+    });
+  });
+}
+
+// Load export settings
+function loadExportSettings() {
+  chrome.storage.local.get(['exportSettings'], (result) => {
+    const settings = result.exportSettings || {
+      defaultDateRange: 'week',
+      includeMultitaskAnalysis: true,
+      includeSummarySheet: true
+    };
+    
+    document.getElementById('dateRangeSelect').value = settings.defaultDateRange;
+    document.getElementById('includeMultitaskAnalysis').checked = settings.includeMultitaskAnalysis;
+    document.getElementById('includeSummarySheet').checked = settings.includeSummarySheet;
+  });
+}
+
+// Load multi-tasking settings
+function loadMultitaskingSettings() {
+  chrome.storage.local.get(['multitaskingSettings'], (result) => {
+    const settings = result.multitaskingSettings || {
+      productivityWeight: 50,
+      autoEndMeeting: true,
+      showMultitaskWarning: false
+    };
+    
+    document.getElementById('productivityWeight').value = settings.productivityWeight;
+    document.getElementById('autoEndMeeting').checked = settings.autoEndMeeting;
+    document.getElementById('showMultitaskWarning').checked = settings.showMultitaskWarning;
+  });
+}
+
+// Load auto-tracking settings
+function loadAutoTrackingSettings() {
+  chrome.storage.local.get(['autoTrackMeetings', 'autoTrackSettings'], (result) => {
+    document.getElementById('autoTrackMeetings').checked = result.autoTrackMeetings || false;
+    
+    const settings = result.autoTrackSettings || {
+      gracePeriod: 2,
+      notifications: true,
+      autoEnd: true
+    };
+    
+    document.getElementById('autoTrackGracePeriod').value = settings.gracePeriod;
+    document.getElementById('autoTrackNotifications').checked = settings.notifications;
+    document.getElementById('autoEndMeetings').checked = settings.autoEnd;
+  });
+}
+
+// Setup event listeners
+function setupEventListeners() {
+  // Client ID
+  document.getElementById('saveClientIdBtn').addEventListener('click', saveClientId);
+  
+  // Account actions
+  document.getElementById('reconnectBtn').addEventListener('click', reconnectAccount);
+  document.getElementById('disconnectBtn').addEventListener('click', disconnectAccount);
+  
+  // Categories
+  document.getElementById('addCategoryBtn').addEventListener('click', addCategory);
+  document.getElementById('newCategoryInput').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') addCategory();
+  });
+  
+  // Quick actions
+  document.getElementById('saveQuickActionsBtn').addEventListener('click', saveQuickActions);
+  
+  // Export settings
+  document.getElementById('saveExportSettingsBtn').addEventListener('click', saveExportSettings);
+  
+  // Multi-tasking settings
+  document.getElementById('saveMultitaskingBtn').addEventListener('click', saveMultitaskingSettings);
+  
+  // Auto-tracking settings
+  document.getElementById('saveAutoTrackingBtn').addEventListener('click', saveAutoTrackingSettings);
+  
+  // Data management
+  document.getElementById('exportAllBtn').addEventListener('click', exportAllData);
+  document.getElementById('backupBtn').addEventListener('click', createBackup);
+  document.getElementById('importBtn').addEventListener('click', () => {
+    document.getElementById('importFile').click();
+  });
+  document.getElementById('importFile').addEventListener('change', importData);
+  document.getElementById('clearDataBtn').addEventListener('click', clearAllData);
+}
+
+// Save client ID
+function saveClientId() {
+  const clientId = document.getElementById('clientIdInput').value.trim();
+  
+  if (!clientId) {
+    alert('Please enter a valid Client ID');
+    return;
+  }
+  
+  chrome.storage.local.set({ clientId }, () => {
+    alert('Client ID saved! You can now connect to Outlook.');
+  });
+}
+
+// Reconnect account
+function reconnectAccount() {
+  chrome.runtime.sendMessage({ action: 'authenticate' }, (response) => {
+    if (response && response.success) {
+      loadAccountStatus();
+      alert('Successfully reconnected!');
+    } else {
+      alert('Connection failed: ' + (response ? response.error : 'Unknown error'));
+    }
+  });
+}
+
+// Disconnect account
+function disconnectAccount() {
+  if (!confirm('Are you sure you want to disconnect your Outlook account?')) return;
+  
+  chrome.storage.local.remove(['accessToken', 'refreshToken', 'tokenExpiry', 'userEmail'], () => {
+    loadAccountStatus();
+    alert('Account disconnected');
+  });
+}
+
+// Add category
+function addCategory() {
+  const input = document.getElementById('newCategoryInput');
+  const newCategory = input.value.trim();
+  
+  if (!newCategory) return;
+  
+  chrome.storage.local.get(['categories'], (result) => {
+    const categories = result.categories || [];
+    
+    if (categories.includes(newCategory)) {
+      alert('Category already exists');
+      return;
+    }
+    
+    categories.push(newCategory);
+    chrome.storage.local.set({ categories }, () => {
+      input.value = '';
+      loadCategories();
+      loadQuickActions();
+      showSuccess('categorySuccess');
+    });
+  });
+}
+
+// Save quick actions
 function saveQuickActions() {
   const checkboxes = document.querySelectorAll('#quickActionsList input[type="checkbox"]:checked');
-  const selected = Array.from(checkboxes).map(cb => cb.value);
   
-  if (selected.length > 6) {
-    alert('Please select no more than 6 quick actions');
+  if (checkboxes.length > 6) {
+    alert('Please select maximum 6 quick actions');
     return;
   }
   
-  if (selected.length === 0) {
-    alert('Please select at least one quick action');
-    return;
-  }
+  const quickActions = Array.from(checkboxes).map(cb => cb.value);
   
-  chrome.storage.local.set({ quickActions: selected }, () => {
+  chrome.storage.local.set({ quickActions }, () => {
     showSuccess('quickActionSuccess');
   });
 }
+
+// Save export settings
+function saveExportSettings() {
+  const exportSettings = {
+    defaultDateRange: document.getElementById('dateRangeSelect').value,
+    includeMultitaskAnalysis: document.getElementById('includeMultitaskAnalysis').checked,
+    includeSummarySheet: document.getElementById('includeSummarySheet').checked
+  };
+  
+  chrome.storage.local.set({ exportSettings }, () => {
+    showSuccess('exportSuccess');
+  });
+}
+
+// Save multi-tasking settings
+function saveMultitaskingSettings() {
+  const multitaskingSettings = {
+    productivityWeight: parseInt(document.getElementById('productivityWeight').value),
+    autoEndMeeting: document.getElementById('autoEndMeeting').checked,
+    showMultitaskWarning: document.getElementById('showMultitaskWarning').checked
+  };
+  
+  chrome.storage.local.set({ multitaskingSettings }, () => {
+    showSuccess('multitaskingSuccess');
+  });
+}
+
+// Save auto-tracking settings
+function saveAutoTrackingSettings() {
+  const autoTrackMeetings = document.getElementById('autoTrackMeetings').checked;
+  const autoTrackSettings = {
+    gracePeriod: parseInt(document.getElementById('autoTrackGracePeriod').value),
+    notifications: document.getElementById('autoTrackNotifications').checked,
+    autoEnd: document.getElementById('autoEndMeetings').checked
+  };
+  
+  chrome.storage.local.set({ autoTrackMeetings, autoTrackSettings }, () => {
+    showSuccess('autoTrackingSuccess');
+    
+    // Notify popup to restart auto-tracking check if enabled
+    if (autoTrackMeetings) {
+      chrome.runtime.sendMessage({ action: 'restartAutoTracking' });
+    }
+  });
+}
+
+// Export all data to Excel
+function exportAllData() {
+  chrome.storage.local.get(['timeEntries'], (result) => {
+    const timeEntries = result.timeEntries || {};
+    
+    if (Object.keys(timeEntries).length === 0) {
+      alert('No data to export');
+      return;
+    }
+    
+    // Prepare all entries
+    const allEntries = [];
+    const multiTaskingAnalysis = [];
+    
+    Object.keys(timeEntries).forEach(date => {
+      const entries = timeEntries[date];
+      
+      let totalMultitaskingTime = 0;
+      let meetingMultitaskingTime = 0;
+      
+      entries.forEach(entry => {
+        const hours = entry.duration / 3600000;
+        
+        allEntries.push({
+          Date: date,
+          Type: entry.type || 'task',
+          Category: entry.category || entry.subject || 'Other',
+          Description: entry.description || entry.subject || '',
+          'Start Time': new Date(entry.startTime).toLocaleTimeString(),
+          'End Time': new Date(entry.endTime).toLocaleTimeString(),
+          'Duration (hours)': hours.toFixed(2),
+          'Multi-tasking': entry.wasMultitasking ? 'Yes' : 'No',
+          'Multi-tasked With': entry.multitaskingWith || ''
+        });
+        
+        if (entry.wasMultitasking) {
+          totalMultitaskingTime += hours;
+          if (entry.type === 'meeting' || entry.multitaskingWith === 'Meeting') {
+            meetingMultitaskingTime += hours;
+          }
+        }
+      });
+      
+      const totalHours = entries.reduce((sum, e) => sum + e.duration / 3600000, 0);
+      const meetingHours = entries.filter(e => e.type === 'meeting' || e.category === 'Meeting')
+        .reduce((sum, e) => sum + e.duration / 3600000, 0);
+      
+      multiTaskingAnalysis.push({
+        Date: date,
+        'Total Hours': totalHours.toFixed(2),
+        'Meeting Hours': meetingHours.toFixed(2),
+        'Multi-tasking Hours': totalMultitaskingTime.toFixed(2),
+        'Meeting Multi-tasking Hours': meetingMultitaskingTime.toFixed(2),
+        'Multi-tasking %': totalHours > 0 ? ((totalMultitaskingTime / totalHours) * 100).toFixed(1) + '%' : '0%',
+        'Meeting Efficiency': meetingHours > 0 ? 
+          ((meetingMultitaskingTime / meetingHours) * 100).toFixed(1) + '% multi-tasked' : 'N/A'
+      });
+    });
+    
+    // Create workbook
+    const wb = XLSX.utils.book_new();
+    
+    // Add sheets
+    const entriesSheet = XLSX.utils.json_to_sheet(allEntries);
+    XLSX.utils.book_append_sheet(wb, entriesSheet, 'All Time Entries');
+    
+    const analysisSheet = XLSX.utils.json_to_sheet(multiTaskingAnalysis);
+    XLSX.utils.book_append_sheet(wb, analysisSheet, 'Multi-tasking Analysis');
+    
+    // Download
+    const filename = `TimeTracker_AllData_${new Date().toISOString().split('T')[0]}.xlsx`;
+    XLSX.writeFile(wb, filename);
+    
+    showSuccess('dataSuccess');
+  });
+}
+
+// Create backup (JSON format)
+function createBackup() {
+  chrome.storage.local.get(null, (data) => {
+    const backup = {
+      version: '2.0.0',
+      timestamp: new Date().toISOString(),
+      data: data
+    };
+    
+    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `TimeTracker_Backup_${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    
+    showSuccess('dataSuccess');
+  });
+}
+
+// Import data
+function importData(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  
+  const reader = new FileReader();
+  reader.onload = function(event) {
+    try {
+      const backup = JSON.parse(event.target.result);
+      
+      if (!backup.data) {
+        throw new Error('Invalid backup file');
+      }
+      
+      if (!confirm('This will replace all existing data. Continue?')) {
+        return;
+      }
+      
+      chrome.storage.local.clear(() => {
+        chrome.storage.local.set(backup.data, () => {
+          loadStatistics();
+          loadCategories();
+          loadQuickActions();
+          loadExportSettings();
+          loadMultitaskingSettings();
+          showSuccess('dataSuccess');
+          alert('Data imported successfully!');
+        });
+      });
+    } catch (error) {
+      alert('Failed to import data: ' + error.message);
+    }
+  };
+  
+  reader.readAsText(file);
+  e.target.value = ''; // Reset file input
+}
+
+// Clear all data
+function clearAllData() {
+  if (!confirm('This will permanently delete ALL your time tracking data. Are you sure?')) return;
+  if (!confirm('This action cannot be undone. Please confirm again.')) return;
+  
+  chrome.storage.local.clear(() => {
+    // Restore default categories
+    const defaultCategories = [
+      'Email', 'Meeting', 'Project Work', 'Admin', 
+      'Break', 'Training', 'Planning', 'Other'
+    ];
+    
+    chrome.storage.local.set({ 
+      categories: defaultCategories,
+      quickActions: defaultCategories.slice(0, 6)
+    }, () => {
+      loadStatistics();
+      loadCategories();
+      loadQuickActions();
+      alert('All data has been cleared');
+    });
+  });
+}
+
+// Show success message
+function showSuccess(elementId) {
+  const element = document.getElementById(elementId);
+  element.classList.add('show');
+  setTimeout(() => {
+    element.classList.remove('show');
+  }, 3000);
+}
+
+// Save categories order after drag and drop
+window.addEventListener('dragend', function() {
+  const categoryItems = document.querySelectorAll('.category-item');
+  const categories = Array.from(categoryItems).map(item => 
+    item.querySelector('.category-name').textContent
+  );
+  
+  chrome.storage.local.set({ categories }, () => {
+    loadQuickActions(); // Refresh quick actions with new order
+  });
+});
