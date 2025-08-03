@@ -1,14 +1,14 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="utf-8">
+  <meta charset="UTF-8">
   <style>
     body {
-      width: 400px;
-      min-height: 500px;
+      width: 350px;
+      min-height: 400px;
       margin: 0;
-      padding: 0;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f3f2f1;
     }
     
     .header {
@@ -18,55 +18,234 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
     
     .header h1 {
       margin: 0;
       font-size: 18px;
+      font-weight: 600;
     }
     
     .auth-status {
-      font-size: 12px;
+      font-size: 11px;
       opacity: 0.9;
+      background: rgba(255,255,255,0.2);
+      padding: 4px 8px;
+      border-radius: 3px;
     }
     
     .container {
       padding: 15px;
     }
     
+    /* Meeting Status Bar */
+    .meeting-status {
+      display: none;
+      background: linear-gradient(90deg, #d83b01, #e74c0e);
+      color: white;
+      padding: 8px;
+      margin: -15px -15px 15px -15px;
+      text-align: center;
+      font-size: 12px;
+      animation: slideDown 0.3s ease;
+    }
+    
+    .meeting-status.active {
+      display: block;
+    }
+    
+    @keyframes slideDown {
+      from {
+        transform: translateY(-100%);
+        opacity: 0;
+      }
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
+    }
+    
+    /* Multi-tasking Indicator */
+    .multitask-indicator {
+      display: none;
+      padding: 8px;
+      background: #fff3cd;
+      border: 1px solid #ffc107;
+      border-radius: 4px;
+      margin-bottom: 10px;
+      font-size: 13px;
+      text-align: center;
+    }
+    
+    .multitask-indicator.active {
+      display: block;
+      animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
+    }
+    
+    .timer-display {
+      font-size: 32px;
+      font-weight: 300;
+      text-align: center;
+      padding: 20px;
+      background: white;
+      border-radius: 8px;
+      margin-bottom: 15px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      transition: all 0.3s ease;
+      position: relative;
+    }
+    
+    /* Enhanced timer display for multi-tasking */
+    .timer-display.multitasking {
+      background: linear-gradient(135deg, #fff 0%, #f0f8ff 100%);
+      border: 2px solid transparent;
+      background-clip: padding-box;
+    }
+    
+    .timer-display.multitasking::before {
+      content: '';
+      position: absolute;
+      inset: -2px;
+      background: linear-gradient(90deg, #d83b01, #0078d4);
+      border-radius: 8px;
+      z-index: -1;
+    }
+    
+    /* Dual timer container */
+    .dual-timer-container {
+      display: none;
+      padding: 10px;
+      background: #f8f9fa;
+      border-radius: 6px;
+      margin-top: 10px;
+      animation: fadeIn 0.3s ease;
+    }
+    
+    .dual-timer-container.active {
+      display: block;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    
+    .timer-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 5px 0;
+    }
+    
+    .timer-label {
+      font-size: 12px;
+      color: #605e5c;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    
+    .timer-value {
+      font-size: 14px;
+      font-weight: 600;
+      font-family: 'Courier New', monospace;
+    }
+    
     .section {
-      margin-bottom: 20px;
+      background: white;
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 15px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
     }
     
     .section-title {
+      font-size: 14px;
       font-weight: 600;
       margin-bottom: 10px;
       color: #323130;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .quick-task-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+    
+    .quick-task-btn {
+      padding: 12px 8px;
+      border: none;
+      background: #e1dfdd;
+      color: #323130;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      transition: all 0.2s;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .quick-task-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .quick-task-btn.active {
+      background: #0078d4;
+      color: white;
+    }
+    
+    .quick-task-btn.meeting-active {
+      background: #d83b01;
+      color: white;
+      animation: meeting-pulse 3s infinite;
+    }
+    
+    @keyframes meeting-pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(216, 59, 1, 0.4); }
+      50% { box-shadow: 0 0 0 8px rgba(216, 59, 1, 0); }
     }
     
     .button {
       background: #0078d4;
       color: white;
       border: none;
-      padding: 10px 20px;
+      padding: 8px 16px;
       border-radius: 4px;
       cursor: pointer;
-      font-size: 14px;
-      margin-right: 10px;
-      margin-bottom: 10px;
+      font-size: 13px;
+      transition: background 0.2s;
     }
     
     .button:hover {
       background: #106ebe;
     }
     
+    .button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    
     .button.secondary {
-      background: #f3f2f1;
-      color: #323130;
+      background: #605e5c;
     }
     
     .button.secondary:hover {
-      background: #e1dfdd;
+      background: #4a4847;
     }
     
     .button.danger {
@@ -74,94 +253,101 @@
     }
     
     .button.danger:hover {
-      background: #b92b00;
+      background: #a52a00;
     }
     
-    .timer-display {
-      font-size: 24px;
-      font-weight: 600;
-      text-align: center;
-      padding: 20px;
-      background: #f3f2f1;
-      border-radius: 8px;
-      margin-bottom: 15px;
-    }
-    
-    .meeting-item,     .task-item {
-      background: #f8f8f8;
-      padding: 12px;
-      margin-bottom: 8px;
-      border-radius: 4px;
-      border-left: 4px solid #0078d4;
-      position: relative;
-    }
-    
-    .task-actions {
-      position: absolute;
-      right: 8px;
-      top: 8px;
-      display: none;
-    }
-    
-    .task-item:hover .task-actions {
+    .task-item {
+      padding: 10px;
+      border-bottom: 1px solid #edebe9;
       display: flex;
-      gap: 4px;
+      justify-content: space-between;
+      align-items: center;
+      transition: background 0.2s;
     }
     
-    .task-action-btn {
-      background: #f3f2f1;
-      border: none;
-      padding: 4px 8px;
-      border-radius: 3px;
-      cursor: pointer;
+    .task-item:hover {
+      background: #faf9f8;
+    }
+    
+    .task-item:last-child {
+      border-bottom: none;
+    }
+    
+    .task-info {
+      flex: 1;
+    }
+    
+    .task-type {
       font-size: 11px;
+      font-weight: 600;
       color: #605e5c;
+      text-transform: uppercase;
+      margin-bottom: 2px;
     }
     
-    .task-action-btn:hover {
-      background: #e1dfdd;
-    }
-    
-    .task-action-btn.delete {
-      color: #d83b01;
-    }
-    
-    .meeting-title, .task-title {
-      font-weight: 500;
+    .task-description {
+      font-size: 13px;
+      color: #323130;
       margin-bottom: 4px;
     }
     
-    .meeting-time, .task-time {
-      font-size: 12px;
-      color: #605e5c;
+    .task-time {
+      font-size: 11px;
+      color: #a19f9d;
+      display: flex;
+      gap: 10px;
     }
     
-    .quick-task-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
+    /* Multi-task indicator in task list */
+    .multitask-tag {
+      display: inline-block;
+      background: #fff3cd;
+      color: #856404;
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 10px;
+      margin-left: 5px;
     }
     
-    .quick-task-btn {
-      background: #e1dfdd;
+    .task-actions {
+      display: flex;
+      gap: 5px;
+    }
+    
+    .task-actions button {
+      padding: 4px 8px;
+      font-size: 11px;
       border: none;
-      padding: 12px;
-      border-radius: 4px;
+      border-radius: 3px;
       cursor: pointer;
-      font-size: 13px;
       transition: all 0.2s;
     }
     
-    .quick-task-btn:hover {
-      background: #d2d0ce;
-      transform: translateY(-1px);
+    .edit-btn {
+      background: #e1dfdd;
+      color: #323130;
     }
     
-    .stats {
-      display: flex;
-      justify-content: space-around;
-      margin-top: 15px;
-      padding-top: 15px;
+    .edit-btn:hover {
+      background: #d2d0ce;
+    }
+    
+    .delete-btn {
+      background: #fde7e9;
+      color: #a80000;
+    }
+    
+    .delete-btn:hover {
+      background: #fdc5c9;
+    }
+    
+    /* Stats summary */
+    .stats-summary {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+      margin-top: 10px;
+      padding-top: 10px;
       border-top: 1px solid #edebe9;
     }
     
@@ -170,40 +356,20 @@
     }
     
     .stat-value {
-      font-size: 20px;
+      font-size: 18px;
       font-weight: 600;
       color: #0078d4;
     }
     
     .stat-label {
-      font-size: 12px;
+      font-size: 11px;
       color: #605e5c;
+      margin-top: 2px;
     }
     
-    .loading {
-      text-align: center;
-      padding: 20px;
-      color: #605e5c;
-    }
-    
-    .error {
-      background: #fde7e9;
-      color: #a80000;
-      padding: 10px;
-      border-radius: 4px;
-      margin-bottom: 10px;
-    }
-    
-    .manual-entry-form {
-      background: #f3f2f1;
-      padding: 15px;
-      border-radius: 8px;
-      margin-top: 15px;
-      display: none;
-    }
-    
+    /* Form styling */
     .form-group {
-      margin-bottom: 12px;
+      margin-bottom: 10px;
     }
     
     .form-group label {
@@ -213,20 +379,20 @@
       margin-bottom: 4px;
     }
     
-    .form-group input, .form-group select {
-      width: 100%;
-      padding: 8px;
-      border: 1px solid #d2d0ce;
-      border-radius: 4px;
-      font-size: 13px;
-    }
-    
-    .form-group input[type="datetime-local"] {
+    .form-group input[type="text"],
+    .form-group input[type="number"],
+    .form-group input[type="datetime-local"],
+    .form-group select {
       width: 100%;
       padding: 6px 8px;
       border: 1px solid #d2d0ce;
       border-radius: 4px;
       font-size: 13px;
+      box-sizing: border-box;
+    }
+    
+    .form-group input[type="checkbox"] {
+      margin-right: 6px;
     }
     
     .form-actions {
@@ -273,6 +439,47 @@
       color: #495057;
     }
     
+    /* Meeting item styling */
+    .meeting-item {
+      padding: 10px;
+      border-bottom: 1px solid #edebe9;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .meeting-item:last-child {
+      border-bottom: none;
+    }
+    
+    .loading {
+      text-align: center;
+      padding: 20px;
+      color: #605e5c;
+    }
+    
+    /* Notification toast */
+    .notification {
+      position: fixed;
+      top: 60px;
+      right: 10px;
+      background: #323130;
+      color: white;
+      padding: 10px 15px;
+      border-radius: 4px;
+      z-index: 1000;
+      opacity: 0;
+      transition: opacity 0.3s;
+      font-size: 13px;
+      max-width: 200px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      pointer-events: none;
+    }
+    
+    .notification.show {
+      opacity: 1;
+    }
+    
     #loginSection, #mainContent {
       display: none;
     }
@@ -294,23 +501,57 @@
   </div>
   
   <div class="container">
+    <!-- Meeting Status Bar -->
+    <div class="meeting-status" id="meetingStatus">
+      <span>👥 Currently in a meeting - You can start other tasks while meeting continues</span>
+    </div>
+    
+    <!-- Multi-tasking Indicator -->
+    <div class="multitask-indicator" id="multitaskIndicator">
+      ⚡ Multi-tasking Mode Active - Tracking multiple activities
+    </div>
+    
     <div id="loginSection" class="info-message">
       <p><strong>Optional:</strong> Connect your Outlook calendar to automatically import meetings.</p>
       <button class="button" id="connectBtn">Connect to Outlook</button>
     </div>
     
     <div id="mainContent">
+      <!-- Main Timer Display -->
       <div class="timer-display" id="timerDisplay">00:00:00</div>
       
+      <!-- Dual Timer Container (shows when multi-tasking) -->
+      <div class="dual-timer-container" id="dualTimerContainer">
+        <div class="timer-row">
+          <span class="timer-label">
+            <span style="color: #d83b01;">👥</span> Meeting
+          </span>
+          <span class="timer-value" id="meetingTime">00:00:00</span>
+        </div>
+        <div class="timer-row">
+          <span class="timer-label">
+            <span style="color: #0078d4;">💼</span> <span id="taskName">Task</span>
+          </span>
+          <span class="timer-value" id="taskTime">00:00:00</span>
+        </div>
+      </div>
+      
+      <!-- Quick Actions Section -->
       <div class="section">
-        <div class="section-title">Quick Actions</div>
+        <div class="section-title">
+          Quick Actions
+          <span style="font-size: 11px; font-weight: normal; color: #605e5c;">
+            Meeting mode allows multi-tasking
+          </span>
+        </div>
         <div class="quick-task-grid" id="quickTaskGrid">
           <!-- Will be populated from categories -->
         </div>
       </div>
       
+      <!-- Today's Summary -->
       <div class="section">
-        <div class="section-title">View Date Range</div>
+        <div class="section-title">Time Entries</div>
         <div class="date-controls">
           <select id="dateRangeSelect">
             <option value="today">Today</option>
@@ -319,92 +560,110 @@
             <option value="lastweek">Last Week</option>
             <option value="month">This Month</option>
             <option value="custom">Custom Range</option>
+            <option value="all">All Time</option>
           </select>
-          <div id="customDateRange" style="display: none; margin-top: 10px;">
-            <input type="date" id="startDate" style="margin-right: 5px;">
+          
+          <div id="customDateRange" style="display: none;">
+            <input type="date" id="startDate">
             <span>to</span>
-            <input type="date" id="endDate" style="margin-left: 5px;">
-            <button class="button secondary" id="applyDateRange" style="margin-left: 10px;">Apply</button>
+            <input type="date" id="endDate">
+            <button class="button" id="applyDateRange" style="width: 100%;">Apply Range</button>
           </div>
         </div>
-      </div>
-      
-      <div class="section">
-        <button class="button" id="syncBtn" style="display:none;">🔄 Sync Calendar</button>
-        <button class="button secondary" id="exportBtn">📊 Export Excel/CSV</button>
-        <button class="button secondary" id="manualEntryBtn">➕ Add Manual Entry</button>
-      </div>
-      
-      <div class="manual-entry-form" id="manualEntryForm">
-        <div class="section-title">Add Time Entry</div>
-        <div class="form-group">
-          <label>Task Category</label>
-          <select id="manualCategory">
-            <option value="Email">Email</option>
-            <option value="Meeting">Meeting</option>
-            <option value="Project Work">Project Work</option>
-            <option value="Admin">Admin</option>
-            <option value="Break">Break</option>
-            <option value="Training">Training</option>
-            <option value="Other">Other</option>
-          </select>
+        
+        <div id="tasksList" style="margin-top: 10px;">
+          <!-- Tasks will be listed here -->
         </div>
-        <div class="form-group">
-          <label>Description (optional)</label>
-          <input type="text" id="manualDescription" placeholder="What did you work on?">
-        </div>
-        <div class="form-group">
-          <label>Duration (minutes)</label>
-          <input type="number" id="manualDuration" min="1" value="30">
-        </div>
-        <div class="form-group">
-          <label>When?</label>
-          <select id="manualWhen">
-            <option value="now">Just now</option>
-            <option value="earlier">Earlier today</option>
-            <option value="custom">Specific time</option>
-          </select>
-        </div>
-        <div class="form-group" id="customTimeGroup" style="display: none;">
-          <label>Date and Time</label>
-          <input type="datetime-local" id="customDateTime">
-        </div>
-        <div class="form-actions">
-          <button class="button" id="saveManualBtn">Save</button>
-          <button class="button secondary" id="cancelManualBtn">Cancel</button>
-        </div>
-      </div>
-      
-      <div class="section" id="meetingsSection">
-        <div class="section-title">Meetings</div>
-        <div id="meetingsList">Loading meetings...</div>
-      </div>
-      
-      <div class="section">
-        <div class="section-title">Logged Tasks</div>
-        <div id="tasksList">No tasks logged yet</div>
-      </div>
-      
-      <div class="section">
-        <div class="section-title">Stats</div>
-        <div class="date-summary" id="dateSummary">Showing: Today</div>
-        <div class="stats">
+        
+        <div class="stats-summary">
           <div class="stat-item">
-            <div class="stat-value" id="totalTime">0h</div>
-            <div class="stat-label">Total Time</div>
+            <div class="stat-value" id="totalHours">0.0</div>
+            <div class="stat-label">Total Hours</div>
           </div>
           <div class="stat-item">
-            <div class="stat-value" id="meetingTime">0h</div>
-            <div class="stat-label">In Meetings</div>
+            <div class="stat-value" id="multitaskHours">0.0</div>
+            <div class="stat-label">Multi-task Hours</div>
           </div>
-          <div class="stat-item">
-            <div class="stat-value" id="taskTime">0h</div>
-            <div class="stat-label">Tasks</div>
+        </div>
+      </div>
+      
+      <!-- Manual Entry Section -->
+      <div class="section">
+        <div class="section-title">Manual Entry</div>
+        <button class="button" id="showManualEntryBtn">+ Add Time Entry</button>
+        
+        <div id="manualEntryForm" style="display: none; margin-top: 10px;">
+          <div class="form-group">
+            <label>Category:</label>
+            <select id="manualCategory">
+              <!-- Categories will be populated here -->
+            </select>
           </div>
+          
+          <div class="form-group">
+            <label>Description:</label>
+            <input type="text" id="manualDescription" placeholder="What did you work on?">
+          </div>
+          
+          <div class="form-group">
+            <label>Duration (minutes):</label>
+            <input type="number" id="manualDuration" value="30" min="1">
+          </div>
+          
+          <div class="form-group">
+            <label>When:</label>
+            <select id="manualWhen">
+              <option value="now">Just now</option>
+              <option value="earlier">Earlier today</option>
+              <option value="custom">Custom time</option>
+            </select>
+          </div>
+          
+          <div id="customTimeGroup" style="display: none;">
+            <div class="form-group">
+              <input type="datetime-local" id="customDateTime">
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label>
+              <input type="checkbox" id="wasMultitasking">
+              Was multi-tasking during this time
+            </label>
+          </div>
+          
+          <div class="form-actions">
+            <button class="button" id="saveManualBtn">Save Entry</button>
+            <button class="button secondary" id="cancelManualBtn">Cancel</button>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Export Section -->
+      <div class="section">
+        <div class="section-title">Export & Analysis</div>
+        <button class="button" id="exportBtn" style="width: 100%;">
+          📊 Export to Excel with Multi-task Analysis
+        </button>
+      </div>
+      
+      <!-- Meetings Section (if connected) -->
+      <div class="section" id="meetingsSection" style="display: none;">
+        <div class="section-title">
+          Today's Meetings
+          <button class="button" id="syncBtn" style="font-size: 11px; padding: 4px 8px;">
+            Sync
+          </button>
+        </div>
+        <div id="meetingsList">
+          <!-- Meetings will be loaded here -->
         </div>
       </div>
     </div>
   </div>
+  
+  <!-- Notification Toast -->
+  <div class="notification" id="notification"></div>
   
   <script src="xlsx.min.js"></script>
   <script src="popup.js"></script>
