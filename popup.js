@@ -13,46 +13,124 @@ document.addEventListener('DOMContentLoaded', async function() {
   loadCategories();
   initializeDateInputs();
   loadDataForDateRange();
-  updateTimer();
+  checkForRunningTimer(); // Check if timer is running from another window
+  setInterval(updateTimer, 1000); // Always run timer update
 });
 
-// Load categories for manual entry dropdown
+// Load categories for manual entry dropdown and quick actions
 function loadCategories() {
-  chrome.storage.local.get(['categories'], (result) => {
+  chrome.storage.local.get(['categories', 'quickActions', 'runningTimer'], (result) => {
     const categories = result.categories || [
       'Email', 'Meeting', 'Project Work', 'Admin', 
       'Break', 'Training', 'Planning', 'Other'
     ];
     
+    // Update manual entry dropdown
     const select = document.getElementById('manualCategory');
     select.innerHTML = categories.map(cat => 
       `<option value="${cat}">${cat}</option>`
     ).join('');
+    
+    // Determine which categories to show as quick actions
+    // Use stored quick actions or default to first 6 categories
+    const quickActions = result.quickActions || categories.slice(0, 6);
+    
+    // Icons for common categories
+    const icons = {
+      'Email': '📧',
+      'Meeting': '👥',
+      'Project Work': '💻',
+      'Break': '☕',
+      'Admin': '📋',
+      'Training': '📚',
+      'Planning': '📅',
+      'Other': '📝',
+      'Phone Call': '📞',
+      'Research': '🔍'
+    };
+    
+    // Populate quick action buttons
+    const grid = document.getElementById('quickTaskGrid');
+    grid.innerHTML = quickActions.map(cat => {
+      const icon = icons[cat] || '▶️';
+      return `<button class="quick-task-btn" data-task="${cat}">${icon} ${cat}</button>`;
+    }).join('');
+    
+    // Re-attach event listeners to new buttons
+    setupQuickTaskListeners();
+    
+    // If timer is running, highlight the active button
+    if (result.runningTimer && result.runningTimer.task) {
+      document.querySelectorAll('.quick-task-btn').forEach(btn => {
+        if (btn.getAttribute('data-task') === result.runningTimer.task) {
+          btn.style.background = '#0078d4';
+          btn.style.color = 'white';
+        }
+      });
+    }
   });
 }
 
 // Check authentication status
 async function checkAuthStatus() {
-  chrome.storage.local.get('accessToken', (result) => {
+  chrome.storage.local.get(['accessToken', 'tokenTimestamp', 'clientId'], (result) => {
     // Always show main content - time tracking works without Outlook
     document.getElementById('mainContent').style.display = 'block';
     
-    if (result.accessToken) {
-      document.getElementById('loginSection').style.display = 'none';
-      document.getElementById('authStatus').textContent = '✓ Connected';
-      document.getElementById('syncBtn').style.display = 'inline-block';
-      document.getElementById('meetingsSection').style.display = 'block';
-      fetchTodayMeetings();
-    } else {
+    // Check if client ID is configured
+    if (!result.clientId || result.clientId === 'YOUR_AZURE_APP_CLIENT_ID') {
+      // No valid client ID configured
       document.getElementById('loginSection').style.display = 'block';
-      document.getElementById('authStatus').textContent = 'Not connected';
+      document.getElementById('authStatus').textContent = 'Not configured';
       document.getElementById('syncBtn').style.display = 'none';
       document.getElementById('meetingsSection').style.display = 'none';
-      // Update meetings list to show connection prompt
-      document.getElementById('meetingsList').innerHTML = 
-        '<p style="text-align: center; color: #605e5c;">Connect to Outlook to see your meetings</p>';
+      
+      // Update connect button to go to settings
+      const connectBtn = document.getElementById('connectBtn');
+      connectBtn.textContent = 'Configure Outlook';
+      connectBtn.onclick = function() {
+        chrome.runtime.openOptionsPage();
+      };
+      
+      return;
+    }
+    
+    if (result.accessToken) {
+      // Check if token is likely still valid (less than 55 minutes old)
+      const tokenAge = result.tokenTimestamp ? Date.now() - result.tokenTimestamp : Infinity;
+      
+      if (tokenAge < 55 * 60 * 1000) {
+        // Token should still be valid
+        document.getElementById('loginSection').style.display = 'none';
+        document.getElementById('authStatus').textContent = '✓ Connected';
+        document.getElementById('syncBtn').style.display = 'inline-block';
+        document.getElementById('meetingsSection').style.display = 'block';
+        
+        // Try to fetch meetings, but handle failure gracefully
+        fetchTodayMeetings().catch(error => {
+          console.error('Failed to fetch meetings:', error);
+          // Token might be invalid, prompt to reconnect
+          document.getElementById('meetingsList').innerHTML = 
+            '<p style="text-align: center; color: #a80000;">Failed to load meetings. Please reconnect to Outlook.</p>';
+        });
+      } else {
+        // Token is expired, need to reconnect
+        handleDisconnectedState();
+      }
+    } else {
+      handleDisconnectedState();
     }
   });
+}
+
+// Handle disconnected state
+function handleDisconnectedState() {
+  document.getElementById('loginSection').style.display = 'block';
+  document.getElementById('authStatus').textContent = 'Not connected';
+  document.getElementById('syncBtn').style.display = 'none';
+  document.getElementById('meetingsSection').style.display = 'none';
+  document.getElementById('meetingsList').innerHTML = 
+    '<p style="text-align: center; color: #605e5c;">Connect to Outlook to see your meetings</p>';
 }
 
 // Setup event listeners
@@ -67,46 +145,6 @@ function setupEventListeners() {
   // Date range selector
   document.getElementById('dateRangeSelect').addEventListener('change', handleDateRangeChange);
   document.getElementById('applyDateRange').addEventListener('click', applyCustomDateRange);
-  
-  // Quick task buttons
-  document.querySelectorAll('.quick-task-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      const taskType = e.target.getAttribute('data-task');
-      
-      // If timer is running for this task, just stop it
-      if (currentTimer && currentTask === taskType) {
-        stopTimer();
-        return;
-      }
-      
-      // If starting a new timer, ask for description based on task type
-      let description = null;
-      
-      // Always prompt for "Other"
-      if (taskType === 'Other') {
-        description = prompt('What type of task is this?');
-        if (!description) return; // Don't start if cancelled
-      } 
-      // Optionally prompt for other task types
-      else if (['Meeting', 'Project Work', 'Email'].includes(taskType)) {
-        const promptText = {
-          'Meeting': 'Meeting topic/attendees (optional):',
-          'Project Work': 'What project are you working on? (optional):',
-          'Email': 'Email subject/recipient (optional):'
-        };
-        description = prompt(promptText[taskType] || 'Details (optional):');
-        // Allow empty description for non-Other tasks
-      }
-      
-      // Stop current timer if running
-      if (currentTimer) {
-        stopTimer();
-      }
-      
-      // Start new timer
-      startTimer(taskType, description);
-    });
-  });
   
   // Manual entry form event listeners
   document.getElementById('manualCategory').addEventListener('change', function() {
@@ -143,6 +181,49 @@ function setupEventListeners() {
   });
 }
 
+// Setup quick task button listeners (called after categories load)
+function setupQuickTaskListeners() {
+  document.querySelectorAll('.quick-task-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const taskType = e.target.getAttribute('data-task');
+      
+      // If timer is running for this task, just stop it
+      if (currentTimer && currentTask === taskType) {
+        stopTimer();
+        return;
+      }
+      
+      // If starting a new timer, ask for description based on task type
+      let description = null;
+      
+      // Always prompt for "Other"
+      if (taskType === 'Other') {
+        description = prompt('What type of task is this?');
+        if (!description) return; // Don't start if cancelled
+      } 
+      // Optionally prompt for task types that benefit from details
+      else if (['Meeting', 'Project Work', 'Email', 'Admin'].includes(taskType)) {
+        const promptText = {
+          'Meeting': 'Meeting topic/attendees (optional):',
+          'Project Work': 'What project are you working on? (optional):',
+          'Email': 'Email subject/recipient (optional):',
+          'Admin': 'What admin task? (optional):'
+        };
+        description = prompt(promptText[taskType] || 'Details (optional):');
+        // Allow empty description for non-Other tasks
+      }
+      
+      // Stop current timer if running
+      if (currentTimer) {
+        stopTimer();
+      }
+      
+      // Start new timer
+      startTimer(taskType, description);
+    });
+  });
+}
+
 // Authenticate with Outlook
 async function authenticate() {
   document.getElementById('connectBtn').disabled = true;
@@ -159,12 +240,50 @@ async function authenticate() {
   });
 }
 
+// Check for running timer from storage
+function checkForRunningTimer() {
+  chrome.storage.local.get(['runningTimer'], (result) => {
+    if (result.runningTimer) {
+      const { task, description, startTimeStamp } = result.runningTimer;
+      
+      // Check if timer is still valid (not older than 24 hours)
+      const elapsed = Date.now() - startTimeStamp;
+      if (elapsed < 24 * 60 * 60 * 1000) { // Less than 24 hours
+        currentTask = task;
+        currentTaskDescription = description;
+        startTime = startTimeStamp;
+        currentTimer = true; // Just mark as running, don't create new interval
+        
+        // Update UI to show running state
+        document.querySelectorAll('.quick-task-btn').forEach(btn => {
+          if (btn.getAttribute('data-task') === task) {
+            btn.style.background = '#0078d4';
+            btn.style.color = 'white';
+          }
+        });
+      } else {
+        // Clear stale timer
+        chrome.storage.local.remove('runningTimer');
+      }
+    }
+  });
+}
+
 // Start timer
 function startTimer(taskType, description = null) {
   currentTask = taskType;
   currentTaskDescription = description;
   startTime = Date.now();
-  currentTimer = setInterval(updateTimer, 1000);
+  currentTimer = true; // Just mark as running
+  
+  // Save timer state to storage for sync across windows
+  chrome.storage.local.set({
+    runningTimer: {
+      task: taskType,
+      description: description,
+      startTimeStamp: startTime
+    }
+  });
   
   // Update UI
   document.querySelectorAll('.quick-task-btn').forEach(btn => {
@@ -182,12 +301,14 @@ function startTimer(taskType, description = null) {
 function stopTimer() {
   if (!currentTimer) return;
   
-  clearInterval(currentTimer);
   const duration = Date.now() - startTime;
+  
+  // Determine the type based on category
+  const entryType = (currentTask === 'Meeting') ? 'meeting' : 'task';
   
   // Save time entry
   saveTimeEntry({
-    type: 'task',
+    type: entryType,
     category: currentTask,
     description: currentTaskDescription || '',
     startTime: new Date(startTime).toISOString(),
@@ -195,6 +316,9 @@ function stopTimer() {
     duration: duration,
     date: new Date().toDateString()
   });
+  
+  // Clear timer from storage
+  chrome.storage.local.remove('runningTimer');
   
   // Reset
   currentTimer = null;
@@ -209,20 +333,43 @@ function stopTimer() {
   });
   
   document.getElementById('timerDisplay').textContent = '00:00:00';
-  loadDataForDateRange(); // Use current date range instead of just today
 }
 
 // Update timer display
 function updateTimer() {
-  if (!currentTimer || !startTime) return;
-  
-  const elapsed = Date.now() - startTime;
-  const hours = Math.floor(elapsed / 3600000);
-  const minutes = Math.floor((elapsed % 3600000) / 60000);
-  const seconds = Math.floor((elapsed % 60000) / 1000);
-  
-  document.getElementById('timerDisplay').textContent = 
-    `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  // Check for timer state from storage first
+  if (!currentTimer || !startTime) {
+    chrome.storage.local.get(['runningTimer'], (result) => {
+      if (result.runningTimer) {
+        const { task, description, startTimeStamp } = result.runningTimer;
+        const elapsed = Date.now() - startTimeStamp;
+        
+        // Check if timer is still valid (not older than 24 hours)
+        if (elapsed < 24 * 60 * 60 * 1000) {
+          const hours = Math.floor(elapsed / 3600000);
+          const minutes = Math.floor((elapsed % 3600000) / 60000);
+          const seconds = Math.floor((elapsed % 60000) / 1000);
+          
+          document.getElementById('timerDisplay').textContent = 
+            `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        } else {
+          // Clear stale timer
+          chrome.storage.local.remove('runningTimer');
+          document.getElementById('timerDisplay').textContent = '00:00:00';
+        }
+      } else {
+        document.getElementById('timerDisplay').textContent = '00:00:00';
+      }
+    });
+  } else {
+    const elapsed = Date.now() - startTime;
+    const hours = Math.floor(elapsed / 3600000);
+    const minutes = Math.floor((elapsed % 3600000) / 60000);
+    const seconds = Math.floor((elapsed % 60000) / 1000);
+    
+    document.getElementById('timerDisplay').textContent = 
+      `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  }
 }
 
 // Fetch today's meetings
@@ -235,17 +382,27 @@ async function fetchTodayMeetings() {
   const tomorrow = new Date(today);
   tomorrow.setDate(tomorrow.getDate() + 1);
   
-  chrome.runtime.sendMessage({
-    action: 'fetchEvents',
-    startDate: today.toISOString(),
-    endDate: tomorrow.toISOString()
-  }, (response) => {
-    if (response.success) {
-      displayMeetings(response.events);
-      saveMeetings(response.events);
-    } else {
-      meetingsList.innerHTML = `<div class="error">Failed to load meetings: ${response.error}</div>`;
-    }
+  return new Promise((resolve, reject) => {
+    chrome.runtime.sendMessage({
+      action: 'fetchEvents',
+      startDate: today.toISOString(),
+      endDate: tomorrow.toISOString()
+    }, (response) => {
+      if (response && response.success) {
+        displayMeetings(response.events);
+        saveMeetings(response.events);
+        resolve(response.events);
+      } else {
+        const error = response ? response.error : 'Unknown error';
+        meetingsList.innerHTML = `<div class="error">Failed to load meetings: ${error}</div>`;
+        
+        // If authentication error, update UI to show disconnected
+        if (error.includes('401') || error.includes('auth') || error.includes('token')) {
+          handleDisconnectedState();
+        }
+        reject(error);
+      }
+    });
   });
 }
 
@@ -280,8 +437,10 @@ function displayMeetings(meetings) {
 function saveMeetings(meetings) {
   const today = new Date().toDateString();
   const meetingEntries = meetings.map(meeting => ({
-    type: 'meeting',
+    type: 'meeting', // Ensure type is 'meeting'
+    category: 'Meeting', // Add category for consistency
     subject: meeting.subject,
+    description: meeting.subject, // Use subject as description
     startTime: meeting.start.dateTime,
     endTime: meeting.end.dateTime,
     duration: new Date(meeting.end.dateTime) - new Date(meeting.start.dateTime),
@@ -316,7 +475,10 @@ function saveTimeEntry(entry) {
     }
     
     timeEntries[entryDate].push(entry);
-    chrome.storage.local.set({ timeEntries });
+    chrome.storage.local.set({ timeEntries }, () => {
+      // Immediately reload data after saving
+      loadDataForDateRange();
+    });
   });
 }
 
@@ -443,22 +605,32 @@ function loadDataForDateRange() {
       }
     });
     
-    // Calculate stats
+    // Calculate stats - Properly separate meeting vs task time
     let totalTime = 0;
     let meetingTime = 0;
     let taskTime = 0;
-    const tasks = [];
-    const meetings = [];
+    const manualEntries = []; // All manually logged entries (tasks and meetings)
+    const outlookMeetings = []; // Outlook imported meetings
     
     rangeEntries.forEach(entry => {
+      totalTime += entry.duration;
+      
       if (entry.type === 'meeting') {
         meetingTime += entry.duration;
-        meetings.push(entry);
+        
+        // Separate Outlook meetings from manually logged meetings
+        if (entry.subject && entry.organizer) {
+          // This is an Outlook meeting
+          outlookMeetings.push(entry);
+        } else {
+          // This is a manually logged meeting
+          manualEntries.push(entry);
+        }
       } else {
+        // This is a task
         taskTime += entry.duration;
-        tasks.push(entry);
+        manualEntries.push(entry);
       }
-      totalTime += entry.duration;
     });
     
     // Update stats
@@ -469,9 +641,11 @@ function loadDataForDateRange() {
     // Update section titles with date range
     updateSectionTitles(startDate, endDate);
     
-    // Display tasks and meetings
-    displayTasks(tasks);
-    displayRangeMeetings(meetings);
+    // Display manually logged entries (both tasks and meetings) in the tasks section
+    displayTasks(manualEntries);
+    
+    // Display Outlook meetings in the meetings section
+    displayRangeMeetings(outlookMeetings);
   });
 }
 
@@ -534,7 +708,8 @@ function displayRangeMeetings(meetings) {
   
   if (!document.getElementById('meetingsSection').style.display || 
       document.getElementById('meetingsSection').style.display === 'none') {
-    return; // Don't display if not connected to Outlook
+    // Don't display if not connected to Outlook
+    return;
   }
   
   if (meetings.length === 0) {
@@ -550,9 +725,12 @@ function displayRangeMeetings(meetings) {
     const end = new Date(meeting.endTime);
     const duration = meeting.duration / 60000; // minutes
     
+    // Use subject or description for display
+    const title = meeting.subject || meeting.description || meeting.category || 'Meeting';
+    
     return `
       <div class="meeting-item">
-        <div class="meeting-title">${meeting.subject || meeting.description || 'Meeting'}</div>
+        <div class="meeting-title">${title}</div>
         <div class="meeting-time">
           ${start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} 
           ${start.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - 
@@ -637,7 +815,7 @@ function editTask(index) {
       
       if (entryDate >= startDate && entryDate <= endDate) {
         timeEntries[dateStr].forEach(entry => {
-          if (entry.type === 'task') {
+          if (entry.type === 'task' || entry.type === 'meeting') {
             allTasks.push({ ...entry, date: dateStr });
           }
         });
@@ -671,7 +849,9 @@ function editTask(index) {
         );
         
         if (originalIndex !== -1) {
+          // Update category and determine new type
           dateEntries[originalIndex].category = newCategory || task.category;
+          dateEntries[originalIndex].type = (newCategory === 'Meeting') ? 'meeting' : 'task';
           dateEntries[originalIndex].duration = parseInt(newDuration) * 60000;
           dateEntries[originalIndex].description = newDescription;
           
@@ -705,7 +885,7 @@ function deleteTask(index) {
       
       if (entryDate >= startDate && entryDate <= endDate) {
         timeEntries[dateStr].forEach(entry => {
-          if (entry.type === 'task') {
+          if (entry.type === 'task' || entry.type === 'meeting') {
             allTasks.push({ ...entry, date: dateStr });
           }
         });
@@ -939,8 +1119,11 @@ function saveManualEntry() {
   
   const startTime = new Date(endTime.getTime() - duration);
   
+  // Determine the type based on category
+  const entryType = (category === 'Meeting') ? 'meeting' : 'task';
+  
   const entry = {
-    type: 'task',
+    type: entryType,
     category: category,
     description: description,
     startTime: startTime.toISOString(),

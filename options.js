@@ -22,15 +22,25 @@ function setupEventListeners() {
   document.getElementById('saveSettingsBtn').addEventListener('click', saveSettings);
   document.getElementById('exportAllBtn').addEventListener('click', exportAllData);
   document.getElementById('clearDataBtn').addEventListener('click', clearAllData);
+  document.getElementById('saveClientIdBtn').addEventListener('click', saveClientId);
+  document.getElementById('saveQuickActionsBtn').addEventListener('click', saveQuickActions);
+  
+  // Add drag and drop for category reordering
+  setupCategoryDragDrop();
 }
 
 function loadSettings() {
-  chrome.storage.local.get(['categories', 'exportSettings'], (result) => {
+  chrome.storage.local.get(['categories', 'exportSettings', 'clientId', 'quickActions'], (result) => {
     const categories = result.categories || defaultCategories;
     displayCategories(categories);
+    displayQuickActions(categories, result.quickActions);
     
     if (result.exportSettings) {
       document.getElementById('dateRangeSelect').value = result.exportSettings.dateRange || 'week';
+    }
+    
+    if (result.clientId) {
+      document.getElementById('clientIdInput').value = result.clientId;
     }
   });
 }
@@ -38,7 +48,8 @@ function loadSettings() {
 function displayCategories(categories) {
   const list = document.getElementById('categoryList');
   list.innerHTML = categories.map((cat, index) => `
-    <li class="category-item">
+    <li class="category-item" draggable="true" data-index="${index}">
+      <span class="drag-handle" style="cursor: move; margin-right: 10px;">☰</span>
       <span>${cat}</span>
       <button class="button danger remove-category-btn" data-index="${index}">Remove</button>
     </li>
@@ -51,6 +62,9 @@ function displayCategories(categories) {
       removeCategory(index);
     });
   });
+  
+  // Re-setup drag and drop
+  setupCategoryDragDrop();
 }
 
 function addCategory() {
@@ -65,6 +79,7 @@ function addCategory() {
       categories.push(category);
       chrome.storage.local.set({ categories }, () => {
         displayCategories(categories);
+        displayQuickActions(categories, null); // Refresh quick actions list
         input.value = '';
         showSuccess('categorySuccess');
       });
@@ -73,11 +88,18 @@ function addCategory() {
 }
 
 function removeCategory(index) {
-  chrome.storage.local.get(['categories'], (result) => {
+  chrome.storage.local.get(['categories', 'quickActions'], (result) => {
     const categories = result.categories || defaultCategories;
+    const removedCategory = categories[index];
     categories.splice(index, 1);
-    chrome.storage.local.set({ categories }, () => {
+    
+    // Also remove from quick actions if present
+    let quickActions = result.quickActions || [];
+    quickActions = quickActions.filter(qa => qa !== removedCategory);
+    
+    chrome.storage.local.set({ categories, quickActions }, () => {
       displayCategories(categories);
+      displayQuickActions(categories, quickActions);
       showSuccess('categorySuccess');
     });
   });
@@ -170,4 +192,122 @@ function showSuccess(elementId) {
   setTimeout(() => {
     element.style.display = 'none';
   }, 3000);
+}
+
+// Save client ID
+function saveClientId() {
+  const clientId = document.getElementById('clientIdInput').value.trim();
+  
+  if (!clientId) {
+    alert('Please enter a valid Client ID');
+    return;
+  }
+  
+  chrome.storage.local.set({ clientId }, () => {
+    // Send message to background script to update client ID
+    chrome.runtime.sendMessage({ action: 'updateClientId', clientId }, (response) => {
+      if (response && response.success) {
+        showSuccess('categorySuccess');
+        alert('Client ID saved! You may need to reconnect to Outlook.');
+      }
+    });
+  });
+}
+
+// Setup drag and drop for category reordering
+function setupCategoryDragDrop() {
+  const list = document.getElementById('categoryList');
+  let draggedItem = null;
+  
+  list.addEventListener('dragstart', (e) => {
+    if (e.target.classList.contains('category-item')) {
+      draggedItem = e.target;
+      e.target.style.opacity = '0.5';
+      e.target.classList.add('dragging');
+    }
+  });
+  
+  list.addEventListener('dragend', (e) => {
+    if (e.target.classList.contains('category-item')) {
+      e.target.style.opacity = '';
+      e.target.classList.remove('dragging');
+    }
+  });
+  
+  list.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    const afterElement = getDragAfterElement(list, e.clientY);
+    if (afterElement == null) {
+      list.appendChild(draggedItem);
+    } else {
+      list.insertBefore(draggedItem, afterElement);
+    }
+  });
+  
+  list.addEventListener('drop', (e) => {
+    e.preventDefault();
+    
+    // Save new order
+    const newOrder = [];
+    document.querySelectorAll('.category-item span:not(.drag-handle):not(:last-child)').forEach(span => {
+      newOrder.push(span.textContent);
+    });
+    
+    chrome.storage.local.set({ categories: newOrder }, () => {
+      // Refresh quick actions with new order
+      chrome.storage.local.get(['quickActions'], (result) => {
+        displayQuickActions(newOrder, result.quickActions);
+      });
+      showSuccess('categorySuccess');
+    });
+  });
+}
+
+// Get element after which to insert dragged item
+function getDragAfterElement(container, y) {
+  const draggableElements = [...container.querySelectorAll('.category-item:not(.dragging)')];
+  
+  return draggableElements.reduce((closest, child) => {
+    const box = child.getBoundingClientRect();
+    const offset = y - box.top - box.height / 2;
+    
+    if (offset < 0 && offset > closest.offset) {
+      return { offset: offset, element: child };
+    } else {
+      return closest;
+    }
+  }, { offset: Number.NEGATIVE_INFINITY }).element;
+}
+
+// Display quick actions checkboxes
+function displayQuickActions(categories, selectedActions) {
+  const selected = selectedActions || categories.slice(0, 6);
+  const container = document.getElementById('quickActionsList');
+  
+  container.innerHTML = categories.map(cat => `
+    <label style="display: block; margin: 5px 0;">
+      <input type="checkbox" value="${cat}" ${selected.includes(cat) ? 'checked' : ''}>
+      ${cat}
+    </label>
+  `).join('');
+}
+
+// Save quick actions selection
+function saveQuickActions() {
+  const checkboxes = document.querySelectorAll('#quickActionsList input[type="checkbox"]:checked');
+  const selected = Array.from(checkboxes).map(cb => cb.value);
+  
+  if (selected.length > 6) {
+    alert('Please select no more than 6 quick actions');
+    return;
+  }
+  
+  if (selected.length === 0) {
+    alert('Please select at least one quick action');
+    return;
+  }
+  
+  chrome.storage.local.set({ quickActions: selected }, () => {
+    showSuccess('quickActionSuccess');
+  });
 }
