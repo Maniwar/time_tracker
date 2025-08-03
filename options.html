@@ -88,6 +88,22 @@
       font-size: 14px;
     }
     
+    .input-group select {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #d2d0ce;
+      border-radius: 4px;
+      font-size: 14px;
+      background: white;
+    }
+    
+    .input-group small {
+      display: block;
+      margin-top: 5px;
+      color: #666;
+      font-size: 12px;
+    }
+    
     .success-message {
       background: #dff6dd;
       color: #0b6a0b;
@@ -95,6 +111,16 @@
       border-radius: 4px;
       margin-bottom: 15px;
       display: none;
+    }
+    
+    .checkbox-list label {
+      display: block;
+      margin: 5px 0;
+      cursor: pointer;
+    }
+    
+    .checkbox-list input[type="checkbox"] {
+      margin-right: 8px;
     }
   </style>
 </head>
@@ -105,13 +131,30 @@
     <h2>Microsoft Account</h2>
     <div id="accountInfo">
       <p>Status: <span id="accountStatus">Checking...</span></p>
+      <div class="input-group">
+        <label>Azure App Client ID (for Outlook integration):</label>
+        <input type="text" id="clientIdInput" placeholder="Enter your Azure App Client ID">
+        <small style="color: #666; display: block; margin-top: 5px;">
+          Get this from Azure Portal → App registrations → Your app → Overview
+        </small>
+      </div>
+      <button class="button" id="saveClientIdBtn">Save Client ID</button>
       <button class="button" id="reconnectBtn">Reconnect Account</button>
       <button class="button danger" id="disconnectBtn">Disconnect</button>
     </div>
   </div>
   
   <div class="card">
+    <h2>Quick Actions</h2>
+    <p>Select which categories appear as quick action buttons (max 6):</p>
+    <div class="success-message" id="quickActionSuccess">Quick actions updated!</div>
+    <div id="quickActionsList" style="margin: 15px 0;"></div>
+    <button class="button" id="saveQuickActionsBtn">Save Quick Actions</button>
+  </div>
+  
+  <div class="card">
     <h2>Task Categories</h2>
+    <p>Drag to reorder categories. The order affects quick actions and dropdowns.</p>
     <div class="success-message" id="categorySuccess">Categories updated!</div>
     <ul class="category-list" id="categoryList"></ul>
     <div class="input-group">
