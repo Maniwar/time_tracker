@@ -367,35 +367,6 @@
     <div class="success-message" id="autoTrackingSuccess">Auto-tracking settings saved!</div>
   </div>
   
-  <!-- Quick Actions Configuration -->
-  <div class="card">
-    <h2>Quick Actions</h2>
-    <p class="section-description">
-      Select which categories appear as quick action buttons in the popup (maximum 6).
-    </p>
-    <div class="checkbox-group" id="quickActionsList">
-      <!-- Will be populated dynamically -->
-    </div>
-    <button class="button" id="saveQuickActionsBtn">Save Quick Actions</button>
-    <div class="success-message" id="quickActionSuccess">Quick actions updated!</div>
-  </div>
-  
-  <!-- Category Management -->
-  <div class="card">
-    <h2>Task Categories</h2>
-    <p class="section-description">
-      Manage your task categories. Drag to reorder, which affects the order in quick actions and dropdowns.
-    </p>
-    <ul class="category-list" id="categoryList">
-      <!-- Will be populated dynamically -->
-    </ul>
-    <div class="input-group" style="display: flex; gap: 10px;">
-      <input type="text" id="newCategoryInput" placeholder="Add new category" style="flex: 1;">
-      <button class="button" id="addCategoryBtn">Add Category</button>
-    </div>
-    <div class="success-message" id="categorySuccess">Categories updated!</div>
-  </div>
-  
   <!-- Export Settings -->
   <div class="card">
     <h2>Export Settings</h2>
@@ -429,6 +400,35 @@
     <div class="success-message" id="exportSuccess">Export settings saved!</div>
   </div>
   
+  <!-- Quick Actions Configuration -->
+  <div class="card">
+    <h2>Quick Actions</h2>
+    <p class="section-description">
+      Select which categories appear as quick action buttons in the popup (maximum 6).
+    </p>
+    <div class="checkbox-group" id="quickActionsList">
+      <!-- Will be populated dynamically -->
+    </div>
+    <button class="button" id="saveQuickActionsBtn">Save Quick Actions</button>
+    <div class="success-message" id="quickActionSuccess">Quick actions updated!</div>
+  </div>
+  
+  <!-- Category Management -->
+  <div class="card">
+    <h2>Task Categories</h2>
+    <p class="section-description">
+      Manage your task categories. Drag to reorder, which affects the order in quick actions and dropdowns.
+    </p>
+    <ul class="category-list" id="categoryList">
+      <!-- Will be populated dynamically -->
+    </ul>
+    <div class="input-group" style="display: flex; gap: 10px;">
+      <input type="text" id="newCategoryInput" placeholder="Add new category" style="flex: 1;">
+      <button class="button" id="addCategoryBtn">Add Category</button>
+    </div>
+    <div class="success-message" id="categorySuccess">Categories updated!</div>
+  </div>
+  
   <!-- Data Management -->
   <div class="card">
     <h2>Data Management</h2>
@@ -451,7 +451,7 @@
     <h2>About</h2>
     <p class="section-description">
       <strong>Time Tracker with Multi-tasking Support</strong><br>
-      Version 2.0.0<br><br>
+      Version 2.0.1<br><br>
       
       This extension helps you track your time accurately, including when you're multi-tasking during meetings. 
       Use the insights to optimize your schedule and improve productivity.<br><br>
@@ -460,7 +460,8 @@
       • Meeting mode with multi-tasking support<br>
       • Dual timer display for simultaneous tracking<br>
       • Multi-tasking analysis in exports<br>
-      • Productivity scoring based on focus time<br><br>
+      • Productivity scoring based on focus time<br>
+      • Export settings that actually work!<br><br>
       
       <strong>Privacy:</strong> All data is stored locally in your browser. No information is sent to external servers.
     </p>

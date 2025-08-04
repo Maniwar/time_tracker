@@ -1,5 +1,5 @@
-// Complete popup.js with Meeting Multi-tasking Support, Auto-Tracking, Enhanced Edit, and Export Improvements
-// Version 2.0.6 - All fixes including timezone, category totals, manual entry, auto-restart prevention, full edit dialog, and minutes in export
+// Complete popup.js with Meeting Multi-tasking Support, Auto-Tracking, Enhanced Edit, and Fixed Export Settings
+// Version 2.0.7 - Fixed export settings loading and application
 
 let currentTimer = null;
 let startTime = null;
@@ -14,7 +14,7 @@ let isInMeeting = false;
 let scheduledMeetingEndTime = null; // Track scheduled end for auto-tracked meetings
 let currentMeetingId = null; // Track current meeting ID to prevent duplicates
 
-let currentDateRange = 'today';
+let currentDateRange = 'today'; // Default, will be overridden by settings
 let customStartDate = null;
 let customEndDate = null;
 
@@ -23,12 +23,26 @@ let autoTrackInterval = null;
 
 // Initialize popup
 document.addEventListener('DOMContentLoaded', async function() {
+  // Load export settings FIRST to set default date range
+  chrome.storage.local.get(['exportSettings'], (result) => {
+    const settings = result.exportSettings || { defaultDateRange: 'today' };
+    currentDateRange = settings.defaultDateRange;
+    document.getElementById('dateRangeSelect').value = currentDateRange;
+    
+    // Handle custom date range visibility
+    if (currentDateRange === 'custom') {
+      document.getElementById('customDateRange').style.display = 'flex';
+    }
+    
+    // Load data for the selected date range
+    loadDataForDateRange();
+    loadCategoryTotals();
+  });
+  
   checkAuthStatus();
   setupEventListeners();
   loadCategories();
   initializeDateInputs();
-  loadDataForDateRange();
-  loadCategoryTotals(); // Load category totals
   checkForRunningTimers();
   setInterval(updateTimers, 1000);
   setInterval(loadCategoryTotals, 30000); // Update category totals every 30 seconds
@@ -2245,12 +2259,16 @@ function deleteTask(index) {
   });
 }
 
-// Export to Excel with improved multi-tasking identification and minutes
+// Export to Excel with fixed export settings support
 async function exportToExcel() {
-  chrome.storage.local.get(['timeEntries', 'multitaskingSettings'], async (result) => {
+  chrome.storage.local.get(['timeEntries', 'multitaskingSettings', 'exportSettings'], async (result) => {
     const { startDate, endDate } = getDateRange();
     const timeEntries = result.timeEntries || {};
     const settings = result.multitaskingSettings || { productivityWeight: 50 };
+    const exportSettings = result.exportSettings || {
+      includeMultitaskAnalysis: true,
+      includeSummarySheet: true
+    };
     
     // Filter entries based on date range
     const filteredEntries = {};
@@ -2383,24 +2401,28 @@ async function exportToExcel() {
     // Create workbook with multiple sheets
     const wb = XLSX.utils.book_new();
     
-    // Add detailed entries sheet
+    // Always add detailed entries sheet
     const entriesSheet = XLSX.utils.json_to_sheet(allEntries);
     XLSX.utils.book_append_sheet(wb, entriesSheet, 'Time Entries');
     
-    // Add multi-tasking pairs sheet
+    // Add multi-tasking pairs sheet if there are pairs
     if (multiTaskingPairs.length > 0) {
       const pairsSheet = XLSX.utils.json_to_sheet(multiTaskingPairs);
       XLSX.utils.book_append_sheet(wb, pairsSheet, 'Multi-tasking Pairs');
     }
     
-    // Add multi-tasking analysis sheet
-    const analysisSheet = XLSX.utils.json_to_sheet(multiTaskingAnalysis);
-    XLSX.utils.book_append_sheet(wb, analysisSheet, 'Multi-tasking Analysis');
+    // Conditionally add multi-tasking analysis sheet based on settings
+    if (exportSettings.includeMultitaskAnalysis) {
+      const analysisSheet = XLSX.utils.json_to_sheet(multiTaskingAnalysis);
+      XLSX.utils.book_append_sheet(wb, analysisSheet, 'Multi-tasking Analysis');
+    }
     
-    // Add summary sheet
-    const summary = calculateSummary(filteredEntries, settings.productivityWeight);
-    const summarySheet = XLSX.utils.json_to_sheet(summary);
-    XLSX.utils.book_append_sheet(wb, summarySheet, 'Summary');
+    // Conditionally add summary sheet based on settings
+    if (exportSettings.includeSummarySheet) {
+      const summary = calculateSummary(filteredEntries, settings.productivityWeight);
+      const summarySheet = XLSX.utils.json_to_sheet(summary);
+      XLSX.utils.book_append_sheet(wb, summarySheet, 'Summary');
+    }
     
     // Generate filename
     const dateRangeStr = currentDateRange === 'custom' ? 
