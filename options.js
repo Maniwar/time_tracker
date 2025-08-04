@@ -491,7 +491,7 @@ function exportAllData() {
 function createBackup() {
   chrome.storage.local.get(null, (data) => {
     const backup = {
-      version: '2.0.0',
+      version: '2.0.1',
       timestamp: new Date().toISOString(),
       data: data
     };

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Outlook Time Tracker with Multi-tasking",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Track time from Outlook meetings and log tasks with multi-tasking support and Excel export. Brought to you by Mani Berenji",
   "permissions": [
     "storage",
