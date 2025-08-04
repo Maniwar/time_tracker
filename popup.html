@@ -590,6 +590,243 @@
       color: #605e5c;
       text-align: right;
     }
+    
+    /* Edit Dialog Styles */
+    .edit-dialog-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 10000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: fadeIn 0.2s ease;
+    }
+    
+    .edit-dialog {
+      background: white;
+      border-radius: 8px;
+      padding: 20px;
+      max-width: 400px;
+      width: 90%;
+      max-height: 80vh;
+      overflow-y: auto;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      animation: slideUp 0.3s ease;
+    }
+    
+    @keyframes slideUp {
+      from {
+        transform: translateY(20px);
+        opacity: 0;
+      }
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
+    }
+    
+    .edit-dialog h3 {
+      margin: 0 0 15px 0;
+      color: #323130;
+      font-size: 16px;
+      border-bottom: 2px solid #0078d4;
+      padding-bottom: 8px;
+    }
+    
+    .edit-form-group {
+      margin-bottom: 12px;
+    }
+    
+    .edit-form-group label {
+      display: block;
+      margin-bottom: 4px;
+      color: #605e5c;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    
+    .edit-form-group input,
+    .edit-form-group select {
+      width: 100%;
+      padding: 6px 8px;
+      border: 1px solid #d2d0ce;
+      border-radius: 4px;
+      font-size: 13px;
+      box-sizing: border-box;
+      transition: border-color 0.2s;
+    }
+    
+    .edit-form-group input:focus,
+    .edit-form-group select:focus {
+      outline: none;
+      border-color: #0078d4;
+      box-shadow: 0 0 0 1px #0078d4;
+    }
+    
+    /* Duration slider styling */
+    input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 6px;
+      border-radius: 3px;
+      background: #d2d0ce;
+      outline: none;
+      margin: 10px 0;
+    }
+    
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #0078d4;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    
+    input[type="range"]::-webkit-slider-thumb:hover {
+      background: #106ebe;
+      transform: scale(1.1);
+    }
+    
+    /* Quick duration buttons for edit dialog */
+    .duration-quick-select {
+      display: flex;
+      gap: 5px;
+      flex-wrap: wrap;
+      margin-top: 8px;
+    }
+    
+    .duration-quick-btn {
+      padding: 4px 10px;
+      background: #e1dfdd;
+      border: 1px solid #d2d0ce;
+      border-radius: 12px;
+      cursor: pointer;
+      font-size: 11px;
+      transition: all 0.2s;
+    }
+    
+    .duration-quick-btn:hover {
+      background: #d2d0ce;
+      transform: translateY(-1px);
+    }
+    
+    .duration-quick-btn.active {
+      background: #0078d4;
+      color: white;
+      border-color: #0078d4;
+    }
+    
+    /* Improved notification styling */
+    .notification.success {
+      background: linear-gradient(135deg, #10893e, #14cc60);
+      color: white;
+    }
+    
+    .notification.error {
+      background: linear-gradient(135deg, #d83b01, #e74c0e);
+      color: white;
+    }
+    
+    .notification.info {
+      background: linear-gradient(135deg, #0078d4, #106ebe);
+      color: white;
+    }
+    
+    /* Time input grid */
+    .time-input-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    
+    /* Multi-tasking section in edit dialog */
+    .edit-multitask-section {
+      background: #fff3cd;
+      padding: 10px;
+      border-radius: 4px;
+      border: 1px solid #ffc107;
+      margin-bottom: 12px;
+    }
+    
+    .edit-multitask-section label {
+      display: flex;
+      align-items: center;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    
+    .edit-multitask-section input[type="checkbox"] {
+      margin-right: 6px;
+      cursor: pointer;
+    }
+    
+    /* Button styling for edit dialog */
+    .edit-dialog-buttons {
+      display: flex;
+      gap: 8px;
+      margin-top: 15px;
+    }
+    
+    .edit-dialog-buttons button {
+      flex: 1;
+      padding: 10px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+    
+    .edit-dialog-buttons button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .edit-dialog-buttons .save-btn {
+      background: #0078d4;
+      color: white;
+    }
+    
+    .edit-dialog-buttons .save-btn:hover {
+      background: #106ebe;
+    }
+    
+    .edit-dialog-buttons .cancel-btn {
+      background: #605e5c;
+      color: white;
+    }
+    
+    .edit-dialog-buttons .cancel-btn:hover {
+      background: #4a4847;
+    }
+    
+    /* Scrollbar styling for dialog */
+    .edit-dialog::-webkit-scrollbar {
+      width: 8px;
+    }
+    
+    .edit-dialog::-webkit-scrollbar-track {
+      background: #f1f1f1;
+      border-radius: 4px;
+    }
+    
+    .edit-dialog::-webkit-scrollbar-thumb {
+      background: #888;
+      border-radius: 4px;
+    }
+    
+    .edit-dialog::-webkit-scrollbar-thumb:hover {
+      background: #555;
+    }
   </style>
 </head>
 <body>
@@ -825,4 +1062,3 @@
   <script src="xlsx.min.js"></script>
   <script src="popup.js"></script>
 </body>
-</html>
