@@ -1,5 +1,5 @@
-// Complete popup.js with Meeting Multi-tasking Support and Auto-Tracking
-// Version 2.0.1 - Fixed auto-start on sync, overlapping meetings, manual entry time bug, and meeting cancel bug
+// Complete popup.js with Meeting Multi-tasking Support, Auto-Tracking, and Timezone Fixes
+// Version 2.0.5 - All fixes including timezone, category totals, manual entry, and auto-restart prevention
 
 let currentTimer = null;
 let startTime = null;
@@ -28,12 +28,98 @@ document.addEventListener('DOMContentLoaded', async function() {
   loadCategories();
   initializeDateInputs();
   loadDataForDateRange();
+  loadCategoryTotals(); // Load category totals
   checkForRunningTimers();
   setInterval(updateTimers, 1000);
+  setInterval(loadCategoryTotals, 30000); // Update category totals every 30 seconds
   
   // Start auto-tracking check
   startAutoTrackingCheck();
 });
+
+// Helper function to convert from a specific timezone to local time
+function convertFromTimeZone(dateStr, timeStr, timeZone) {
+  // Create a date string that includes the timezone
+  const dateTimeStr = `${dateStr}T${timeStr}`;
+  
+  try {
+    // Use Intl.DateTimeFormat to get the offset for the given timezone
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: timeZone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    });
+    
+    // Parse the original date in UTC
+    const utcDate = new Date(dateTimeStr + 'Z');
+    
+    // Get the formatted parts in the target timezone
+    const parts = formatter.formatToParts(utcDate);
+    const getPart = (type) => parts.find(p => p.type === type)?.value;
+    
+    // Reconstruct the date in the target timezone
+    const year = getPart('year');
+    const month = getPart('month');
+    const day = getPart('day');
+    const hour = getPart('hour');
+    const minute = getPart('minute');
+    const second = getPart('second');
+    
+    // Create a new date with these components in local time
+    return new Date(`${year}-${month}-${day}T${hour}:${minute}:${second}`);
+  } catch (e) {
+    console.warn('Timezone conversion failed, using default parsing:', e);
+    return new Date(dateTimeStr);
+  }
+}
+
+// Parse meeting time with proper timezone handling - FIXED VERSION
+function parseMeetingTime(timeObj) {
+  let parsedTime;
+  
+  if (timeObj.dateTime) {
+    // Meeting has specific time (not all-day)
+    let dateTimeStr = timeObj.dateTime;
+    
+    // CRITICAL FIX: If the timeZone field is "UTC" but the datetime string 
+    // doesn't have a Z, we need to add it so JavaScript parses it as UTC
+    if (timeObj.timeZone === 'UTC' && !dateTimeStr.includes('Z') && !dateTimeStr.match(/[+-]\d{2}:\d{2}$/)) {
+      // The time is in UTC but missing the Z indicator
+      // Remove any trailing decimals first (the .0000000 part)
+      dateTimeStr = dateTimeStr.replace(/\.\d+$/, '') + 'Z';
+    }
+    
+    // Now parse the corrected datetime string
+    parsedTime = new Date(dateTimeStr);
+    
+    // Handle other timezones if specified and not UTC
+    if (timeObj.timeZone && timeObj.timeZone !== 'UTC' && !dateTimeStr.includes('Z') && !dateTimeStr.match(/[+-]\d{2}:\d{2}$/)) {
+      // This is a time in a specific non-UTC timezone
+      try {
+        const dateStr = timeObj.dateTime.split('T')[0];
+        const timeStr = timeObj.dateTime.split('T')[1].replace(/\.\d+$/, '');
+        
+        // Convert from the specified timezone to local
+        parsedTime = convertFromTimeZone(dateStr, timeStr, timeObj.timeZone);
+      } catch (e) {
+        console.warn('Timezone conversion failed, using default parsing:', e);
+      }
+    }
+  } else if (timeObj.date) {
+    // All-day event
+    parsedTime = new Date(timeObj.date + 'T00:00:00');
+  } else {
+    // Fallback
+    parsedTime = new Date();
+  }
+  
+  return parsedTime;
+}
 
 // Start auto-tracking check for meetings
 function startAutoTrackingCheck() {
@@ -46,11 +132,12 @@ function startAutoTrackingCheck() {
 // Check if any meetings should auto-start
 async function checkForMeetingsToAutoTrack() {
   // Get auto-tracking settings
-  chrome.storage.local.get(['autoTrackMeetings', 'todayMeetings', 'runningMeetingTimer', 'autoTrackSettings'], (result) => {
+  chrome.storage.local.get(['autoTrackMeetings', 'todayMeetings', 'runningMeetingTimer', 'autoTrackSettings', 'endedMeetings'], (result) => {
     if (!result.autoTrackMeetings) return; // Feature disabled
     if (result.runningMeetingTimer) return; // Already tracking a meeting
     
     const meetings = result.todayMeetings || [];
+    const endedMeetings = result.endedMeetings || [];
     const settings = result.autoTrackSettings || { gracePeriod: 2 };
     const now = new Date();
     
@@ -58,14 +145,17 @@ async function checkForMeetingsToAutoTrack() {
     const eligibleMeetings = [];
     
     meetings.forEach(meeting => {
-      const start = new Date(meeting.start.dateTime || meeting.start.date);
-      const end = new Date(meeting.end.dateTime || meeting.end.date);
+      const start = parseMeetingTime(meeting.start);
+      const end = parseMeetingTime(meeting.end);
       
       // Check if meeting should be running now (with grace period)
       const gracePeriod = settings.gracePeriod * 60 * 1000; // Convert minutes to ms
       const shouldBeRunning = now >= new Date(start.getTime() - gracePeriod) && now < end;
       
-      if (shouldBeRunning && !meeting.autoTracked) {
+      // Check if this meeting was already ended early
+      const wasEndedEarly = endedMeetings.includes(meeting.id);
+      
+      if (shouldBeRunning && !meeting.autoTracked && !wasEndedEarly) {
         eligibleMeetings.push(meeting);
       }
     });
@@ -119,7 +209,10 @@ function showMeetingSelectionDialog(meetings) {
       Which meeting are you attending?
     </p>
     <div id="meetingOptions" style="margin-bottom: 15px;">
-      ${meetings.map((meeting, index) => `
+      ${meetings.map((meeting, index) => {
+        const start = parseMeetingTime(meeting.start);
+        const end = parseMeetingTime(meeting.end);
+        return `
         <button class="meeting-option-btn" data-index="${index}" style="
           width: 100%;
           padding: 10px;
@@ -134,11 +227,12 @@ function showMeetingSelectionDialog(meetings) {
         ">
           <strong>${meeting.subject}</strong><br>
           <small style="color: #605e5c;">
-            ${new Date(meeting.start.dateTime || meeting.start.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - 
-            ${new Date(meeting.end.dateTime || meeting.end.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            ${start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - 
+            ${end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
           </small>
         </button>
-      `).join('')}
+      `;
+      }).join('')}
     </div>
     <button id="skipAutoTrack" style="
       width: 100%;
@@ -205,7 +299,7 @@ function showMeetingSelectionDialog(meetings) {
 // Auto-start a meeting
 function autoStartMeeting(meeting) {
   const subject = meeting.subject || 'Scheduled Meeting';
-  const end = new Date(meeting.end.dateTime || meeting.end.date);
+  const end = parseMeetingTime(meeting.end);
   
   // Get notification setting
   chrome.storage.local.get(['autoTrackSettings'], (result) => {
@@ -270,6 +364,7 @@ function autoStartMeeting(meeting) {
     const settings = result.autoTrackSettings || { autoEnd: true };
     if (settings.autoEnd) {
       const timeUntilEnd = end.getTime() - Date.now();
+      
       if (timeUntilEnd > 0) {
         setTimeout(() => {
           // Check if meeting is still running and was auto-tracked
@@ -355,6 +450,136 @@ function loadCategories() {
       }
     }
   });
+}
+
+// Load and display category totals
+function loadCategoryTotals() {
+  const { startDate, endDate } = getDateRange();
+  
+  chrome.storage.local.get(['timeEntries'], (result) => {
+    const timeEntries = result.timeEntries || {};
+    const categoryTotals = {};
+    let totalMinutes = 0;
+    
+    Object.keys(timeEntries).forEach(date => {
+      const entryDate = new Date(date);
+      if (entryDate >= startDate && entryDate <= endDate) {
+        const dayEntries = timeEntries[date] || [];
+        
+        dayEntries.forEach(entry => {
+          // Skip scheduled entries that weren't tracked
+          if (entry.scheduled && !entry.autoTracked) return;
+          if (entry.fromCalendar) return;
+          
+          const category = entry.category || entry.type || 'Other';
+          const minutes = Math.round(entry.duration / 60000);
+          
+          if (!categoryTotals[category]) {
+            categoryTotals[category] = 0;
+          }
+          categoryTotals[category] += minutes;
+          totalMinutes += minutes;
+        });
+      }
+    });
+    
+    displayCategoryTotals(categoryTotals, totalMinutes);
+  });
+}
+
+// Display category totals
+function displayCategoryTotals(categoryTotals, totalMinutes) {
+  // Check if the section exists
+  let totalsSection = document.getElementById('categoryTotalsSection');
+  
+  if (!totalsSection) {
+    // Find where to insert it (after Time Entries section)
+    const timeEntriesSection = document.querySelector('.section:has(#tasksList)');
+    
+    if (timeEntriesSection) {
+      totalsSection = document.createElement('div');
+      totalsSection.className = 'section';
+      totalsSection.id = 'categoryTotalsSection';
+      
+      // Insert after time entries section
+      timeEntriesSection.insertAdjacentElement('afterend', totalsSection);
+    } else {
+      return; // Can't find where to put it
+    }
+  }
+  
+  // Format time helper
+  const formatTime = (minutes) => {
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    if (hours > 0) {
+      return `${hours}h ${mins}m`;
+    }
+    return `${mins}m`;
+  };
+  
+  // Sort categories by time spent
+  const sortedCategories = Object.entries(categoryTotals)
+    .sort((a, b) => b[1] - a[1]);
+  
+  // Get date range text
+  let dateRangeText = 'Today';
+  switch(currentDateRange) {
+    case 'yesterday': dateRangeText = 'Yesterday'; break;
+    case 'week': dateRangeText = 'This Week'; break;
+    case 'lastweek': dateRangeText = 'Last Week'; break;
+    case 'month': dateRangeText = 'This Month'; break;
+    case 'custom': dateRangeText = 'Custom Range'; break;
+    case 'all': dateRangeText = 'All Time'; break;
+  }
+  
+  // Build HTML with inline styles for immediate compatibility
+  let html = `
+    <div class="section-title">
+      ${dateRangeText}'s Time by Category
+      <span style="font-size: 11px; font-weight: normal; color: #605e5c;">
+        Total: ${formatTime(totalMinutes)}
+      </span>
+    </div>
+  `;
+  
+  if (sortedCategories.length === 0) {
+    html += '<p style="text-align: center; color: #605e5c; padding: 10px;">No time tracked for this period</p>';
+  } else {
+    html += '<div class="category-totals-list">';
+    
+    sortedCategories.forEach(([category, minutes]) => {
+      const percentage = totalMinutes > 0 ? Math.round((minutes / totalMinutes) * 100) : 0;
+      const width = percentage > 0 ? percentage : 1; // Minimum 1% width
+      
+      // Choose color based on category
+      let barColor = '#0078d4'; // Default blue
+      if (category === 'Meeting') barColor = '#d83b01';
+      else if (category === 'Email') barColor = '#10893e';
+      else if (category.includes('Project')) barColor = '#5c2d91';
+      else if (category === 'Break') barColor = '#008272';
+      else if (category === 'Admin') barColor = '#ca5010';
+      else if (category === 'Training') barColor = '#8661c5';
+      else if (category === 'Planning') barColor = '#00b7c3';
+      
+      html += `
+        <div class="category-total-item">
+          <div class="category-total-header">
+            <span class="category-name">${category}</span>
+            <span class="category-time" style="color: ${barColor};">${formatTime(minutes)}</span>
+          </div>
+          <div class="category-total-bar">
+            <div class="category-total-fill" style="width: ${width}%; background: ${barColor};"></div>
+          </div>
+          <div class="category-percentage">${percentage}%</div>
+        </div>
+      `;
+    });
+    
+    html += '</div>';
+  }
+  
+  totalsSection.innerHTML = html;
 }
 
 // Check for running timers from storage (both meeting and task)
@@ -627,16 +852,52 @@ function setupEventListeners() {
     }
   });
   
-  // Manual entry time selection
+  // Manual entry time selection - IMPROVED
   document.getElementById('manualWhen').addEventListener('change', function() {
-    if (this.value === 'custom') {
-      document.getElementById('customTimeGroup').style.display = 'block';
-      const now = new Date();
-      now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-      document.getElementById('customDateTime').value = now.toISOString().slice(0, 16);
-    } else {
-      document.getElementById('customTimeGroup').style.display = 'none';
+    // Hide all conditional groups
+    document.getElementById('minutesAgoGroup').style.display = 'none';
+    document.getElementById('hoursAgoGroup').style.display = 'none';
+    document.getElementById('specificTimeGroup').style.display = 'none';
+    
+    // Show relevant group
+    switch(this.value) {
+      case 'minutes-ago':
+        document.getElementById('minutesAgoGroup').style.display = 'block';
+        break;
+      case 'hours-ago':
+        document.getElementById('hoursAgoGroup').style.display = 'block';
+        break;
+      case 'specific-time':
+        document.getElementById('specificTimeGroup').style.display = 'block';
+        document.getElementById('specificDate').style.display = 'none';
+        // Set default to current time
+        const now = new Date();
+        document.getElementById('specificEndTime').value = now.toTimeString().slice(0, 5);
+        break;
+      case 'specific-datetime':
+        document.getElementById('specificTimeGroup').style.display = 'block';
+        document.getElementById('specificDate').style.display = 'block';
+        // Set defaults
+        const today = new Date();
+        document.getElementById('specificEndTime').value = today.toTimeString().slice(0, 5);
+        document.getElementById('specificDate').value = today.toISOString().split('T')[0];
+        break;
     }
+  });
+  
+  // Multi-tasking checkbox
+  document.getElementById('wasMultitasking').addEventListener('change', function() {
+    document.getElementById('multitaskingDetails').style.display = 
+      this.checked ? 'block' : 'none';
+  });
+  
+  // Quick duration chips
+  document.querySelectorAll('.duration-chip').forEach(chip => {
+    chip.addEventListener('click', function() {
+      document.querySelectorAll('.duration-chip').forEach(c => c.classList.remove('selected'));
+      this.classList.add('selected');
+      document.getElementById('manualDuration').value = this.dataset.minutes;
+    });
   });
   
   // Event delegation for edit/delete buttons
@@ -768,11 +1029,36 @@ function stopMeetingTimer(endedEarly = false) {
   const duration = Date.now() - meetingStartTime;
   
   // Check if this was an auto-tracked meeting
-  chrome.storage.local.get(['runningMeetingTimer'], (result) => {
+  chrome.storage.local.get(['runningMeetingTimer', 'endedMeetings'], (result) => {
     const wasAutoTracked = result.runningMeetingTimer && result.runningMeetingTimer.autoTracked;
+    const meetingId = result.runningMeetingTimer ? result.runningMeetingTimer.meetingId : null;
+    
+    // If ended early and has an ID, add to ended meetings list
+    if (endedEarly && meetingId) {
+      const endedMeetings = result.endedMeetings || [];
+      if (!endedMeetings.includes(meetingId)) {
+        endedMeetings.push(meetingId);
+        // Store ended meetings for today only (clear at midnight)
+        chrome.storage.local.set({ endedMeetings });
+        
+        // Set timeout to clear at midnight
+        const now = new Date();
+        const midnight = new Date(now);
+        midnight.setDate(midnight.getDate() + 1);
+        midnight.setHours(0, 0, 0, 0);
+        const msUntilMidnight = midnight - now;
+        setTimeout(() => {
+          chrome.storage.local.set({ endedMeetings: [] });
+        }, msUntilMidnight);
+      }
+    }
+    
+    // Generate unique ID for this meeting entry
+    const entryId = `meeting_${meetingStartTime}_${Date.now()}`;
     
     // Save meeting entry with multi-tasking flag
     const entry = {
+      id: entryId,
       type: 'meeting',
       category: 'Meeting',
       description: meetingDescription || '',
@@ -781,7 +1067,7 @@ function stopMeetingTimer(endedEarly = false) {
       duration: duration,
       date: new Date().toDateString(),
       wasMultitasking: currentTimer ? true : false,
-      multitaskingWith: currentTask || null,
+      multitaskingWith: currentTask ? `${currentTask}${currentTaskDescription ? ': ' + currentTaskDescription : ''}` : null,
       autoTracked: wasAutoTracked,
       endedEarly: endedEarly && scheduledMeetingEndTime ? 
         (Date.now() < scheduledMeetingEndTime.getTime()) : false
@@ -863,8 +1149,12 @@ function stopTaskTimer() {
   
   const duration = Date.now() - startTime;
   
+  // Generate unique ID for this task entry
+  const entryId = `task_${startTime}_${Date.now()}`;
+  
   // Save time entry with multi-tasking flag
   saveTimeEntry({
+    id: entryId,
     type: 'task',
     category: currentTask,
     description: currentTaskDescription || '',
@@ -873,7 +1163,7 @@ function stopTaskTimer() {
     duration: duration,
     date: new Date().toDateString(),
     wasMultitasking: isInMeeting ? true : false,
-    multitaskingWith: isInMeeting ? 'Meeting' : null
+    multitaskingWith: isInMeeting ? `Meeting${meetingDescription ? ': ' + meetingDescription.replace('[AUTO] ', '') : ''}` : null
   });
   
   // Clear timer from storage
@@ -926,21 +1216,39 @@ async function authenticate() {
   });
 }
 
-// Fetch today's meetings
+// Fetch today's meetings with proper timezone handling
 async function fetchTodayMeetings() {
   const meetingsList = document.getElementById('meetingsList');
   meetingsList.innerHTML = '<div class="loading">Loading meetings...</div>';
   
+  // Get today's date range in local timezone
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const tomorrow = new Date(today);
   tomorrow.setDate(tomorrow.getDate() + 1);
   
+  // Convert to UTC for API request
+  // Microsoft Graph expects UTC ISO strings
+  const startDateTime = today.toISOString();
+  const endDateTime = tomorrow.toISOString();
+  
+  // Clear ended meetings list when fetching new meetings (new day)
+  chrome.storage.local.get(['lastSyncDate'], (result) => {
+    const lastSync = result.lastSyncDate;
+    const todayStr = today.toDateString();
+    if (lastSync !== todayStr) {
+      chrome.storage.local.set({ 
+        endedMeetings: [],
+        lastSyncDate: todayStr
+      });
+    }
+  });
+  
   return new Promise((resolve, reject) => {
     chrome.runtime.sendMessage({
       action: 'fetchEvents',
-      startDate: today.toISOString(),
-      endDate: tomorrow.toISOString()
+      startDate: startDateTime,
+      endDate: endDateTime
     }, (response) => {
       if (response && response.success) {
         displayMeetings(response.events);
@@ -963,23 +1271,27 @@ async function fetchTodayMeetings() {
 
 // Check if any meetings are currently in progress after sync
 function checkForMeetingsInProgress(meetings) {
-  chrome.storage.local.get(['autoTrackMeetings', 'runningMeetingTimer', 'autoTrackSettings'], (result) => {
+  chrome.storage.local.get(['autoTrackMeetings', 'runningMeetingTimer', 'autoTrackSettings', 'endedMeetings'], (result) => {
     if (!result.autoTrackMeetings) return; // Feature disabled
     if (result.runningMeetingTimer) return; // Already tracking a meeting
     
     const settings = result.autoTrackSettings || { gracePeriod: 2 };
+    const endedMeetings = result.endedMeetings || [];
     const now = new Date();
     const eligibleMeetings = [];
     
     meetings.forEach(meeting => {
-      const start = new Date(meeting.start.dateTime || meeting.start.date);
-      const end = new Date(meeting.end.dateTime || meeting.end.date);
+      const start = parseMeetingTime(meeting.start);
+      const end = parseMeetingTime(meeting.end);
       
       // Check if meeting should be running now (with grace period)
       const gracePeriod = settings.gracePeriod * 60 * 1000; // Convert minutes to ms
       const shouldBeRunning = now >= new Date(start.getTime() - gracePeriod) && now < end;
       
-      if (shouldBeRunning) {
+      // Check if already ended early
+      const wasEndedEarly = endedMeetings.includes(meeting.id);
+      
+      if (shouldBeRunning && !wasEndedEarly) {
         eligibleMeetings.push(meeting);
       }
     });
@@ -993,7 +1305,7 @@ function checkForMeetingsInProgress(meetings) {
   });
 }
 
-// Display meetings
+// Display meetings with proper timezone handling
 function displayMeetings(meetings) {
   const meetingsList = document.getElementById('meetingsList');
   
@@ -1003,17 +1315,31 @@ function displayMeetings(meetings) {
   }
   
   meetingsList.innerHTML = meetings.map((meeting, index) => {
-    const start = new Date(meeting.start.dateTime || meeting.start.date);
-    const end = new Date(meeting.end.dateTime || meeting.end.date);
-    const duration = (end - start) / 60000; // minutes
+    // Use the fixed parseMeetingTime function
+    const start = parseMeetingTime(meeting.start);
+    const end = parseMeetingTime(meeting.end);
+    
+    const duration = Math.round((end - start) / 60000); // minutes
+    
+    // Format times in local timezone
+    const startTimeStr = start.toLocaleTimeString([], { 
+      hour: '2-digit', 
+      minute: '2-digit',
+      hour12: true
+    });
+    
+    const endTimeStr = end.toLocaleTimeString([], { 
+      hour: '2-digit', 
+      minute: '2-digit',
+      hour12: true
+    });
     
     return `
       <div class="meeting-item">
         <div style="flex: 1;">
           <div style="font-weight: 600; margin-bottom: 4px;">${meeting.subject}</div>
           <div style="font-size: 12px; color: #605e5c;">
-            ${start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - 
-            ${end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            ${startTimeStr} - ${endTimeStr}
             (${duration} min)
           </div>
         </div>
@@ -1024,83 +1350,45 @@ function displayMeetings(meetings) {
     `;
   }).join('');
   
-  // Attach event listeners to track buttons using event delegation
   setupMeetingTrackButtons();
 }
 
 // Setup meeting track button listeners
 function setupMeetingTrackButtons() {
-  const meetingsList = document.getElementById('meetingsList');
-  meetingsList.addEventListener('click', function(e) {
-    if (e.target.classList.contains('track-meeting-btn')) {
-      const index = parseInt(e.target.dataset.index);
+  document.querySelectorAll('.track-meeting-btn').forEach(btn => {
+    btn.addEventListener('click', function(e) {
+      const index = parseInt(this.dataset.index);
       trackMeeting(index);
-    }
+    });
   });
 }
 
 // Track meeting from calendar
 function trackMeeting(index) {
-  chrome.storage.local.get(['todayMeetings'], (result) => {
+  chrome.storage.local.get(['todayMeetings', 'runningMeetingTimer'], (result) => {
     const meetings = result.todayMeetings || [];
     if (meetings[index]) {
       const meeting = meetings[index];
       const description = meeting.subject;
       
-      if (isInMeeting) {
+      // Check if there's actually a running meeting timer (not just scheduled entries)
+      if (result.runningMeetingTimer) {
         if (confirm('End current meeting and start tracking this one?')) {
           stopMeetingTimer();
           startMeetingTimer(description);
         }
       } else {
+        // No active meeting timer, just start tracking
         startMeetingTimer(description);
       }
     }
   });
 }
 
-// Save meetings to storage
+// Save meetings to storage (fixed to not interfere with tracking)
 function saveMeetings(meetings) {
+  // Only save the meeting list for display, don't add to timeEntries unless actually tracked
   chrome.storage.local.set({ todayMeetings: meetings });
-  
-  // Auto-add meetings to time entries (scheduled times only, not tracked)
-  chrome.storage.local.get(['timeEntries'], (result) => {
-    const timeEntries = result.timeEntries || {};
-    const today = new Date().toDateString();
-    
-    if (!timeEntries[today]) {
-      timeEntries[today] = [];
-    }
-    
-    // Remove existing calendar meetings and add updated ones
-    timeEntries[today] = timeEntries[today].filter(entry => !entry.fromCalendar);
-    
-    // Only add scheduled times for reference (actual tracking happens via auto-track or manual)
-    const meetingEntries = meetings.map(meeting => {
-      const start = new Date(meeting.start.dateTime || meeting.start.date);
-      const end = new Date(meeting.end.dateTime || meeting.end.date);
-      
-      return {
-        type: 'meeting',
-        category: 'Meeting',
-        subject: meeting.subject,
-        description: `[Scheduled] ${meeting.subject}`,
-        startTime: start.toISOString(),
-        endTime: end.toISOString(),
-        duration: end - start,
-        date: today,
-        fromCalendar: true,
-        scheduled: true, // Mark as scheduled, not tracked
-        id: meeting.id // Store meeting ID
-      };
-    });
-    
-    timeEntries[today].push(...meetingEntries);
-    
-    chrome.storage.local.set({ timeEntries }, () => {
-      loadDataForDateRange();
-    });
-  });
 }
 
 // Initialize date inputs
@@ -1223,15 +1511,15 @@ function loadDataForDateRange() {
       if (entryDate >= startDate && entryDate <= endDate) {
         const dayEntries = timeEntries[date];
         dayEntries.forEach(entry => {
-          // Skip scheduled entries that weren't actually tracked
-          if (entry.scheduled && !entry.autoTracked) return;
-          
-          const hours = entry.duration / 3600000;
-          totalHours += hours;
-          if (entry.wasMultitasking) {
-            multitaskHours += hours;
+          // Only include actual tracked time, not scheduled meetings
+          if (!entry.scheduled && !entry.fromCalendar) {
+            const hours = entry.duration / 3600000;
+            totalHours += hours;
+            if (entry.wasMultitasking) {
+              multitaskHours += hours;
+            }
+            filteredEntries.push({ ...entry, date });
           }
-          filteredEntries.push({ ...entry, date });
         });
       }
     });
@@ -1278,22 +1566,40 @@ function loadDataForDateRange() {
         `;
       }).join('');
     }
+    
+    // Refresh category totals
+    loadCategoryTotals();
   });
 }
 
-// Show manual entry form
+// Show manual entry form with improved UI
 function showManualEntry() {
-  document.getElementById('manualEntryForm').style.display = 'block';
+  const form = document.getElementById('manualEntryForm');
+  form.style.display = 'block';
+  
+  // Reset form to defaults
   document.getElementById('manualDescription').value = '';
   document.getElementById('manualDuration').value = '30';
-  document.getElementById('manualWhen').value = 'now';
-  document.getElementById('customTimeGroup').style.display = 'none';
+  document.getElementById('manualWhen').value = 'just-now';
+  document.getElementById('minutesAgo').value = '15';
+  document.getElementById('hoursAgo').value = '1';
   document.getElementById('wasMultitasking').checked = false;
+  document.getElementById('multitaskingWith').value = '';
+  document.getElementById('multitaskingDetails').style.display = 'none';
   
-  // Set default custom time to now
+  // Hide all conditional groups
+  document.getElementById('minutesAgoGroup').style.display = 'none';
+  document.getElementById('hoursAgoGroup').style.display = 'none';
+  document.getElementById('specificTimeGroup').style.display = 'none';
+  
+  // Set default time to now
   const now = new Date();
-  now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-  document.getElementById('customDateTime').value = now.toISOString().slice(0, 16);
+  document.getElementById('specificEndTime').value = now.toTimeString().slice(0, 5);
+  document.getElementById('specificDate').value = now.toISOString().split('T')[0];
+  
+  // Set the 30m chip as selected
+  document.querySelectorAll('.duration-chip').forEach(c => c.classList.remove('selected'));
+  document.querySelector('.duration-chip[data-minutes="30"]').classList.add('selected');
 }
 
 // Hide manual entry form
@@ -1301,77 +1607,170 @@ function hideManualEntry() {
   document.getElementById('manualEntryForm').style.display = 'none';
 }
 
-// Save manual entry
+// Save manual entry with improved logic
 function saveManualEntry() {
   const category = document.getElementById('manualCategory').value;
   let description = document.getElementById('manualDescription').value;
   const duration = parseInt(document.getElementById('manualDuration').value) * 60000; // Convert to ms
   const when = document.getElementById('manualWhen').value;
   const wasMultitasking = document.getElementById('wasMultitasking').checked;
+  const multitaskingWith = document.getElementById('multitaskingWith').value;
   
+  // Validation
   if (!duration || duration <= 0) {
     alert('Please enter a valid duration');
     return;
   }
   
-  // If Other category and no description, prompt for it
+  // If Other category and no description, require it
   if (category === 'Other' && !description) {
-    description = prompt('What type of task was this?');
-    if (!description) {
-      alert('Please provide a description for "Other" tasks');
-      return;
-    }
+    alert('Please provide a description for "Other" tasks');
+    document.getElementById('manualDescription').focus();
+    return;
   }
   
-  let endTime;
+  // Calculate end time based on selection
+  let endTime = new Date();
   
-  if (when === 'custom') {
-    const customTime = document.getElementById('customDateTime').value;
-    if (!customTime) {
-      alert('Please select a date and time');
-      return;
-    }
-    endTime = new Date(customTime);
-  } else if (when === 'earlier') {
-    // Fixed: Set endTime to current time, then calculate the actual earlier time
-    const now = new Date();
-    // Generate a random time between 1-4 hours ago for "earlier today"
-    const hoursAgo = Math.floor(Math.random() * 3) + 1; // 1-4 hours ago
-    endTime = new Date(now.getTime() - (hoursAgo * 60 * 60 * 1000));
-  } else {
-    endTime = new Date();
+  switch(when) {
+    case 'just-now':
+      // Task just finished
+      endTime = new Date();
+      break;
+      
+    case 'minutes-ago':
+      // Task ended X minutes ago
+      const minutesAgo = parseInt(document.getElementById('minutesAgo').value) || 15;
+      endTime = new Date(Date.now() - (minutesAgo * 60 * 1000));
+      break;
+      
+    case 'hours-ago':
+      // Task ended X hours ago or at specific time
+      const hoursAgoValue = document.getElementById('hoursAgo').value;
+      if (hoursAgoValue === 'morning') {
+        endTime.setHours(9, 0, 0, 0); // 9 AM today
+      } else if (hoursAgoValue === 'lunch') {
+        endTime.setHours(13, 0, 0, 0); // 1 PM today
+      } else {
+        const hoursAgo = parseInt(hoursAgoValue);
+        endTime = new Date(Date.now() - (hoursAgo * 60 * 60 * 1000));
+      }
+      break;
+      
+    case 'specific-time':
+      // Specific time today
+      const timeStr = document.getElementById('specificEndTime').value;
+      if (!timeStr) {
+        alert('Please select an end time');
+        return;
+      }
+      const [hours, minutes] = timeStr.split(':').map(Number);
+      endTime.setHours(hours, minutes, 0, 0);
+      
+      // If the time is in the future, assume it was yesterday
+      if (endTime > new Date()) {
+        endTime.setDate(endTime.getDate() - 1);
+      }
+      break;
+      
+    case 'specific-datetime':
+      // Specific date and time
+      const dateStr = document.getElementById('specificDate').value;
+      const timeStr2 = document.getElementById('specificEndTime').value;
+      if (!dateStr || !timeStr2) {
+        alert('Please select both date and time');
+        return;
+      }
+      endTime = new Date(dateStr + 'T' + timeStr2);
+      break;
   }
   
+  // Calculate start time
   const startTime = new Date(endTime.getTime() - duration);
   
-  // Determine the type based on category
-  const entryType = (category === 'Meeting') ? 'meeting' : 'task';
+  // Validate times
+  if (startTime > new Date()) {
+    alert('Start time cannot be in the future');
+    return;
+  }
   
-  const entry = {
-    type: entryType,
-    category: category,
-    description: description,
-    startTime: startTime.toISOString(),
-    endTime: endTime.toISOString(),
-    duration: duration,
-    date: startTime.toDateString(),
-    wasMultitasking: wasMultitasking,
-    multitaskingWith: wasMultitasking ? 'Unknown' : null
-  };
+  if (endTime > new Date()) {
+    alert('End time cannot be in the future');
+    return;
+  }
   
-  saveTimeEntry(entry);
-  hideManualEntry();
-  loadDataForDateRange();
-  
-  // Show success feedback
-  const btn = document.getElementById('saveManualBtn');
-  const originalText = btn.textContent;
-  btn.textContent = '✓ Saved!';
-  btn.style.background = '#107c10';
-  setTimeout(() => {
-    btn.textContent = originalText;
-    btn.style.background = '';
-  }, 2000);
+  // Check for overlaps with existing entries
+  checkForOverlaps(startTime, endTime).then(hasOverlap => {
+    if (hasOverlap) {
+      if (!confirm('This entry overlaps with existing entries. Continue anyway?')) {
+        return;
+      }
+    }
+    
+    // Determine the type based on category
+    const entryType = (category === 'Meeting') ? 'meeting' : 'task';
+    
+    // Generate unique ID
+    const entryId = `manual_${startTime.getTime()}_${Date.now()}`;
+    
+    // Build multi-tasking description
+    let multitaskingDescription = null;
+    if (wasMultitasking && multitaskingWith) {
+      multitaskingDescription = multitaskingWith;
+      if (multitaskingWith === 'Other' && !description.includes('multi-tasking')) {
+        description += ' (multi-tasking)';
+      }
+    }
+    
+    const entry = {
+      id: entryId,
+      type: entryType,
+      category: category,
+      description: description,
+      startTime: startTime.toISOString(),
+      endTime: endTime.toISOString(),
+      duration: duration,
+      date: startTime.toDateString(),
+      wasMultitasking: wasMultitasking,
+      multitaskingWith: multitaskingDescription,
+      manualEntry: true // Flag to identify manual entries
+    };
+    
+    saveTimeEntry(entry);
+    hideManualEntry();
+    loadDataForDateRange();
+    
+    // Show success feedback
+    const btn = document.getElementById('saveManualBtn');
+    const originalText = btn.textContent;
+    btn.textContent = '✓ Saved!';
+    btn.style.background = '#107c10';
+    setTimeout(() => {
+      btn.textContent = originalText;
+      btn.style.background = '';
+    }, 2000);
+  });
+}
+
+// Helper function to check for overlapping entries
+async function checkForOverlaps(startTime, endTime) {
+  return new Promise((resolve) => {
+    chrome.storage.local.get(['timeEntries'], (result) => {
+      const timeEntries = result.timeEntries || {};
+      const dateKey = startTime.toDateString();
+      const entries = timeEntries[dateKey] || [];
+      
+      const hasOverlap = entries.some(entry => {
+        const entryStart = new Date(entry.startTime);
+        const entryEnd = new Date(entry.endTime);
+        
+        // Check if times overlap
+        return (startTime < entryEnd && endTime > entryStart);
+      });
+      
+      resolve(hasOverlap);
+    });
+  });
 }
 
 // Save time entry
@@ -1387,6 +1786,7 @@ function saveTimeEntry(entry) {
     timeEntries[entryDate].push(entry);
     chrome.storage.local.set({ timeEntries }, () => {
       loadDataForDateRange();
+      loadCategoryTotals(); // Refresh category totals
     });
   });
 }
@@ -1403,7 +1803,7 @@ function editTask(index) {
       const entryDate = new Date(date);
       if (entryDate >= startDate && entryDate <= endDate) {
         timeEntries[date].forEach(entry => {
-          if (!entry.scheduled || entry.autoTracked) {
+          if (!entry.scheduled && !entry.fromCalendar) {
             allEntries.push({ entry, date });
           }
         });
@@ -1444,7 +1844,7 @@ function deleteTask(index) {
       const entryDate = new Date(date);
       if (entryDate >= startDate && entryDate <= endDate) {
         timeEntries[date].forEach(entry => {
-          if (!entry.scheduled || entry.autoTracked) {
+          if (!entry.scheduled && !entry.fromCalendar) {
             allEntries.push({ entry, date });
           }
         });
@@ -1461,13 +1861,14 @@ function deleteTask(index) {
         dateEntries.splice(entryIndex, 1);
         chrome.storage.local.set({ timeEntries }, () => {
           loadDataForDateRange();
+          loadCategoryTotals(); // Refresh category totals
         });
       }
     }
   });
 }
 
-// Export to Excel
+// Export to Excel with improved multi-tasking identification
 async function exportToExcel() {
   chrome.storage.local.get(['timeEntries', 'multitaskingSettings'], async (result) => {
     const { startDate, endDate } = getDateRange();
@@ -1481,7 +1882,7 @@ async function exportToExcel() {
       if (entryDate >= startDate && entryDate <= endDate) {
         // Filter out scheduled entries that weren't tracked
         filteredEntries[date] = timeEntries[date].filter(entry => 
-          !entry.scheduled || entry.autoTracked
+          !entry.scheduled && !entry.fromCalendar
         );
       }
     });
@@ -1494,6 +1895,7 @@ async function exportToExcel() {
     // Prepare data with multi-tasking analysis
     const allEntries = [];
     const multiTaskingAnalysis = [];
+    const multiTaskingPairs = []; // New sheet for multi-tasking pairs
     
     Object.keys(filteredEntries).forEach(date => {
       const entries = filteredEntries[date];
@@ -1504,11 +1906,15 @@ async function exportToExcel() {
       let autoTrackedTime = 0;
       let timeSaved = 0;
       
+      // Track multi-tasking pairs
+      const dailyPairs = {};
+      
       entries.forEach(entry => {
         const hours = entry.duration / 3600000;
         
-        // Add to main entries sheet
+        // Add to main entries sheet with ID
         allEntries.push({
+          'Entry ID': entry.id || `${entry.type}_${new Date(entry.startTime).getTime()}`,
           Date: date,
           Type: entry.type || 'task',
           Category: entry.category || entry.subject || 'Other',
@@ -1528,6 +1934,23 @@ async function exportToExcel() {
           if (entry.type === 'meeting' || entry.multitaskingWith === 'Meeting') {
             meetingMultitaskingTime += hours;
           }
+          
+          // Track multi-tasking pairs
+          if (entry.multitaskingWith) {
+            const pairKey = `${entry.category} + ${entry.multitaskingWith}`;
+            if (!dailyPairs[pairKey]) {
+              dailyPairs[pairKey] = {
+                date: date,
+                task1: entry.category,
+                task1Description: entry.description || '',
+                task2: entry.multitaskingWith,
+                totalTime: 0,
+                occurrences: 0
+              };
+            }
+            dailyPairs[pairKey].totalTime += hours;
+            dailyPairs[pairKey].occurrences++;
+          }
         }
         
         // Track auto-tracked time
@@ -1542,6 +1965,18 @@ async function exportToExcel() {
             timeSaved += parseInt(match[1]);
           }
         }
+      });
+      
+      // Add multi-tasking pairs to the list
+      Object.values(dailyPairs).forEach(pair => {
+        multiTaskingPairs.push({
+          Date: pair.date,
+          'Task 1': pair.task1,
+          'Task 1 Description': pair.task1Description,
+          'Task 2': pair.task2,
+          'Total Hours': pair.totalTime.toFixed(2),
+          'Occurrences': pair.occurrences
+        });
       });
       
       // Add to multi-tasking analysis
@@ -1569,6 +2004,12 @@ async function exportToExcel() {
     // Add detailed entries sheet
     const entriesSheet = XLSX.utils.json_to_sheet(allEntries);
     XLSX.utils.book_append_sheet(wb, entriesSheet, 'Time Entries');
+    
+    // Add multi-tasking pairs sheet
+    if (multiTaskingPairs.length > 0) {
+      const pairsSheet = XLSX.utils.json_to_sheet(multiTaskingPairs);
+      XLSX.utils.book_append_sheet(wb, pairsSheet, 'Multi-tasking Pairs');
+    }
     
     // Add multi-tasking analysis sheet
     const analysisSheet = XLSX.utils.json_to_sheet(multiTaskingAnalysis);

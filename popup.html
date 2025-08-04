@@ -382,6 +382,8 @@
     .form-group input[type="text"],
     .form-group input[type="number"],
     .form-group input[type="datetime-local"],
+    .form-group input[type="time"],
+    .form-group input[type="date"],
     .form-group select {
       width: 100%;
       padding: 6px 8px;
@@ -492,6 +494,102 @@
       margin-bottom: 15px;
       font-size: 13px;
     }
+    
+    /* Manual entry improvements */
+    .duration-chip {
+      display: inline-block;
+      padding: 4px 10px;
+      background: #e1dfdd;
+      border: 1px solid #d2d0ce;
+      border-radius: 12px;
+      cursor: pointer;
+      font-size: 11px;
+      transition: all 0.2s;
+    }
+    
+    .duration-chip:hover {
+      background: #d2d0ce;
+    }
+    
+    .duration-chip.selected {
+      background: #0078d4;
+      color: white;
+      border-color: #0078d4;
+    }
+    
+    #multitaskingDetails select {
+      padding: 6px 8px;
+      border: 1px solid #d2d0ce;
+      border-radius: 4px;
+      font-size: 13px;
+    }
+    
+    #specificTimeGroup input[type="date"] {
+      width: 100%;
+    }
+    
+    #minutesAgoGroup input,
+    #hoursAgoGroup select {
+      width: 100%;
+    }
+    
+    /* Category Totals Styles */
+    .category-totals-list {
+      margin-top: 10px;
+    }
+    
+    .category-total-item {
+      margin-bottom: 12px;
+      padding: 8px;
+      background: #f8f9fa;
+      border-radius: 4px;
+      transition: background 0.2s;
+    }
+    
+    .category-total-item:hover {
+      background: #f3f2f1;
+    }
+    
+    .category-total-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+    
+    .category-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: #323130;
+    }
+    
+    .category-time {
+      font-size: 13px;
+      font-weight: 600;
+      color: #0078d4;
+    }
+    
+    .category-total-bar {
+      height: 20px;
+      background: #e1dfdd;
+      border-radius: 10px;
+      overflow: hidden;
+      margin-bottom: 4px;
+    }
+    
+    .category-total-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #0078d4, #106ebe);
+      border-radius: 10px;
+      transition: width 0.3s ease;
+      min-width: 2%;
+    }
+    
+    .category-percentage {
+      font-size: 11px;
+      color: #605e5c;
+      text-align: right;
+    }
   </style>
 </head>
 <body>
@@ -549,7 +647,7 @@
         </div>
       </div>
       
-      <!-- Today's Summary -->
+      <!-- Time Entries Section -->
       <div class="section">
         <div class="section-title">Time Entries</div>
         <div class="date-controls">
@@ -587,51 +685,110 @@
         </div>
       </div>
       
+      <!-- Category Totals Section (will be inserted here dynamically) -->
+      
       <!-- Manual Entry Section -->
       <div class="section">
         <div class="section-title">Manual Entry</div>
         <button class="button" id="showManualEntryBtn">+ Add Time Entry</button>
         
         <div id="manualEntryForm" style="display: none; margin-top: 10px;">
+          <!-- Category Selection -->
           <div class="form-group">
             <label>Category:</label>
             <select id="manualCategory">
-              <!-- Categories will be populated here -->
+              <!-- Categories will be populated dynamically -->
             </select>
           </div>
           
+          <!-- Description -->
           <div class="form-group">
             <label>Description:</label>
-            <input type="text" id="manualDescription" placeholder="What did you work on?">
+            <input type="text" id="manualDescription" placeholder="What did you work on? (optional)">
           </div>
           
+          <!-- Duration with quick selections -->
           <div class="form-group">
             <label>Duration (minutes):</label>
             <input type="number" id="manualDuration" value="30" min="1">
-          </div>
-          
-          <div class="form-group">
-            <label>When:</label>
-            <select id="manualWhen">
-              <option value="now">Just now</option>
-              <option value="earlier">Earlier today</option>
-              <option value="custom">Custom time</option>
-            </select>
-          </div>
-          
-          <div id="customTimeGroup" style="display: none;">
-            <div class="form-group">
-              <input type="datetime-local" id="customDateTime">
+            
+            <!-- Quick duration buttons -->
+            <div style="display: flex; gap: 5px; flex-wrap: wrap; margin-top: 8px;">
+              <span class="duration-chip" data-minutes="15">15m</span>
+              <span class="duration-chip selected" data-minutes="30">30m</span>
+              <span class="duration-chip" data-minutes="45">45m</span>
+              <span class="duration-chip" data-minutes="60">1h</span>
+              <span class="duration-chip" data-minutes="90">1.5h</span>
+              <span class="duration-chip" data-minutes="120">2h</span>
             </div>
           </div>
           
+          <!-- When did it end -->
           <div class="form-group">
-            <label>
-              <input type="checkbox" id="wasMultitasking">
-              Was multi-tasking during this time
-            </label>
+            <label>When:</label>
+            <select id="manualWhen">
+              <option value="just-now">Just finished</option>
+              <option value="minutes-ago">Minutes ago...</option>
+              <option value="hours-ago">Hours ago...</option>
+              <option value="specific-time">Specific time today...</option>
+              <option value="specific-datetime">Different day...</option>
+            </select>
           </div>
           
+          <!-- Minutes ago input (hidden by default) -->
+          <div id="minutesAgoGroup" style="display: none;">
+            <div class="form-group">
+              <label>How many minutes ago:</label>
+              <input type="number" id="minutesAgo" value="15" min="1" max="120">
+            </div>
+          </div>
+          
+          <!-- Hours ago dropdown (hidden by default) -->
+          <div id="hoursAgoGroup" style="display: none;">
+            <div class="form-group">
+              <label>When exactly:</label>
+              <select id="hoursAgo">
+                <option value="1">1 hour ago</option>
+                <option value="2">2 hours ago</option>
+                <option value="3">3 hours ago</option>
+                <option value="4">4 hours ago</option>
+                <option value="5">5 hours ago</option>
+                <option value="morning">This morning (9 AM)</option>
+                <option value="lunch">After lunch (1 PM)</option>
+              </select>
+            </div>
+          </div>
+          
+          <!-- Specific time input (hidden by default) -->
+          <div id="specificTimeGroup" style="display: none;">
+            <div class="form-group">
+              <label>End time:</label>
+              <input type="time" id="specificEndTime">
+              <input type="date" id="specificDate" style="margin-top: 5px; display: none;">
+            </div>
+          </div>
+          
+          <!-- Multi-tasking section -->
+          <div class="form-group" style="background: #fff3cd; padding: 10px; border-radius: 4px;">
+            <label style="display: flex; align-items: center;">
+              <input type="checkbox" id="wasMultitasking" style="margin-right: 6px;">
+              I was multi-tasking during this time
+            </label>
+            
+            <div id="multitaskingDetails" style="display: none; margin-top: 8px;">
+              <select id="multitaskingWith" style="width: 100%;">
+                <option value="">What else were you doing?</option>
+                <option value="Meeting">👥 In a meeting</option>
+                <option value="Email">📧 Checking email</option>
+                <option value="Slack/Chat">💬 On Slack/Chat</option>
+                <option value="Phone Call">📞 On a call</option>
+                <option value="Admin">📋 Admin work</option>
+                <option value="Other">Other task</option>
+              </select>
+            </div>
+          </div>
+          
+          <!-- Action buttons -->
           <div class="form-actions">
             <button class="button" id="saveManualBtn">Save Entry</button>
             <button class="button secondary" id="cancelManualBtn">Cancel</button>
