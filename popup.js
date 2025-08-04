@@ -1,5 +1,5 @@
-// Complete popup.js with Meeting Multi-tasking Support, Auto-Tracking, and Timezone Fixes
-// Version 2.0.5 - All fixes including timezone, category totals, manual entry, and auto-restart prevention
+// Complete popup.js with Meeting Multi-tasking Support, Auto-Tracking, Enhanced Edit, and Export Improvements
+// Version 2.0.6 - All fixes including timezone, category totals, manual entry, auto-restart prevention, full edit dialog, and minutes in export
 
 let currentTimer = null;
 let startTime = null;
@@ -1791,14 +1791,19 @@ function saveTimeEntry(entry) {
   });
 }
 
-// Edit task
+// Edit task with full edit dialog
 function editTask(index) {
   const { startDate, endDate } = getDateRange();
   
-  chrome.storage.local.get(['timeEntries'], (result) => {
+  chrome.storage.local.get(['timeEntries', 'categories'], (result) => {
     const timeEntries = result.timeEntries || {};
+    const categories = result.categories || [
+      'Email', 'Meeting', 'Project Work', 'Admin', 
+      'Break', 'Training', 'Planning', 'Other'
+    ];
     const allEntries = [];
     
+    // Collect all entries in date range
     Object.keys(timeEntries).forEach(date => {
       const entryDate = new Date(date);
       if (entryDate >= startDate && entryDate <= endDate) {
@@ -1814,19 +1819,391 @@ function editTask(index) {
     
     if (allEntries[index]) {
       const { entry, date } = allEntries[index];
-      const newDescription = prompt('Edit description:', entry.description || '');
-      
-      if (newDescription !== null) {
-        const dateEntries = timeEntries[date];
-        const entryIndex = dateEntries.indexOf(entry);
-        if (entryIndex !== -1) {
-          dateEntries[entryIndex].description = newDescription;
-          chrome.storage.local.set({ timeEntries }, () => {
-            loadDataForDateRange();
+      showEditDialog(entry, date, categories);
+    }
+  });
+}
+// Enhanced showEditDialog function with smart multi-tasking selection
+// Show comprehensive edit dialog with smart multi-tasking selection
+function showEditDialog(entry, entryDate, categories) {
+  // Create overlay
+  const overlay = document.createElement('div');
+  overlay.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  `;
+  
+  // Create dialog
+  const dialog = document.createElement('div');
+  dialog.style.cssText = `
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    max-width: 400px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  `;
+  
+  // Format dates and times for inputs
+  const startDateTime = new Date(entry.startTime);
+  const endDateTime = new Date(entry.endTime);
+  const duration = Math.round(entry.duration / 60000); // minutes
+  
+  dialog.innerHTML = `
+    <h3 style="margin: 0 0 15px 0; color: #323130; font-size: 16px;">
+      Edit Time Entry
+    </h3>
+    
+    <div style="margin-bottom: 12px;">
+      <label style="display: block; margin-bottom: 4px; color: #605e5c; font-size: 13px;">
+        Category:
+      </label>
+      <select id="editCategory" style="width: 100%; padding: 6px; border: 1px solid #d2d0ce; border-radius: 4px; font-size: 13px;">
+        ${categories.map(cat => 
+          `<option value="${cat}" ${cat === entry.category ? 'selected' : ''}>${cat}</option>`
+        ).join('')}
+      </select>
+    </div>
+    
+    <div style="margin-bottom: 12px;">
+      <label style="display: block; margin-bottom: 4px; color: #605e5c; font-size: 13px;">
+        Description:
+      </label>
+      <input type="text" id="editDescription" value="${entry.description || ''}" 
+        style="width: 100%; padding: 6px; border: 1px solid #d2d0ce; border-radius: 4px; font-size: 13px; box-sizing: border-box;">
+    </div>
+    
+    <div style="margin-bottom: 12px;">
+      <label style="display: block; margin-bottom: 4px; color: #605e5c; font-size: 13px;">
+        Date:
+      </label>
+      <input type="date" id="editDate" value="${startDateTime.toISOString().split('T')[0]}" 
+        style="width: 100%; padding: 6px; border: 1px solid #d2d0ce; border-radius: 4px; font-size: 13px; box-sizing: border-box;">
+    </div>
+    
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+      <div>
+        <label style="display: block; margin-bottom: 4px; color: #605e5c; font-size: 13px;">
+          Start Time:
+        </label>
+        <input type="time" id="editStartTime" value="${startDateTime.toTimeString().slice(0, 5)}" 
+          style="width: 100%; padding: 6px; border: 1px solid #d2d0ce; border-radius: 4px; font-size: 13px; box-sizing: border-box;">
+      </div>
+      <div>
+        <label style="display: block; margin-bottom: 4px; color: #605e5c; font-size: 13px;">
+          End Time:
+        </label>
+        <input type="time" id="editEndTime" value="${endDateTime.toTimeString().slice(0, 5)}" 
+          style="width: 100%; padding: 6px; border: 1px solid #d2d0ce; border-radius: 4px; font-size: 13px; box-sizing: border-box;">
+      </div>
+    </div>
+    
+    <div style="margin-bottom: 12px;">
+      <label style="display: block; margin-bottom: 4px; color: #605e5c; font-size: 13px;">
+        Duration (minutes): <span id="durationDisplay" style="color: #0078d4; font-weight: 600;">${duration}</span>
+      </label>
+      <input type="range" id="editDuration" min="1" max="480" value="${duration}" 
+        style="width: 100%;">
+      <div style="display: flex; justify-content: space-between; font-size: 11px; color: #605e5c;">
+        <span>1 min</span>
+        <span>8 hours</span>
+      </div>
+    </div>
+    
+    <div style="margin-bottom: 12px; background: #fff3cd; padding: 10px; border-radius: 4px;">
+      <label style="display: flex; align-items: center; font-size: 13px;">
+        <input type="checkbox" id="editMultitasking" ${entry.wasMultitasking ? 'checked' : ''} 
+          style="margin-right: 6px;">
+        Was multi-tasking during this time
+      </label>
+      <div id="editMultitaskingDetails" style="display: ${entry.wasMultitasking ? 'block' : 'none'}; margin-top: 8px;">
+        <label style="display: block; margin-bottom: 4px; color: #605e5c; font-size: 12px;">
+          What else were you doing?
+        </label>
+        <select id="editMultitaskingWith" style="width: 100%; padding: 6px; border: 1px solid #d2d0ce; border-radius: 4px; font-size: 13px;">
+          <option value="" disabled>Loading overlapping activities...</option>
+        </select>
+      </div>
+    </div>
+    
+    <div style="display: flex; gap: 8px; margin-top: 15px;">
+      <button id="saveEditBtn" style="flex: 1; padding: 8px; background: #0078d4; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px;">
+        Save Changes
+      </button>
+      <button id="cancelEditBtn" style="flex: 1; padding: 8px; background: #605e5c; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px;">
+        Cancel
+      </button>
+    </div>
+  `;
+  
+  overlay.appendChild(dialog);
+  document.body.appendChild(overlay);
+  
+  // Function to find overlapping entries
+  function findOverlappingEntries(currentStartTime, currentEndTime, currentEntryId) {
+    return new Promise((resolve) => {
+      chrome.storage.local.get(['timeEntries'], (result) => {
+        const timeEntries = result.timeEntries || {};
+        const overlappingEntries = [];
+        
+        // Check all dates around the current entry
+        const checkDates = [];
+        const currentDate = new Date(currentStartTime);
+        
+        // Check current date and adjacent dates (for entries crossing midnight)
+        for (let i = -1; i <= 1; i++) {
+          const checkDate = new Date(currentDate);
+          checkDate.setDate(checkDate.getDate() + i);
+          checkDates.push(checkDate.toDateString());
+        }
+        
+        checkDates.forEach(dateStr => {
+          const entries = timeEntries[dateStr] || [];
+          entries.forEach(otherEntry => {
+            // Skip the current entry itself
+            if (otherEntry.id === currentEntryId || 
+                (otherEntry.startTime === entry.startTime && otherEntry.endTime === entry.endTime)) {
+              return;
+            }
+            
+            const otherStart = new Date(otherEntry.startTime);
+            const otherEnd = new Date(otherEntry.endTime);
+            
+            // Check if times overlap
+            if ((currentStartTime < otherEnd && currentEndTime > otherStart) ||
+                (otherStart < currentEndTime && otherEnd > currentStartTime)) {
+              overlappingEntries.push({
+                id: otherEntry.id,
+                category: otherEntry.category,
+                description: otherEntry.description || '',
+                type: otherEntry.type,
+                startTime: otherStart,
+                endTime: otherEnd
+              });
+            }
           });
+        });
+        
+        // Sort by start time
+        overlappingEntries.sort((a, b) => a.startTime - b.startTime);
+        resolve(overlappingEntries);
+      });
+    });
+  }
+  
+  // Function to update multi-tasking dropdown
+  async function updateMultitaskingDropdown() {
+    const date = document.getElementById('editDate').value;
+    const startTime = document.getElementById('editStartTime').value;
+    const endTime = document.getElementById('editEndTime').value;
+    
+    if (!date || !startTime || !endTime) return;
+    
+    const currentStart = new Date(`${date}T${startTime}`);
+    let currentEnd = new Date(`${date}T${endTime}`);
+    
+    // Handle end time being next day
+    if (currentEnd < currentStart) {
+      currentEnd.setDate(currentEnd.getDate() + 1);
+    }
+    
+    const overlappingEntries = await findOverlappingEntries(currentStart, currentEnd, entry.id);
+    const dropdown = document.getElementById('editMultitaskingWith');
+    
+    // Build options HTML
+    let optionsHTML = `<option value="" disabled ${!entry.multitaskingWith ? 'selected' : ''}>Select an overlapping activity...</option>`;
+    
+    if (overlappingEntries.length > 0) {
+      optionsHTML += '<optgroup label="Overlapping Activities">';
+      overlappingEntries.forEach(overlap => {
+        const timeStr = `${overlap.startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - ${overlap.endTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+        const displayText = `${overlap.category}${overlap.description ? ': ' + overlap.description : ''} (${timeStr})`;
+        const value = `${overlap.category}${overlap.description ? ': ' + overlap.description : ''}`;
+        const selected = entry.multitaskingWith === value ? 'selected' : '';
+        optionsHTML += `<option value="${value}" ${selected}>${displayText}</option>`;
+      });
+      optionsHTML += '</optgroup>';
+    }
+    
+    // Add generic options as fallback
+    optionsHTML += '<optgroup label="Other Activities">';
+    const genericOptions = [
+      { value: 'Meeting', label: '👥 In a meeting', icon: '👥' },
+      { value: 'Email', label: '📧 Checking email', icon: '📧' },
+      { value: 'Slack/Chat', label: '💬 On Slack/Chat', icon: '💬' },
+      { value: 'Phone Call', label: '📞 On a call', icon: '📞' },
+      { value: 'Admin', label: '📋 Admin work', icon: '📋' },
+      { value: 'Other', label: 'Other task', icon: '📝' }
+    ];
+    
+    genericOptions.forEach(opt => {
+      const selected = entry.multitaskingWith === opt.value ? 'selected' : '';
+      optionsHTML += `<option value="${opt.value}" ${selected}>${opt.label}</option>`;
+    });
+    optionsHTML += '</optgroup>';
+    
+    dropdown.innerHTML = optionsHTML;
+  }
+  
+  // Add event listeners
+  const durationSlider = document.getElementById('editDuration');
+  const durationDisplay = document.getElementById('durationDisplay');
+  const startTimeInput = document.getElementById('editStartTime');
+  const endTimeInput = document.getElementById('editEndTime');
+  const dateInput = document.getElementById('editDate');
+  
+  // Update duration display when slider changes
+  durationSlider.addEventListener('input', (e) => {
+    const minutes = e.target.value;
+    durationDisplay.textContent = minutes;
+    
+    // Update end time based on new duration
+    const date = dateInput.value;
+    const startTime = startTimeInput.value;
+    const startDateTime = new Date(`${date}T${startTime}`);
+    const endDateTime = new Date(startDateTime.getTime() + (minutes * 60000));
+    endTimeInput.value = endDateTime.toTimeString().slice(0, 5);
+    
+    // Update multi-tasking dropdown if needed
+    if (document.getElementById('editMultitasking').checked) {
+      updateMultitaskingDropdown();
+    }
+  });
+  
+  // Update duration when times change
+  function updateDurationFromTimes() {
+    const date = dateInput.value;
+    const startTime = startTimeInput.value;
+    const endTime = endTimeInput.value;
+    
+    if (startTime && endTime) {
+      let startDateTime = new Date(`${date}T${startTime}`);
+      let endDateTime = new Date(`${date}T${endTime}`);
+      
+      // Handle end time being next day
+      if (endDateTime < startDateTime) {
+        endDateTime.setDate(endDateTime.getDate() + 1);
+      }
+      
+      const durationMs = endDateTime - startDateTime;
+      const durationMinutes = Math.round(durationMs / 60000);
+      
+      if (durationMinutes > 0 && durationMinutes <= 480) {
+        durationSlider.value = durationMinutes;
+        durationDisplay.textContent = durationMinutes;
+      }
+    }
+    
+    // Update multi-tasking dropdown if needed
+    if (document.getElementById('editMultitasking').checked) {
+      updateMultitaskingDropdown();
+    }
+  }
+  
+  startTimeInput.addEventListener('change', updateDurationFromTimes);
+  endTimeInput.addEventListener('change', updateDurationFromTimes);
+  dateInput.addEventListener('change', updateDurationFromTimes);
+  
+  // Multi-tasking checkbox
+  document.getElementById('editMultitasking').addEventListener('change', (e) => {
+    const detailsDiv = document.getElementById('editMultitaskingDetails');
+    detailsDiv.style.display = e.target.checked ? 'block' : 'none';
+    
+    if (e.target.checked) {
+      updateMultitaskingDropdown();
+    }
+  });
+  
+  // Initial load of multi-tasking options if already multi-tasking
+  if (entry.wasMultitasking) {
+    updateMultitaskingDropdown();
+  }
+  
+  // Save button
+  document.getElementById('saveEditBtn').addEventListener('click', () => {
+    const updatedEntry = {
+      ...entry,
+      category: document.getElementById('editCategory').value,
+      description: document.getElementById('editDescription').value,
+      wasMultitasking: document.getElementById('editMultitasking').checked,
+      multitaskingWith: document.getElementById('editMultitasking').checked ? 
+        document.getElementById('editMultitaskingWith').value : null
+    };
+    
+    // Calculate new times
+    const newDate = document.getElementById('editDate').value;
+    const startTime = document.getElementById('editStartTime').value;
+    const endTime = document.getElementById('editEndTime').value;
+    
+    let newStartDateTime = new Date(`${newDate}T${startTime}`);
+    let newEndDateTime = new Date(`${newDate}T${endTime}`);
+    
+    // Handle end time being next day
+    if (newEndDateTime < newStartDateTime) {
+      newEndDateTime.setDate(newEndDateTime.getDate() + 1);
+    }
+    
+    updatedEntry.startTime = newStartDateTime.toISOString();
+    updatedEntry.endTime = newEndDateTime.toISOString();
+    updatedEntry.duration = newEndDateTime - newStartDateTime;
+    updatedEntry.date = newStartDateTime.toDateString();
+    
+    // Save the updated entry
+    saveUpdatedEntry(entry, updatedEntry, entryDate);
+    document.body.removeChild(overlay);
+  });
+  
+  // Cancel button
+  document.getElementById('cancelEditBtn').addEventListener('click', () => {
+    document.body.removeChild(overlay);
+  });
+}
+
+// Save the updated entry
+function saveUpdatedEntry(oldEntry, newEntry, originalDate) {
+  chrome.storage.local.get(['timeEntries'], (result) => {
+    const timeEntries = result.timeEntries || {};
+    
+    // Remove old entry
+    if (timeEntries[originalDate]) {
+      const index = timeEntries[originalDate].findIndex(e => 
+        e.id === oldEntry.id || 
+        (e.startTime === oldEntry.startTime && e.endTime === oldEntry.endTime)
+      );
+      
+      if (index !== -1) {
+        timeEntries[originalDate].splice(index, 1);
+        
+        // Remove date key if no entries left
+        if (timeEntries[originalDate].length === 0) {
+          delete timeEntries[originalDate];
         }
       }
     }
+    
+    // Add new entry to potentially new date
+    const newDate = newEntry.date;
+    if (!timeEntries[newDate]) {
+      timeEntries[newDate] = [];
+    }
+    timeEntries[newDate].push(newEntry);
+    
+    // Save and refresh
+    chrome.storage.local.set({ timeEntries }, () => {
+      loadDataForDateRange();
+      loadCategoryTotals();
+      showNotification('Entry updated successfully');
+    });
   });
 }
 
@@ -1868,7 +2245,7 @@ function deleteTask(index) {
   });
 }
 
-// Export to Excel with improved multi-tasking identification
+// Export to Excel with improved multi-tasking identification and minutes
 async function exportToExcel() {
   chrome.storage.local.get(['timeEntries', 'multitaskingSettings'], async (result) => {
     const { startDate, endDate } = getDateRange();
@@ -1911,8 +2288,11 @@ async function exportToExcel() {
       
       entries.forEach(entry => {
         const hours = entry.duration / 3600000;
+        const totalMinutes = Math.round(entry.duration / 60000);
+        const displayHours = Math.floor(hours);
+        const displayMinutes = Math.round((hours - displayHours) * 60);
         
-        // Add to main entries sheet with ID
+        // Add to main entries sheet with both hours and minutes
         allEntries.push({
           'Entry ID': entry.id || `${entry.type}_${new Date(entry.startTime).getTime()}`,
           Date: date,
@@ -1922,6 +2302,8 @@ async function exportToExcel() {
           'Start Time': new Date(entry.startTime).toLocaleTimeString(),
           'End Time': new Date(entry.endTime).toLocaleTimeString(),
           'Duration (hours)': hours.toFixed(2),
+          'Duration (h:m)': `${displayHours}h ${displayMinutes}m`,
+          'Duration (minutes)': totalMinutes,
           'Multi-tasking': entry.wasMultitasking ? 'Yes' : 'No',
           'Multi-tasked With': entry.multitaskingWith || '',
           'Auto-tracked': entry.autoTracked ? 'Yes' : 'No',
