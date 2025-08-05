@@ -242,6 +242,67 @@
     .import-export-buttons button {
       flex: 1;
     }
+    
+    /* Calendar accounts styling */
+    .account-card {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 15px;
+      background: #f8f9fa;
+      border-radius: 6px;
+      margin-bottom: 10px;
+      border: 1px solid #e1dfdd;
+    }
+    
+    .account-card.connected {
+      background: #f0f8f0;
+      border-color: #107c10;
+    }
+    
+    .account-info {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+    
+    .account-icon {
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .account-details h3 {
+      margin: 0 0 5px 0;
+      font-size: 16px;
+      color: #323130;
+    }
+    
+    .account-email {
+      font-size: 13px;
+      color: #605e5c;
+    }
+    
+    .provider-tag {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      margin-left: 8px;
+      font-weight: 600;
+    }
+    
+    .provider-tag.google {
+      background: #4285F4;
+      color: white;
+    }
+    
+    .provider-tag.outlook {
+      background: #0078D4;
+      color: white;
+    }
   </style>
 </head>
 <body>
@@ -270,34 +331,66 @@
     </div>
   </div>
   
-  <!-- Microsoft Account Settings -->
+  <!-- Calendar Accounts -->
   <div class="card">
-    <h2>Microsoft Account <span class="feature-badge">Optional</span></h2>
+    <h2>Calendar Accounts <span class="feature-badge">New!</span></h2>
     <p class="section-description">
-      Connect your Outlook calendar to automatically import meetings. This requires an Azure App registration.
+      Connect your calendars to automatically import meetings. Google Calendar offers one-click setup, while Outlook requires Azure configuration.
     </p>
-    <div id="accountInfo">
-      <p>Status: <span id="accountStatus" style="font-weight: 600;">Checking...</span></p>
-      <div class="input-group">
-        <label>Azure App Client ID:</label>
-        <input type="text" id="clientIdInput" placeholder="Enter your Azure App Client ID">
-        <small>
-          To get a Client ID:<br>
-          1. Go to <a href="https://portal.azure.com" target="_blank">Azure Portal</a><br>
-          2. Navigate to App registrations → New registration<br>
-          3. Set redirect URI to: <code id="redirectUri">Loading...</code><br>
-          4. Copy the Application (client) ID
-        </small>
+    
+    <!-- Google Calendar -->
+    <div class="account-card" id="googleAccountCard">
+      <div class="account-info">
+        <div class="account-icon">
+          <svg width="40" height="40" viewBox="0 0 24 24">
+            <path fill="#4285F4" d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/>
+          </svg>
+        </div>
+        <div class="account-details">
+          <h3>Google Calendar <span class="provider-tag google">Easy Setup</span></h3>
+          <div class="account-email" id="googleAccountEmail">Not connected</div>
+        </div>
       </div>
-      <button class="button" id="saveClientIdBtn">Save Client ID</button>
-      <button class="button secondary" id="reconnectBtn">Reconnect Account</button>
-      <button class="button danger" id="disconnectBtn">Disconnect</button>
+      <div id="googleAccountActions">
+        <p style="margin: 0; color: #605e5c; font-size: 13px;">Connect via extension popup</p>
+      </div>
     </div>
+    
+    <!-- Microsoft Outlook -->
+    <div class="account-card" id="outlookAccountCard">
+      <div class="account-info">
+        <div class="account-icon">
+          <svg width="40" height="40" viewBox="0 0 24 24">
+            <path fill="#0078D4" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10h5v-2h-5c-4.34 0-8-3.66-8-8s3.66-8 8-8 8 3.66 8 8v1.43c0 .79-.71 1.57-1.5 1.57s-1.5-.78-1.5-1.57V12c0-2.76-2.24-5-5-5s-5 2.24-5 5 2.24 5 5 5c1.38 0 2.64-.56 3.54-1.47.65.89 1.77 1.47 2.96 1.47 1.97 0 3.5-1.6 3.5-3.57V12c0-5.52-4.48-10-10-10zm0 13c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3z"/>
+          </svg>
+        </div>
+        <div class="account-details">
+          <h3>Outlook Calendar <span class="provider-tag outlook">Azure Setup</span></h3>
+          <div class="account-email" id="outlookAccountEmail">Not connected</div>
+        </div>
+      </div>
+      <div id="outlookAccountActions">
+        <div class="input-group">
+          <label>Azure App Client ID:</label>
+          <input type="text" id="clientIdInput" placeholder="Enter your Azure App Client ID">
+          <small>
+            To get a Client ID:<br>
+            1. Go to <a href="https://portal.azure.com" target="_blank">Azure Portal</a><br>
+            2. Navigate to App registrations → New registration<br>
+            3. Set redirect URI to: <code id="redirectUri">Loading...</code><br>
+            4. Copy the Application (client) ID
+          </small>
+        </div>
+        <button class="button" id="saveClientIdBtn">Save Client ID</button>
+      </div>
+    </div>
+    
+    <div class="success-message" id="accountSuccess">Account settings updated!</div>
   </div>
   
   <!-- Multi-tasking Settings -->
   <div class="card">
-    <h2>Multi-tasking Settings <span class="feature-badge">New!</span></h2>
+    <h2>Multi-tasking Settings</h2>
     <p class="section-description">
       Configure how multi-tasking is tracked and analyzed in your time reports.
     </p>
@@ -331,12 +424,12 @@
   <div class="card">
     <h2>Auto-Tracking Settings <span class="feature-badge">Auto!</span></h2>
     <p class="section-description">
-      Automatically start tracking meetings when their scheduled time begins.
+      Automatically start tracking meetings when their scheduled time begins. Works with both Google and Outlook calendars.
     </p>
     <div class="input-group">
       <label>
         <input type="checkbox" id="autoTrackMeetings">
-        <strong>Enable auto-tracking for Outlook meetings</strong>
+        <strong>Enable auto-tracking for calendar meetings</strong>
       </label>
       <small>Meetings will automatically start tracking at their scheduled time and stop at the scheduled end time. You can always end them early if needed.</small>
     </div>
@@ -450,20 +543,22 @@
   <div class="card">
     <h2>About</h2>
     <p class="section-description">
-      <strong>Time Tracker with Multi-tasking Support</strong><br>
-      Version 2.0.1<br><br>
+      <strong>Universal Time Tracker with Multi-tasking Support</strong><br>
+      Version 2.2.0<br><br>
       
-      This extension helps you track your time accurately, including when you're multi-tasking during meetings. 
+      This extension helps you track your time accurately across Google Calendar and Outlook, including when you're multi-tasking during meetings. 
       Use the insights to optimize your schedule and improve productivity.<br><br>
       
       <strong>New Features:</strong><br>
+      • Google Calendar integration with one-click setup<br>
+      • Universal calendar view for both Google and Outlook<br>
       • Meeting mode with multi-tasking support<br>
+      • Auto-tracking for scheduled meetings<br>
       • Dual timer display for simultaneous tracking<br>
       • Multi-tasking analysis in exports<br>
-      • Productivity scoring based on focus time<br>
-      • Export settings that actually work!<br><br>
+      • Productivity scoring based on focus time<br><br>
       
-      <strong>Privacy:</strong> All data is stored locally in your browser. No information is sent to external servers.
+      <strong>Privacy:</strong> All data is stored locally in your browser. No information is sent to external servers except for calendar sync with your authenticated accounts.
     </p>
   </div>
   

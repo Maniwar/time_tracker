@@ -1,5 +1,6 @@
 // background.js - Service Worker for Time Tracker Extension
 // Handles Outlook authentication and calendar sync with PKCE support
+// Google Calendar is handled through chrome.identity API directly
 
 // Store for OAuth tokens
 let accessToken = null;
@@ -66,6 +67,8 @@ async function generatePKCEChallenge() {
 
 // Message handler for popup communication
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  console.log('Background received message:', request.action);
+  
   if (request.action === 'authenticate') {
     handleAuthentication().then(sendResponse).catch(error => {
       sendResponse({ success: false, error: error.message });
@@ -92,6 +95,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   } else if (request.action === 'getRedirectUri') {
     // Return the redirect URI for display in options
     sendResponse({ redirectUri: REDIRECT_URI });
+    return true;
+  } else if (request.action === 'restartAutoTracking') {
+    // Notify popup to restart auto-tracking check
+    console.log('Auto-tracking restart requested');
+    sendResponse({ success: true });
     return true;
   }
 });
@@ -380,7 +388,7 @@ async function fetchCalendarEvents(startDate, endDate) {
     const url = new URL('https://graph.microsoft.com/v1.0/me/calendarview');
     url.searchParams.append('startDateTime', startDate);
     url.searchParams.append('endDateTime', endDate);
-    url.searchParams.append('$select', 'subject,start,end,isAllDay,location,organizer');
+    url.searchParams.append('$select', 'subject,start,end,isAllDay,location,organizer,attendees,id,webLink');
     url.searchParams.append('$orderby', 'start/dateTime');
     url.searchParams.append('$top', '50');
     
@@ -432,6 +440,7 @@ chrome.runtime.onInstalled.addListener(() => {
   // Log the redirect URI on installation
   console.log('Extension installed. Redirect URI for Azure:', REDIRECT_URI);
   console.log('PKCE is enabled for enhanced security');
+  console.log('Google Calendar uses chrome.identity API directly');
 });
 
 // Export for testing (only in Node.js environment)
