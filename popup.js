@@ -569,8 +569,6 @@ async function connectGoogle() {
 }
 
 // Handle Outlook connection
-// Replace the existing connectOutlook() function in popup.js with this fixed version:
-
 async function connectOutlook() {
   const btn = document.getElementById('outlookConnectBtn');
   const originalText = btn.textContent;
