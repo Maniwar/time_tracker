@@ -39,6 +39,147 @@
       padding: 15px;
     }
     
+    /* Calendar provider styles */
+    .calendar-providers {
+      background: white;
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 15px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+    
+    .provider-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    
+    .provider-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #323130;
+    }
+    
+    .provider-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    
+    .provider-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px;
+      border: 1px solid #e1dfdd;
+      border-radius: 4px;
+      transition: all 0.2s;
+    }
+    
+    .provider-item.connected {
+      background: #f0f8f0;
+      border-color: #107c10;
+    }
+    
+    .provider-info {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex: 1;
+    }
+    
+    .provider-icon {
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .provider-icon img {
+      width: 20px;
+      height: 20px;
+    }
+    
+    .provider-details {
+      flex: 1;
+    }
+    
+    .provider-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: #323130;
+    }
+    
+    .provider-email {
+      font-size: 11px;
+      color: #605e5c;
+    }
+    
+    .provider-status {
+      font-size: 11px;
+      color: #605e5c;
+      font-style: italic;
+    }
+    
+    .connect-btn {
+      padding: 4px 12px;
+      font-size: 12px;
+      border: none;
+      border-radius: 3px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .connect-btn.primary {
+      background: #0078d4;
+      color: white;
+    }
+    
+    .connect-btn.primary:hover {
+      background: #106ebe;
+    }
+    
+    .connect-btn.disconnect {
+      background: #e1dfdd;
+      color: #323130;
+    }
+    
+    .connect-btn.disconnect:hover {
+      background: #d2d0ce;
+    }
+    
+    /* Calendar selector */
+    .calendar-selector {
+      display: flex;
+      gap: 5px;
+      margin-bottom: 10px;
+      padding: 0 15px;
+    }
+    
+    .calendar-tab {
+      flex: 1;
+      padding: 6px 12px;
+      border: 1px solid #d2d0ce;
+      background: white;
+      cursor: pointer;
+      text-align: center;
+      font-size: 12px;
+      transition: all 0.2s;
+      border-radius: 4px;
+    }
+    
+    .calendar-tab.active {
+      background: #0078d4;
+      color: white;
+      border-color: #0078d4;
+    }
+    
+    .calendar-tab:hover:not(.active) {
+      background: #f3f2f1;
+    }
+    
     /* Meeting Status Bar */
     .meeting-status {
       display: none;
@@ -482,6 +623,21 @@
       opacity: 1;
     }
     
+    .notification.success {
+      background: linear-gradient(135deg, #10893e, #14cc60);
+      color: white;
+    }
+    
+    .notification.error {
+      background: linear-gradient(135deg, #d83b01, #e74c0e);
+      color: white;
+    }
+    
+    .notification.info {
+      background: linear-gradient(135deg, #0078d4, #106ebe);
+      color: white;
+    }
+    
     #loginSection, #mainContent {
       display: none;
     }
@@ -723,22 +879,6 @@
       border-color: #0078d4;
     }
     
-    /* Improved notification styling */
-    .notification.success {
-      background: linear-gradient(135deg, #10893e, #14cc60);
-      color: white;
-    }
-    
-    .notification.error {
-      background: linear-gradient(135deg, #d83b01, #e74c0e);
-      color: white;
-    }
-    
-    .notification.info {
-      background: linear-gradient(135deg, #0078d4, #106ebe);
-      color: white;
-    }
-    
     /* Time input grid */
     .time-input-grid {
       display: grid;
@@ -827,12 +967,21 @@
     .edit-dialog::-webkit-scrollbar-thumb:hover {
       background: #555;
     }
+    
+    /* Provider icon in meetings */
+    .provider-indicator {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      vertical-align: middle;
+      margin-right: 4px;
+    }
   </style>
 </head>
 <body>
   <div class="header">
     <h1>Time Tracker</h1>
-    <div class="auth-status" id="authStatus"></div>
+    <div class="auth-status" id="authStatus">Universal</div>
   </div>
   
   <div class="container">
@@ -846,9 +995,65 @@
       ⚡ Multi-tasking Mode Active - Tracking multiple activities
     </div>
     
-    <div id="loginSection" class="info-message">
-      <p><strong>Optional:</strong> Connect your Outlook calendar to automatically import meetings.</p>
-      <button class="button" id="connectBtn">Connect to Outlook</button>
+    <!-- Calendar Providers Section -->
+    <div class="calendar-providers" id="calendarProviders">
+      <div class="provider-header">
+        <span class="provider-title">📅 Calendar Connections</span>
+        <button class="button" id="settingsBtn" style="font-size: 11px; padding: 4px 8px;">
+          ⚙️ Settings
+        </button>
+      </div>
+      
+      <div class="provider-list">
+        <!-- Google Calendar -->
+        <div class="provider-item" id="googleProvider">
+          <div class="provider-info">
+            <div class="provider-icon">
+              <!-- Google Calendar Icon SVG -->
+              <svg width="20" height="20" viewBox="0 0 24 24">
+                <path fill="#4285F4" d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/>
+              </svg>
+            </div>
+            <div class="provider-details">
+              <div class="provider-name">Google Calendar</div>
+              <div class="provider-email" id="googleEmail" style="display: none;"></div>
+              <div class="provider-status" id="googleStatus">One-click setup</div>
+            </div>
+          </div>
+          <button class="connect-btn primary" id="googleConnectBtn">Connect</button>
+        </div>
+        
+        <!-- Microsoft Outlook -->
+        <div class="provider-item" id="outlookProvider">
+          <div class="provider-info">
+            <div class="provider-icon">
+              <!-- Outlook Icon SVG -->
+              <svg width="20" height="20" viewBox="0 0 24 24">
+                <path fill="#0078D4" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10h5v-2h-5c-4.34 0-8-3.66-8-8s3.66-8 8-8 8 3.66 8 8v1.43c0 .79-.71 1.57-1.5 1.57s-1.5-.78-1.5-1.57V12c0-2.76-2.24-5-5-5s-5 2.24-5 5 2.24 5 5 5c1.38 0 2.64-.56 3.54-1.47.65.89 1.77 1.47 2.96 1.47 1.97 0 3.5-1.6 3.5-3.57V12c0-5.52-4.48-10-10-10zm0 13c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3z"/>
+              </svg>
+            </div>
+            <div class="provider-details">
+              <div class="provider-name">Outlook Calendar</div>
+              <div class="provider-email" id="outlookEmail" style="display: none;"></div>
+              <div class="provider-status" id="outlookStatus">Requires Azure setup</div>
+            </div>
+          </div>
+          <button class="connect-btn primary" id="outlookConnectBtn">Connect</button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Calendar Selector (shown when multiple calendars connected) -->
+    <div class="calendar-selector" id="calendarSelector" style="display: none;">
+      <div class="calendar-tab active" data-provider="all" id="allTab">
+        All Calendars
+      </div>
+      <div class="calendar-tab" data-provider="google" id="googleTab">
+        Google
+      </div>
+      <div class="calendar-tab" data-provider="outlook" id="outlookTab">
+        Outlook
+      </div>
     </div>
     
     <div id="mainContent">
@@ -1060,6 +1265,7 @@
   <div class="notification" id="notification"></div>
   
   <script src="xlsx.min.js"></script>
+  <script src="google-calendar.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>

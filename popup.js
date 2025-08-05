@@ -1,5 +1,5 @@
-// Complete popup.js with Meeting Multi-tasking Support, Auto-Tracking, Enhanced Edit, and Fixed Export Settings
-// Version 2.0.7 - Fixed export settings loading and application
+// Complete popup.js with Meeting Multi-tasking Support, Auto-Tracking, Google Calendar, and Fixed Export Settings
+// Version 2.2.0 - Universal Calendar Support
 
 let currentTimer = null;
 let startTime = null;
@@ -21,8 +21,21 @@ let customEndDate = null;
 // Auto-tracking check interval
 let autoTrackInterval = null;
 
+// Calendar service instances
+let googleCalendarService = null;
+let activeCalendarProvider = 'all'; // 'all', 'google', or 'outlook'
+let connectedProviders = [];
+
+// Initialize Google Calendar service
+function initializeCalendarServices() {
+  googleCalendarService = new GoogleCalendarService();
+}
+
 // Initialize popup
 document.addEventListener('DOMContentLoaded', async function() {
+  // Initialize Google Calendar service FIRST
+  initializeCalendarServices();
+  
   // Load export settings FIRST to set default date range
   chrome.storage.local.get(['exportSettings'], (result) => {
     const settings = result.exportSettings || { defaultDateRange: 'today' };
@@ -34,22 +47,27 @@ document.addEventListener('DOMContentLoaded', async function() {
       document.getElementById('customDateRange').style.display = 'flex';
     }
     
-    // Load data for the selected date range
-    loadDataForDateRange();
-    loadCategoryTotals();
+    // Now proceed with the rest of initialization
+    initializeApp();
   });
-  
-  checkAuthStatus();
+});
+
+// Separate initialization function
+async function initializeApp() {
+  await checkAuthStatus();
   setupEventListeners();
+  setupCalendarProviderListeners();
   loadCategories();
   initializeDateInputs();
+  loadDataForDateRange();
+  loadCategoryTotals();
   checkForRunningTimers();
   setInterval(updateTimers, 1000);
-  setInterval(loadCategoryTotals, 30000); // Update category totals every 30 seconds
+  setInterval(loadCategoryTotals, 30000);
   
   // Start auto-tracking check
   startAutoTrackingCheck();
-});
+}
 
 // Helper function to convert from a specific timezone to local time
 function convertFromTimeZone(dateStr, timeStr, timeZone) {
@@ -319,7 +337,7 @@ function autoStartMeeting(meeting) {
   chrome.storage.local.get(['autoTrackSettings'], (result) => {
     const settings = result.autoTrackSettings || { notifications: true };
     if (settings.notifications) {
-      showNotification(`⏰ Auto-started: ${subject}`, 5000);
+      showNotification(`⏰ Auto-started: ${subject}`, 'info', 5000);
     }
   });
   
@@ -388,7 +406,7 @@ function autoStartMeeting(meeting) {
               stopMeetingTimer(false); // false = ended on schedule
               const settings = result.autoTrackSettings || { notifications: true };
               if (settings.notifications) {
-                showNotification(`⏰ Meeting ended: ${subject}`, 3000);
+                showNotification(`⏰ Meeting ended: ${subject}`, 'info', 3000);
               }
             }
           });
@@ -398,6 +416,220 @@ function autoStartMeeting(meeting) {
   });
 }
 
+// Check auth status for both providers
+async function checkAuthStatus() {
+  const providers = [];
+  
+  // Check Google connection
+  try {
+    if (googleCalendarService && await googleCalendarService.isConnected()) {
+      const userInfo = await googleCalendarService.getUserInfo();
+      providers.push('google');
+      updateProviderUI('google', true, userInfo.email);
+      
+      // Store Google connection info
+      chrome.storage.local.set({
+        googleConnected: true,
+        googleEmail: userInfo.email
+      });
+    } else {
+      updateProviderUI('google', false);
+    }
+  } catch (error) {
+    console.log('Google not connected:', error);
+    updateProviderUI('google', false);
+  }
+  
+  // Check Microsoft connection
+  chrome.storage.local.get(['accessToken', 'userEmail', 'tokenExpiry', 'autoTrackMeetings'], (result) => {
+    const authStatus = document.getElementById('authStatus');
+    document.getElementById('mainContent').style.display = 'block';
+    
+    if (result.autoTrackMeetings) {
+      console.log('Auto-tracking meetings is enabled');
+    }
+    
+    if (result.accessToken && result.tokenExpiry) {
+      const now = Date.now();
+      const expiryTime = new Date(result.tokenExpiry).getTime();
+      
+      if (now < expiryTime) {
+        providers.push('outlook');
+        updateProviderUI('outlook', true, result.userEmail);
+      } else {
+        updateProviderUI('outlook', false);
+      }
+    } else {
+      updateProviderUI('outlook', false);
+    }
+    
+    // Update connected providers list
+    connectedProviders = providers;
+    
+    // Show/hide calendar selector
+    if (providers.length > 1) {
+      document.getElementById('calendarSelector').style.display = 'flex';
+      updateCalendarTabs();
+    } else {
+      document.getElementById('calendarSelector').style.display = 'none';
+    }
+    
+    // Show meetings section if any calendar is connected
+    if (providers.length > 0) {
+      document.getElementById('meetingsSection').style.display = 'block';
+      fetchTodayMeetings();
+    } else {
+      document.getElementById('meetingsSection').style.display = 'none';
+    }
+    
+    // Update auth status display
+    if (providers.length === 0) {
+      authStatus.textContent = 'Not connected';
+    } else if (providers.length === 1) {
+      authStatus.textContent = providers[0] === 'google' ? 'Google' : 'Outlook';
+    } else {
+      authStatus.textContent = 'Universal';
+    }
+  });
+}
+
+// Update provider UI
+function updateProviderUI(provider, connected, email = null) {
+  const providerItem = document.getElementById(`${provider}Provider`);
+  const emailElement = document.getElementById(`${provider}Email`);
+  const statusElement = document.getElementById(`${provider}Status`);
+  const connectBtn = document.getElementById(`${provider}ConnectBtn`);
+  
+  if (connected) {
+    providerItem.classList.add('connected');
+    emailElement.textContent = email;
+    emailElement.style.display = 'block';
+    statusElement.style.display = 'none';
+    connectBtn.textContent = 'Disconnect';
+    connectBtn.className = 'connect-btn disconnect';
+  } else {
+    providerItem.classList.remove('connected');
+    emailElement.style.display = 'none';
+    statusElement.style.display = 'block';
+    statusElement.textContent = provider === 'outlook' ? 
+      'Requires Azure setup' : 'One-click setup';
+    connectBtn.textContent = 'Connect';
+    connectBtn.className = 'connect-btn primary';
+  }
+}
+
+// Update calendar tabs
+function updateCalendarTabs() {
+  document.querySelectorAll('.calendar-tab').forEach(tab => {
+    tab.classList.remove('active');
+    const provider = tab.dataset.provider;
+    
+    // Disable tabs for non-connected providers
+    if (provider !== 'all' && !connectedProviders.includes(provider)) {
+      tab.style.display = 'none';
+    } else {
+      tab.style.display = 'block';
+      if (provider === activeCalendarProvider) {
+        tab.classList.add('active');
+      }
+    }
+  });
+}
+
+// Handle Google connection
+async function connectGoogle() {
+  const btn = document.getElementById('googleConnectBtn');
+  const originalText = btn.textContent;
+  
+  try {
+    btn.disabled = true;
+    btn.textContent = 'Connecting...';
+    
+    if (originalText === 'Disconnect') {
+      // Disconnect
+      await googleCalendarService.signOut();
+      chrome.storage.local.remove(['googleConnected', 'googleEmail']);
+      updateProviderUI('google', false);
+      await checkAuthStatus();
+      showNotification('Disconnected from Google Calendar');
+    } else {
+      // Connect
+      const userInfo = await googleCalendarService.connect();
+      updateProviderUI('google', true, userInfo.email);
+      await checkAuthStatus();
+      showNotification('Connected to Google Calendar!', 'success');
+    }
+  } catch (error) {
+    console.error('Google connection error:', error);
+    showNotification('Failed to connect to Google: ' + error.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalText === 'Disconnect' ? 'Disconnect' : 'Connect';
+  }
+}
+
+// Handle Outlook connection
+// Replace the existing connectOutlook() function in popup.js with this fixed version:
+
+async function connectOutlook() {
+  const btn = document.getElementById('outlookConnectBtn');
+  const originalText = btn.textContent;
+  
+  chrome.storage.local.get(['accessToken', 'clientId'], async (result) => {
+    if (result.accessToken && btn.textContent === 'Disconnect') {
+      // Disconnect
+      chrome.runtime.sendMessage({ action: 'signOut' }, () => {
+        updateProviderUI('outlook', false);
+        checkAuthStatus();
+        showNotification('Disconnected from Outlook');
+      });
+    } else {
+      // Check if client ID is saved
+      if (!result.clientId) {
+        // No client ID saved, show setup instructions
+        if (confirm('Outlook requires Azure app setup. You need to save your Client ID first.\n\nOpen settings to configure?')) {
+          chrome.runtime.openOptionsPage();
+        }
+        return;
+      }
+      
+      // Client ID is saved, proceed with authentication
+      btn.disabled = true;
+      btn.textContent = 'Connecting...';
+      
+      try {
+        // Send authenticate message to background script
+        chrome.runtime.sendMessage({ action: 'authenticate' }, (response) => {
+          if (response && response.success) {
+            updateProviderUI('outlook', true, response.userEmail);
+            checkAuthStatus();
+            showNotification('Connected to Outlook successfully!', 'success');
+            // Refresh meetings list after connection
+            fetchAndDisplayMeetings();
+          } else {
+            const errorMsg = response?.error || 'Authentication failed';
+            showNotification(`Failed to connect: ${errorMsg}`, 'error');
+            
+            // If it's a client ID error, offer to open settings
+            if (errorMsg.includes('Client ID')) {
+              if (confirm('Client ID issue detected. Open settings to verify?')) {
+                chrome.runtime.openOptionsPage();
+              }
+            }
+          }
+          
+          btn.disabled = false;
+          btn.textContent = originalText;
+        });
+      } catch (error) {
+        console.error('Outlook connection error:', error);
+        showNotification('Failed to connect to Outlook: ' + error.message, 'error');
+        btn.disabled = false;
+        btn.textContent = originalText;
+      }
+    }
+  });
+}
 // Load categories for manual entry dropdown and quick actions
 function loadCategories() {
   chrome.storage.local.get(['categories', 'quickActions', 'runningTimer', 'runningMeetingTimer'], (result) => {
@@ -787,66 +1019,8 @@ function updateMultitaskIndicator() {
   }
 }
 
-// Check auth status
-function checkAuthStatus() {
-  chrome.storage.local.get(['accessToken', 'userEmail', 'tokenExpiry', 'autoTrackMeetings'], (result) => {
-    const authStatus = document.getElementById('authStatus');
-    const syncBtn = document.getElementById('syncBtn');
-    const meetingsSection = document.getElementById('meetingsSection');
-    
-    document.getElementById('mainContent').style.display = 'block';
-    
-    // Show auto-tracking status
-    if (result.autoTrackMeetings) {
-      console.log('Auto-tracking meetings is enabled');
-    }
-    
-    if (result.accessToken && result.tokenExpiry) {
-      const now = Date.now();
-      const expiryTime = new Date(result.tokenExpiry).getTime();
-      
-      if (now < expiryTime) {
-        // Token is valid
-        authStatus.textContent = result.userEmail || 'Connected';
-        document.getElementById('loginSection').style.display = 'none';
-        
-        if (syncBtn) syncBtn.style.display = 'inline-block';
-        if (meetingsSection) meetingsSection.style.display = 'block';
-        
-        // Auto-fetch meetings
-        fetchTodayMeetings().catch(err => {
-          console.error('Failed to fetch meetings:', err);
-          document.getElementById('meetingsList').innerHTML = 
-            '<p style="text-align: center; color: #605e5c;">Failed to load meetings. Please reconnect to Outlook.</p>';
-        });
-      } else {
-        // Token is expired
-        handleDisconnectedState();
-      }
-    } else {
-      handleDisconnectedState();
-    }
-  });
-}
-
-// Handle disconnected state
-function handleDisconnectedState() {
-  document.getElementById('loginSection').style.display = 'block';
-  document.getElementById('authStatus').textContent = 'Not connected';
-  const syncBtn = document.getElementById('syncBtn');
-  const meetingsSection = document.getElementById('meetingsSection');
-  if (syncBtn) syncBtn.style.display = 'none';
-  if (meetingsSection) meetingsSection.style.display = 'none';
-  const meetingsList = document.getElementById('meetingsList');
-  if (meetingsList) {
-    meetingsList.innerHTML = '<p style="text-align: center; color: #605e5c;">Connect to Outlook to see your meetings</p>';
-  }
-}
-
 // Setup event listeners
 function setupEventListeners() {
-  document.getElementById('connectBtn').addEventListener('click', authenticate);
-  document.getElementById('syncBtn').addEventListener('click', fetchTodayMeetings);
   document.getElementById('exportBtn').addEventListener('click', exportToExcel);
   document.getElementById('showManualEntryBtn').addEventListener('click', showManualEntry);
   document.getElementById('saveManualBtn').addEventListener('click', saveManualEntry);
@@ -977,6 +1151,52 @@ function setupQuickTaskListeners() {
   });
 }
 
+// Setup calendar provider event listeners
+function setupCalendarProviderListeners() {
+  // Google connect/disconnect
+  document.getElementById('googleConnectBtn').addEventListener('click', connectGoogle);
+  
+  // Outlook connect/disconnect
+  document.getElementById('outlookConnectBtn').addEventListener('click', connectOutlook);
+  
+  // Settings button
+  document.getElementById('settingsBtn').addEventListener('click', () => {
+    chrome.runtime.openOptionsPage();
+  });
+  
+  // Calendar tabs
+  document.querySelectorAll('.calendar-tab').forEach(tab => {
+    tab.addEventListener('click', (e) => {
+      activeCalendarProvider = e.currentTarget.dataset.provider;
+      updateCalendarTabs();
+      fetchTodayMeetings();
+    });
+  });
+  
+  // Update sync button to sync all connected calendars
+  const syncBtn = document.getElementById('syncBtn');
+  if (syncBtn) {
+    // Remove any existing listeners first
+    const newSyncBtn = syncBtn.cloneNode(true);
+    syncBtn.parentNode.replaceChild(newSyncBtn, syncBtn);
+    
+    newSyncBtn.addEventListener('click', async () => {
+      newSyncBtn.disabled = true;
+      newSyncBtn.textContent = 'Syncing...';
+      
+      try {
+        await fetchTodayMeetings();
+        showNotification('Calendars synced successfully!', 'success');
+      } catch (error) {
+        showNotification('Sync failed: ' + error.message, 'error');
+      } finally {
+        newSyncBtn.disabled = false;
+        newSyncBtn.textContent = 'Sync';
+      }
+    });
+  }
+}
+
 // Handle meeting toggle
 function handleMeetingToggle() {
   chrome.storage.local.get(['runningMeetingTimer'], (result) => {
@@ -1092,7 +1312,7 @@ function stopMeetingTimer(endedEarly = false) {
       const scheduledDuration = scheduledMeetingEndTime.getTime() - meetingStartTime;
       const savedMinutes = Math.round((scheduledDuration - duration) / 60000);
       entry.description += ` [Ended ${savedMinutes}m early]`;
-      showNotification(`Meeting ended ${savedMinutes} minutes early`, 3000);
+      showNotification(`Meeting ended ${savedMinutes} minutes early`, 'info', 3000);
     }
     
     saveTimeEntry(entry);
@@ -1201,11 +1421,12 @@ function stopTaskTimer() {
   showNotification('Task completed');
 }
 
-// Show notification (enhanced with duration parameter)
-function showNotification(message, duration = 3000) {
+// Show notification with types
+function showNotification(message, type = 'info', duration = 3000) {
   const notification = document.getElementById('notification');
   if (notification) {
     notification.textContent = message;
+    notification.className = `notification ${type}`;
     notification.classList.add('show');
     
     setTimeout(() => {
@@ -1214,72 +1435,182 @@ function showNotification(message, duration = 3000) {
   }
 }
 
-// Authenticate with Outlook
-async function authenticate() {
-  document.getElementById('connectBtn').disabled = true;
-  document.getElementById('connectBtn').textContent = 'Connecting...';
-  
-  chrome.runtime.sendMessage({ action: 'authenticate' }, (response) => {
-    if (response && response.success) {
-      checkAuthStatus();
-    } else {
-      alert('Authentication failed: ' + (response ? response.error : 'Unknown error'));
-      document.getElementById('connectBtn').disabled = false;
-      document.getElementById('connectBtn').textContent = 'Connect to Outlook';
-    }
-  });
-}
-
-// Fetch today's meetings with proper timezone handling
+// Fetch today's meetings from both providers
 async function fetchTodayMeetings() {
   const meetingsList = document.getElementById('meetingsList');
   meetingsList.innerHTML = '<div class="loading">Loading meetings...</div>';
   
-  // Get today's date range in local timezone
+  // Get today's date range
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const tomorrow = new Date(today);
   tomorrow.setDate(tomorrow.getDate() + 1);
   
-  // Convert to UTC for API request
-  // Microsoft Graph expects UTC ISO strings
-  const startDateTime = today.toISOString();
-  const endDateTime = tomorrow.toISOString();
+  const allMeetings = [];
+  const errors = [];
   
-  // Clear ended meetings list when fetching new meetings (new day)
-  chrome.storage.local.get(['lastSyncDate'], (result) => {
-    const lastSync = result.lastSyncDate;
-    const todayStr = today.toDateString();
-    if (lastSync !== todayStr) {
-      chrome.storage.local.set({ 
-        endedMeetings: [],
-        lastSyncDate: todayStr
-      });
+  try {
+    // Fetch from Google if connected and selected
+    if (connectedProviders.includes('google') && 
+        (activeCalendarProvider === 'all' || activeCalendarProvider === 'google')) {
+      try {
+        const googleEvents = await googleCalendarService.fetchEvents(
+          today.toISOString(),
+          tomorrow.toISOString()
+        );
+        allMeetings.push(...googleEvents);
+      } catch (error) {
+        console.error('Google Calendar fetch error:', error);
+        errors.push({ provider: 'Google', error: error.message });
+      }
     }
-  });
-  
+    
+    // Fetch from Outlook if connected and selected
+    if (connectedProviders.includes('outlook') && 
+        (activeCalendarProvider === 'all' || activeCalendarProvider === 'outlook')) {
+      try {
+        const outlookEvents = await fetchOutlookEvents(today, tomorrow);
+        allMeetings.push(...outlookEvents);
+      } catch (error) {
+        console.error('Outlook Calendar fetch error:', error);
+        errors.push({ provider: 'Outlook', error: error.message });
+      }
+    }
+    
+    // Sort meetings by start time
+    allMeetings.sort((a, b) => {
+      const startA = parseMeetingTime(a.start);
+      const startB = parseMeetingTime(b.start);
+      return startA - startB;
+    });
+    
+    // Remove duplicates (same title and time)
+    const uniqueMeetings = removeDuplicateMeetings(allMeetings);
+    
+    // Display meetings
+    displayUnifiedMeetings(uniqueMeetings);
+    
+    // Save for auto-tracking
+    saveMeetingsForAutoTracking(uniqueMeetings);
+    
+    // Check if any meetings should be auto-started
+    setTimeout(() => {
+      checkForMeetingsInProgress(uniqueMeetings);
+    }, 1000);
+    
+    // Show errors if any
+    if (errors.length > 0) {
+      const errorMsg = errors.map(e => `${e.provider}: ${e.error}`).join(', ');
+      showNotification('Some calendars had errors', 'error', 5000);
+    }
+  } catch (error) {
+    meetingsList.innerHTML = `<p style="color: #a80000;">Failed to load meetings: ${error.message}</p>`;
+  }
+}
+
+// Fetch Outlook events (wrapper for existing functionality)
+async function fetchOutlookEvents(startDate, endDate) {
   return new Promise((resolve, reject) => {
     chrome.runtime.sendMessage({
       action: 'fetchEvents',
-      startDate: startDateTime,
-      endDate: endDateTime
+      startDate: startDate.toISOString(),
+      endDate: endDate.toISOString()
     }, (response) => {
       if (response && response.success) {
-        displayMeetings(response.events);
-        saveMeetings(response.events);
-        
-        // Check if any meetings should be auto-started immediately after sync
-        setTimeout(() => {
-          checkForMeetingsInProgress(response.events);
-        }, 1000);
-        
-        resolve(response.events);
+        const events = (response.events || []).map(event => ({
+          ...event,
+          provider: 'outlook'
+        }));
+        resolve(events);
       } else {
-        const error = response ? response.error : 'Unknown error';
-        meetingsList.innerHTML = `<p style="color: #a80000;">Failed to load meetings: ${error}</p>`;
-        reject(error);
+        reject(new Error(response ? response.error : 'Unknown error'));
       }
     });
+  });
+}
+
+// Remove duplicate meetings
+function removeDuplicateMeetings(meetings) {
+  const seen = new Map();
+  
+  return meetings.filter(meeting => {
+    const key = `${meeting.subject}-${meeting.start.dateTime}-${meeting.end.dateTime}`;
+    if (seen.has(key)) {
+      return false;
+    }
+    seen.set(key, true);
+    return true;
+  });
+}
+
+
+// Display unified meetings
+function displayUnifiedMeetings(meetings) {
+  const meetingsList = document.getElementById('meetingsList');
+  
+  if (!meetings || meetings.length === 0) {
+    meetingsList.innerHTML = '<p style="text-align: center; color: #605e5c;">No meetings scheduled for today</p>';
+    return;
+  }
+  
+  meetingsList.innerHTML = meetings.map((meeting, index) => {
+    const start = parseMeetingTime(meeting.start);
+    const end = parseMeetingTime(meeting.end);
+    const duration = Math.round((end - start) / 60000);
+    
+    const startTimeStr = start.toLocaleTimeString([], { 
+      hour: '2-digit', 
+      minute: '2-digit',
+      hour12: true
+    });
+    
+    const endTimeStr = end.toLocaleTimeString([], { 
+      hour: '2-digit', 
+      minute: '2-digit',
+      hour12: true
+    });
+    
+    // Provider indicator
+    const providerIcon = meeting.provider === 'google' ? 
+      '<svg width="14" height="14" class="provider-indicator"><path fill="#4285F4" d="M11 1.5H10V0H9v1.5H5V0H4v1.5H3c-.83 0-1.5.68-1.5 1.5v8c0 .83.68 1.5 1.5 1.5h8c.83 0 1.5-.68 1.5-1.5V3c0-.83-.68-1.5-1.5-1.5zm0 9.5H3V5h8v6zM5 6.5h2v2H5z"/></svg>' :
+      '<svg width="14" height="14" class="provider-indicator"><path fill="#0078D4" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10h5v-2h-5c-4.34 0-8-3.66-8-8s3.66-8 8-8 8 3.66 8 8v1.43c0 .79-.71 1.57-1.5 1.57s-1.5-.78-1.5-1.57V12c0-2.76-2.24-5-5-5s-5 2.24-5 5 2.24 5 5 5c1.38 0 2.64-.56 3.54-1.47.65.89 1.77 1.47 2.96 1.47 1.97 0 3.5-1.6 3.5-3.57V12c0-5.52-4.48-10-10-10zm0 13c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3z"/></svg>';
+    
+    // Handle location - Outlook returns an object with displayName, Google returns a string
+    let locationText = '';
+    if (meeting.location) {
+      if (typeof meeting.location === 'string') {
+        locationText = meeting.location;
+      } else if (meeting.location.displayName) {
+        locationText = meeting.location.displayName;
+      }
+    }
+    
+    return `
+      <div class="meeting-item" data-provider="${meeting.provider}">
+        <div style="flex: 1;">
+          <div style="font-weight: 600; margin-bottom: 4px;">
+            ${providerIcon} ${meeting.subject}
+          </div>
+          <div style="font-size: 12px; color: #605e5c;">
+            ${startTimeStr} - ${endTimeStr}
+            (${duration} min)
+            ${locationText ? ` • ${locationText}` : ''}
+          </div>
+        </div>
+        <button class="button track-meeting-btn" data-index="${index}" style="font-size: 12px; padding: 4px 12px;">
+          Track
+        </button>
+      </div>
+    `;
+  }).join('');
+  
+  setupMeetingTrackButtons();
+}
+// Save meetings for auto-tracking
+function saveMeetingsForAutoTracking(meetings) {
+  chrome.storage.local.set({ 
+    todayMeetings: meetings,
+    lastSyncTime: new Date().toISOString()
   });
 }
 
@@ -1319,54 +1650,6 @@ function checkForMeetingsInProgress(meetings) {
   });
 }
 
-// Display meetings with proper timezone handling
-function displayMeetings(meetings) {
-  const meetingsList = document.getElementById('meetingsList');
-  
-  if (!meetings || meetings.length === 0) {
-    meetingsList.innerHTML = '<p style="text-align: center; color: #605e5c;">No meetings scheduled for today</p>';
-    return;
-  }
-  
-  meetingsList.innerHTML = meetings.map((meeting, index) => {
-    // Use the fixed parseMeetingTime function
-    const start = parseMeetingTime(meeting.start);
-    const end = parseMeetingTime(meeting.end);
-    
-    const duration = Math.round((end - start) / 60000); // minutes
-    
-    // Format times in local timezone
-    const startTimeStr = start.toLocaleTimeString([], { 
-      hour: '2-digit', 
-      minute: '2-digit',
-      hour12: true
-    });
-    
-    const endTimeStr = end.toLocaleTimeString([], { 
-      hour: '2-digit', 
-      minute: '2-digit',
-      hour12: true
-    });
-    
-    return `
-      <div class="meeting-item">
-        <div style="flex: 1;">
-          <div style="font-weight: 600; margin-bottom: 4px;">${meeting.subject}</div>
-          <div style="font-size: 12px; color: #605e5c;">
-            ${startTimeStr} - ${endTimeStr}
-            (${duration} min)
-          </div>
-        </div>
-        <button class="button track-meeting-btn" data-index="${index}" style="font-size: 12px; padding: 4px 12px;">
-          Track
-        </button>
-      </div>
-    `;
-  }).join('');
-  
-  setupMeetingTrackButtons();
-}
-
 // Setup meeting track button listeners
 function setupMeetingTrackButtons() {
   document.querySelectorAll('.track-meeting-btn').forEach(btn => {
@@ -1385,7 +1668,7 @@ function trackMeeting(index) {
       const meeting = meetings[index];
       const description = meeting.subject;
       
-      // Check if there's actually a running meeting timer (not just scheduled entries)
+      // Check if there's actually a running meeting timer
       if (result.runningMeetingTimer) {
         if (confirm('End current meeting and start tracking this one?')) {
           stopMeetingTimer();
@@ -1397,12 +1680,6 @@ function trackMeeting(index) {
       }
     }
   });
-}
-
-// Save meetings to storage (fixed to not interfere with tracking)
-function saveMeetings(meetings) {
-  // Only save the meeting list for display, don't add to timeEntries unless actually tracked
-  chrome.storage.local.set({ todayMeetings: meetings });
 }
 
 // Initialize date inputs
@@ -1558,6 +1835,7 @@ function loadDataForDateRange() {
         if (entry.wasMultitasking) badges += '<span class="multitask-tag">Multi-tasked</span>';
         if (entry.autoTracked) badges += '<span class="multitask-tag" style="background: #d1ecf1; color: #0c5460;">Auto-tracked</span>';
         if (entry.endedEarly) badges += '<span class="multitask-tag" style="background: #d4edda; color: #155724;">Ended early</span>';
+        if (entry.provider) badges += `<span class="multitask-tag" style="background: ${entry.provider === 'google' ? '#4285F4' : '#0078D4'}; color: white;">${entry.provider}</span>`;
         
         return `
           <div class="task-item">
@@ -1837,36 +2115,16 @@ function editTask(index) {
     }
   });
 }
-// Enhanced showEditDialog function with smart multi-tasking selection
+
 // Show comprehensive edit dialog with smart multi-tasking selection
 function showEditDialog(entry, entryDate, categories) {
   // Create overlay
   const overlay = document.createElement('div');
-  overlay.style.cssText = `
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
-    z-index: 10000;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  `;
+  overlay.className = 'edit-dialog-overlay';
   
   // Create dialog
   const dialog = document.createElement('div');
-  dialog.style.cssText = `
-    background: white;
-    border-radius: 8px;
-    padding: 20px;
-    max-width: 400px;
-    width: 90%;
-    max-height: 80vh;
-    overflow-y: auto;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  `;
+  dialog.className = 'edit-dialog';
   
   // Format dates and times for inputs
   const startDateTime = new Date(entry.startTime);
@@ -1874,89 +2132,65 @@ function showEditDialog(entry, entryDate, categories) {
   const duration = Math.round(entry.duration / 60000); // minutes
   
   dialog.innerHTML = `
-    <h3 style="margin: 0 0 15px 0; color: #323130; font-size: 16px;">
-      Edit Time Entry
-    </h3>
+    <h3>Edit Time Entry</h3>
     
-    <div style="margin-bottom: 12px;">
-      <label style="display: block; margin-bottom: 4px; color: #605e5c; font-size: 13px;">
-        Category:
-      </label>
-      <select id="editCategory" style="width: 100%; padding: 6px; border: 1px solid #d2d0ce; border-radius: 4px; font-size: 13px;">
+    <div class="edit-form-group">
+      <label>Category:</label>
+      <select id="editCategory">
         ${categories.map(cat => 
           `<option value="${cat}" ${cat === entry.category ? 'selected' : ''}>${cat}</option>`
         ).join('')}
       </select>
     </div>
     
-    <div style="margin-bottom: 12px;">
-      <label style="display: block; margin-bottom: 4px; color: #605e5c; font-size: 13px;">
-        Description:
-      </label>
-      <input type="text" id="editDescription" value="${entry.description || ''}" 
-        style="width: 100%; padding: 6px; border: 1px solid #d2d0ce; border-radius: 4px; font-size: 13px; box-sizing: border-box;">
+    <div class="edit-form-group">
+      <label>Description:</label>
+      <input type="text" id="editDescription" value="${entry.description || ''}">
     </div>
     
-    <div style="margin-bottom: 12px;">
-      <label style="display: block; margin-bottom: 4px; color: #605e5c; font-size: 13px;">
-        Date:
-      </label>
-      <input type="date" id="editDate" value="${startDateTime.toISOString().split('T')[0]}" 
-        style="width: 100%; padding: 6px; border: 1px solid #d2d0ce; border-radius: 4px; font-size: 13px; box-sizing: border-box;">
+    <div class="edit-form-group">
+      <label>Date:</label>
+      <input type="date" id="editDate" value="${startDateTime.toISOString().split('T')[0]}">
     </div>
     
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
-      <div>
-        <label style="display: block; margin-bottom: 4px; color: #605e5c; font-size: 13px;">
-          Start Time:
-        </label>
-        <input type="time" id="editStartTime" value="${startDateTime.toTimeString().slice(0, 5)}" 
-          style="width: 100%; padding: 6px; border: 1px solid #d2d0ce; border-radius: 4px; font-size: 13px; box-sizing: border-box;">
+    <div class="time-input-grid">
+      <div class="edit-form-group">
+        <label>Start Time:</label>
+        <input type="time" id="editStartTime" value="${startDateTime.toTimeString().slice(0, 5)}">
       </div>
-      <div>
-        <label style="display: block; margin-bottom: 4px; color: #605e5c; font-size: 13px;">
-          End Time:
-        </label>
-        <input type="time" id="editEndTime" value="${endDateTime.toTimeString().slice(0, 5)}" 
-          style="width: 100%; padding: 6px; border: 1px solid #d2d0ce; border-radius: 4px; font-size: 13px; box-sizing: border-box;">
+      <div class="edit-form-group">
+        <label>End Time:</label>
+        <input type="time" id="editEndTime" value="${endDateTime.toTimeString().slice(0, 5)}">
       </div>
     </div>
     
-    <div style="margin-bottom: 12px;">
-      <label style="display: block; margin-bottom: 4px; color: #605e5c; font-size: 13px;">
-        Duration (minutes): <span id="durationDisplay" style="color: #0078d4; font-weight: 600;">${duration}</span>
-      </label>
-      <input type="range" id="editDuration" min="1" max="480" value="${duration}" 
-        style="width: 100%;">
+    <div class="edit-form-group">
+      <label>Duration (minutes): <span id="durationDisplay">${duration}</span></label>
+      <input type="range" id="editDuration" min="1" max="480" value="${duration}">
       <div style="display: flex; justify-content: space-between; font-size: 11px; color: #605e5c;">
         <span>1 min</span>
         <span>8 hours</span>
       </div>
     </div>
     
-    <div style="margin-bottom: 12px; background: #fff3cd; padding: 10px; border-radius: 4px;">
-      <label style="display: flex; align-items: center; font-size: 13px;">
-        <input type="checkbox" id="editMultitasking" ${entry.wasMultitasking ? 'checked' : ''} 
-          style="margin-right: 6px;">
+    <div class="edit-multitask-section">
+      <label>
+        <input type="checkbox" id="editMultitasking" ${entry.wasMultitasking ? 'checked' : ''}>
         Was multi-tasking during this time
       </label>
       <div id="editMultitaskingDetails" style="display: ${entry.wasMultitasking ? 'block' : 'none'}; margin-top: 8px;">
         <label style="display: block; margin-bottom: 4px; color: #605e5c; font-size: 12px;">
           What else were you doing?
         </label>
-        <select id="editMultitaskingWith" style="width: 100%; padding: 6px; border: 1px solid #d2d0ce; border-radius: 4px; font-size: 13px;">
+        <select id="editMultitaskingWith">
           <option value="" disabled>Loading overlapping activities...</option>
         </select>
       </div>
     </div>
     
-    <div style="display: flex; gap: 8px; margin-top: 15px;">
-      <button id="saveEditBtn" style="flex: 1; padding: 8px; background: #0078d4; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px;">
-        Save Changes
-      </button>
-      <button id="cancelEditBtn" style="flex: 1; padding: 8px; background: #605e5c; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px;">
-        Cancel
-      </button>
+    <div class="edit-dialog-buttons">
+      <button class="save-btn" id="saveEditBtn">Save Changes</button>
+      <button class="cancel-btn" id="cancelEditBtn">Cancel</button>
     </div>
   `;
   
@@ -2052,12 +2286,12 @@ function showEditDialog(entry, entryDate, categories) {
     // Add generic options as fallback
     optionsHTML += '<optgroup label="Other Activities">';
     const genericOptions = [
-      { value: 'Meeting', label: '👥 In a meeting', icon: '👥' },
-      { value: 'Email', label: '📧 Checking email', icon: '📧' },
-      { value: 'Slack/Chat', label: '💬 On Slack/Chat', icon: '💬' },
-      { value: 'Phone Call', label: '📞 On a call', icon: '📞' },
-      { value: 'Admin', label: '📋 Admin work', icon: '📋' },
-      { value: 'Other', label: 'Other task', icon: '📝' }
+      { value: 'Meeting', label: '👥 In a meeting' },
+      { value: 'Email', label: '📧 Checking email' },
+      { value: 'Slack/Chat', label: '💬 On Slack/Chat' },
+      { value: 'Phone Call', label: '📞 On a call' },
+      { value: 'Admin', label: '📋 Admin work' },
+      { value: 'Other', label: 'Other task' }
     ];
     
     genericOptions.forEach(opt => {
@@ -2325,7 +2559,8 @@ async function exportToExcel() {
           'Multi-tasking': entry.wasMultitasking ? 'Yes' : 'No',
           'Multi-tasked With': entry.multitaskingWith || '',
           'Auto-tracked': entry.autoTracked ? 'Yes' : 'No',
-          'Ended Early': entry.endedEarly ? 'Yes' : 'No'
+          'Ended Early': entry.endedEarly ? 'Yes' : 'No',
+          'Provider': entry.provider || 'Manual'
         });
         
         // Track multi-tasking time

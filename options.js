@@ -1,4 +1,4 @@
-// Complete options.js - Settings Page Logic with Multi-tasking Support
+// Complete options.js - Settings Page Logic with Multi-tasking and Google Calendar Support
 
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
@@ -45,10 +45,28 @@ function loadStatistics() {
   });
 }
 
-// Load account status
+// Load account status for both Google and Outlook
 function loadAccountStatus() {
+  // Check Google Calendar status
+  chrome.storage.local.get(['googleConnected', 'googleEmail'], (result) => {
+    const googleCard = document.getElementById('googleAccountCard');
+    const googleEmail = document.getElementById('googleAccountEmail');
+    
+    if (result.googleConnected && result.googleEmail) {
+      googleCard.classList.add('connected');
+      googleEmail.textContent = result.googleEmail;
+      googleEmail.style.color = '#107c10';
+    } else {
+      googleCard.classList.remove('connected');
+      googleEmail.textContent = 'Not connected';
+      googleEmail.style.color = '#605e5c';
+    }
+  });
+  
+  // Check Outlook status
   chrome.storage.local.get(['accessToken', 'userEmail', 'tokenExpiry', 'clientId'], (result) => {
-    const statusElement = document.getElementById('accountStatus');
+    const outlookCard = document.getElementById('outlookAccountCard');
+    const outlookEmail = document.getElementById('outlookAccountEmail');
     
     if (result.clientId) {
       document.getElementById('clientIdInput').value = result.clientId;
@@ -57,15 +75,18 @@ function loadAccountStatus() {
     if (result.accessToken && result.tokenExpiry) {
       const expiry = new Date(result.tokenExpiry);
       if (new Date() < expiry) {
-        statusElement.textContent = `Connected as ${result.userEmail || 'Unknown'}`;
-        statusElement.style.color = '#107c10';
+        outlookCard.classList.add('connected');
+        outlookEmail.textContent = result.userEmail || 'Connected';
+        outlookEmail.style.color = '#107c10';
       } else {
-        statusElement.textContent = 'Token expired - Reconnect required';
-        statusElement.style.color = '#d83b01';
+        outlookCard.classList.remove('connected');
+        outlookEmail.textContent = 'Token expired - Reconnect required';
+        outlookEmail.style.color = '#d83b01';
       }
     } else {
-      statusElement.textContent = 'Not connected';
-      statusElement.style.color = '#605e5c';
+      outlookCard.classList.remove('connected');
+      outlookEmail.textContent = 'Not connected';
+      outlookEmail.style.color = '#605e5c';
     }
   });
 }
@@ -256,10 +277,6 @@ function setupEventListeners() {
   // Client ID
   document.getElementById('saveClientIdBtn').addEventListener('click', saveClientId);
   
-  // Account actions
-  document.getElementById('reconnectBtn').addEventListener('click', reconnectAccount);
-  document.getElementById('disconnectBtn').addEventListener('click', disconnectAccount);
-  
   // Categories
   document.getElementById('addCategoryBtn').addEventListener('click', addCategory);
   document.getElementById('newCategoryInput').addEventListener('keypress', function(e) {
@@ -298,29 +315,8 @@ function saveClientId() {
   }
   
   chrome.storage.local.set({ clientId }, () => {
-    alert('Client ID saved! You can now connect to Outlook.');
-  });
-}
-
-// Reconnect account
-function reconnectAccount() {
-  chrome.runtime.sendMessage({ action: 'authenticate' }, (response) => {
-    if (response && response.success) {
-      loadAccountStatus();
-      alert('Successfully reconnected!');
-    } else {
-      alert('Connection failed: ' + (response ? response.error : 'Unknown error'));
-    }
-  });
-}
-
-// Disconnect account
-function disconnectAccount() {
-  if (!confirm('Are you sure you want to disconnect your Outlook account?')) return;
-  
-  chrome.storage.local.remove(['accessToken', 'refreshToken', 'tokenExpiry', 'userEmail'], () => {
-    loadAccountStatus();
-    alert('Account disconnected');
+    showSuccess('accountSuccess');
+    alert('Client ID saved! You can now connect to Outlook via the extension popup.');
   });
 }
 
@@ -442,7 +438,8 @@ function exportAllData() {
           'End Time': new Date(entry.endTime).toLocaleTimeString(),
           'Duration (hours)': hours.toFixed(2),
           'Multi-tasking': entry.wasMultitasking ? 'Yes' : 'No',
-          'Multi-tasked With': entry.multitaskingWith || ''
+          'Multi-tasked With': entry.multitaskingWith || '',
+          'Provider': entry.provider || 'Manual'
         });
         
         if (entry.wasMultitasking) {
@@ -491,7 +488,7 @@ function exportAllData() {
 function createBackup() {
   chrome.storage.local.get(null, (data) => {
     const backup = {
-      version: '2.0.1',
+      version: '2.2.0',
       timestamp: new Date().toISOString(),
       data: data
     };
@@ -533,6 +530,8 @@ function importData(e) {
           loadQuickActions();
           loadExportSettings();
           loadMultitaskingSettings();
+          loadAutoTrackingSettings();
+          loadAccountStatus();
           showSuccess('dataSuccess');
           alert('Data imported successfully!');
         });
@@ -565,6 +564,7 @@ function clearAllData() {
       loadStatistics();
       loadCategories();
       loadQuickActions();
+      loadAccountStatus();
       alert('All data has been cleared');
     });
   });

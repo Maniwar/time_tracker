@@ -1,16 +1,24 @@
 {
   "manifest_version": 3,
-  "name": "Outlook Time Tracker with Multi-tasking",
-  "version": "2.0.1",
-  "description": "Track time from Outlook meetings and log tasks with multi-tasking support and Excel export. Brought to you by Mani Berenji",
+  "name": "Universal Time Tracker - Google & Outlook",
+  "version": "2.2.0",
+  "description": "Track time with Google Calendar and Outlook meetings, multi-tasking support, auto-tracking, and Excel export.",
   "permissions": [
     "storage",
     "identity",
     "alarms"
   ],
   "host_permissions": [
+    "https://www.googleapis.com/*",
     "https://graph.microsoft.com/*"
   ],
+  "oauth2": {
+    "client_id": "785918599575-g6q6rtfgadrgr48vmt93olqb034m6c46.apps.googleusercontent.com",
+    "scopes": [
+      "https://www.googleapis.com/auth/calendar.readonly",
+      "https://www.googleapis.com/auth/userinfo.email"
+    ]
+  },
   "background": {
     "service_worker": "background.js"
   },
