@@ -1,6 +1,6 @@
 # Time Tracker Extension Privacy Policy
 
-Last Updated: [Date]
+Last Updated: [8/6/2025]
 
 ## Data Collection
 The Time Tracker extension collects:
