@@ -32,4 +32,4 @@ You can:
 - Disconnect calendar accounts at any time
 
 ## Contact
-[Your contact email]
+mberenji@msn.com
