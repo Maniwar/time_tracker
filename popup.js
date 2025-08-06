@@ -1997,8 +1997,9 @@ function saveManualEntry() {
       }
     }
     
-    // Determine the type based on category
-    const entryType = (category === 'Meeting') ? 'meeting' : 'task';
+    // FIXED: Determine the type based on category and description
+    const entryType = (category === 'Meeting' || 
+                      (description && description.toLowerCase().includes('meeting'))) ? 'meeting' : 'task';
     
     // Generate unique ID
     const entryId = `manual_${startTime.getTime()}_${Date.now()}`;
@@ -2041,7 +2042,6 @@ function saveManualEntry() {
     }, 2000);
   });
 }
-
 // Helper function to check for overlapping entries
 async function checkForOverlaps(startTime, endTime) {
   return new Promise((resolve) => {
@@ -2385,6 +2385,14 @@ function showEditDialog(entry, entryDate, categories) {
       multitaskingWith: document.getElementById('editMultitasking').checked ? 
         document.getElementById('editMultitaskingWith').value : null
     };
+    
+    // ADDED: Ensure type matches category
+    if (updatedEntry.category === 'Meeting') {
+      updatedEntry.type = 'meeting';
+    } else if (updatedEntry.category !== 'Meeting' && updatedEntry.type === 'meeting') {
+      // Changed from meeting to another category
+      updatedEntry.type = 'task';
+    }
     
     // Calculate new times
     const newDate = document.getElementById('editDate').value;
