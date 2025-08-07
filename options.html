@@ -45,6 +45,7 @@
     }
     
     .input-group input[type="text"],
+    .input-group input[type="number"],
     .input-group select {
       width: 100%;
       padding: 8px 12px;
@@ -91,6 +92,14 @@
     
     .button.secondary:hover {
       background: #4a4847;
+    }
+    
+    .button.success {
+      background: #107c10;
+    }
+    
+    .button.success:hover {
+      background: #0e5e0e;
     }
     
     .success-message {
@@ -157,6 +166,169 @@
     
     .delete-category:hover {
       background: #fdc5c9;
+    }
+    
+    /* Goals and Deliverables Styles */
+    .goal-item {
+      background: #e3f2fd;
+      padding: 15px;
+      margin-bottom: 15px;
+      border-radius: 6px;
+      border: 1px solid #90caf9;
+    }
+    
+    .goal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    
+    .goal-name {
+      font-size: 16px;
+      font-weight: 600;
+      color: #1976d2;
+      flex: 1;
+    }
+    
+    .goal-actions {
+      display: flex;
+      gap: 8px;
+    }
+    
+    .goal-actions button {
+      padding: 4px 10px;
+      font-size: 12px;
+    }
+    
+    .goal-details {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 10px;
+      font-size: 13px;
+      color: #605e5c;
+    }
+    
+    .goal-impact {
+      font-style: italic;
+      color: #0d47a1;
+      margin-bottom: 10px;
+      font-size: 13px;
+    }
+    
+    .deliverables-list {
+      margin-top: 10px;
+      padding: 10px;
+      background: white;
+      border-radius: 4px;
+    }
+    
+    .deliverable-item {
+      background: #f8f9fa;
+      padding: 8px 12px;
+      margin-bottom: 6px;
+      border-radius: 4px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+    }
+    
+    .deliverable-item:hover {
+      background: #e1dfdd;
+    }
+    
+    .deliverable-name {
+      flex: 1;
+    }
+    
+    .deliverable-actions {
+      display: flex;
+      gap: 5px;
+    }
+    
+    .deliverable-actions button {
+      padding: 2px 8px;
+      font-size: 11px;
+    }
+    
+    .add-deliverable-form {
+      display: none;
+      margin-top: 10px;
+      padding: 10px;
+      background: #fafafa;
+      border-radius: 4px;
+      border: 1px dashed #d2d0ce;
+    }
+    
+    .add-deliverable-form.active {
+      display: block;
+    }
+    
+    .goal-progress {
+      margin-top: 10px;
+      padding: 10px;
+      background: #f5f5f5;
+      border-radius: 4px;
+    }
+    
+    .progress-bar {
+      height: 20px;
+      background: #e0e0e0;
+      border-radius: 10px;
+      overflow: hidden;
+      margin-bottom: 5px;
+    }
+    
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #107c10, #14cc60);
+      border-radius: 10px;
+      transition: width 0.3s ease;
+    }
+    
+    .progress-text {
+      font-size: 12px;
+      color: #605e5c;
+      text-align: center;
+    }
+    
+    /* Tab Navigation */
+    .tab-navigation {
+      display: flex;
+      border-bottom: 2px solid #e1dfdd;
+      margin-bottom: 20px;
+    }
+    
+    .tab-button {
+      background: none;
+      border: none;
+      padding: 10px 20px;
+      cursor: pointer;
+      font-size: 14px;
+      color: #605e5c;
+      transition: all 0.2s;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -2px;
+    }
+    
+    .tab-button:hover {
+      color: #323130;
+    }
+    
+    .tab-button.active {
+      color: #0078d4;
+      border-bottom-color: #0078d4;
+      font-weight: 600;
+    }
+    
+    .tab-content {
+      display: none;
+    }
+    
+    .tab-content.active {
+      display: block;
     }
     
     .checkbox-group {
@@ -303,263 +475,665 @@
       background: #0078D4;
       color: white;
     }
+    
+    /* Modal styles */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 1000;
+      animation: fadeIn 0.2s ease;
+    }
+    
+    .modal-overlay.active {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .modal-content {
+      background: white;
+      border-radius: 8px;
+      padding: 25px;
+      max-width: 500px;
+      width: 90%;
+      max-height: 80vh;
+      overflow-y: auto;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      animation: slideUp 0.3s ease;
+    }
+    
+    @keyframes slideUp {
+      from {
+        transform: translateY(20px);
+        opacity: 0;
+      }
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
+    }
+    
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    
+    .modal-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #323130;
+    }
+    
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 24px;
+      color: #605e5c;
+      cursor: pointer;
+      padding: 0;
+      width: 30px;
+      height: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 4px;
+      transition: all 0.2s;
+    }
+    
+    .modal-close:hover {
+      background: #f3f2f1;
+    }
+    
+    .modal-body {
+      margin-bottom: 20px;
+    }
+    
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+  /* Completion styles */
+  .complete-btn {
+    background: #107c10;
+    color: white;
+    border: none;
+    padding: 4px 10px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 11px;
+    transition: background 0.2s;
+  }
+  
+  .complete-btn:hover {
+    background: #0e5e0e;
+  }
+  
+  .uncomplete-btn {
+    background: #605e5c;
+    color: white;
+    border: none;
+    padding: 4px 10px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 11px;
+    transition: background 0.2s;
+  }
+  
+  .uncomplete-btn:hover {
+    background: #4a4847;
+  }
+  
+  .completed-goal {
+    opacity: 0.7;
+    background: #f0f8f0;
+    border-color: #107c10;
+    position: relative;
+  }
+  
+  .completed-goal::after {
+    content: '✓ Completed';
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: #107c10;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  
+  .completed-deliverable {
+    opacity: 0.7;
+    background: #f8f9fa;
+    text-decoration: line-through;
+  }
+  
+  .completed-deliverable .deliverable-name {
+    color: #605e5c;
+  }
+  
+  .completion-date {
+    font-size: 11px;
+    color: #605e5c;
+    font-style: italic;
+    margin-top: 5px;
+  }
+
+  .visibility-controls {
+    display: flex;
+    gap: 20px;
+    padding: 12px;
+    background: #f8f9fa;
+    border-radius: 6px;
+    margin-top: 15px;
+    border: 1px solid #e1dfdd;
+  }
+  
+  .visibility-option {
+    display: flex;
+    align-items: center;
+    font-size: 13px;
+    color: #323130;
+    cursor: pointer;
+    user-select: none;
+  }
+  
+  .visibility-option input[type="checkbox"] {
+    margin-right: 8px;
+    cursor: pointer;
+  }
+  
+  .visibility-option span {
+    font-weight: 500;
+  }
+  
+  /* Completion styles */
+  .complete-btn {
+    background: #107c10;
+    color: white;
+    border: none;
+    padding: 4px 10px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 11px;
+    transition: background 0.2s;
+  }
+  
+  .complete-btn:hover {
+    background: #0e5e0e;
+  }
+  
+  .uncomplete-btn {
+    background: #605e5c;
+    color: white;
+    border: none;
+    padding: 4px 10px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 11px;
+    transition: background 0.2s;
+  }
+  
+  .uncomplete-btn:hover {
+    background: #4a4847;
+  }
+  
+  .completed-goal {
+    opacity: 0.8;
+    background: #f0f8f0;
+    border-color: #107c10;
+    position: relative;
+  }
+  
+  .completed-goal::after {
+    content: '✓ Completed';
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: #107c10;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  
+  .completed-deliverable {
+    opacity: 0.7;
+    background: #f8f9fa;
+  }
+  
+  .completed-deliverable .deliverable-name {
+    color: #605e5c;
+    text-decoration: line-through;
+  }
+  
+  .completion-date {
+    font-size: 11px;
+    color: #605e5c;
+    font-style: italic;
+    margin-top: 5px;
+  }
+  
+  /* Goal completion stats */
+  .goal-completion-stats {
+    display: inline-block;
+    margin-left: 10px;
+    font-size: 12px;
+    color: #605e5c;
+    font-weight: normal;
+  }
+  
+  /* Make completed items visually distinct but not hidden */
+  .deliverable-item.completed-deliverable:hover {
+    background: #f3f2f1;
+  }
+    /* Form styles for modals */
+    .form-row {
+      margin-bottom: 15px;
+    }
+    
+    .form-row label {
+      display: block;
+      margin-bottom: 5px;
+      color: #605e5c;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    
+    .form-row input,
+    .form-row select,
+    .form-row textarea {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid #d2d0ce;
+      border-radius: 4px;
+      font-size: 14px;
+      font-family: inherit;
+    }
+    
+    .form-row textarea {
+      min-height: 80px;
+      resize: vertical;
+    }
+    
+    .form-row small {
+      display: block;
+      margin-top: 5px;
+      color: #a19f9d;
+      font-size: 12px;
+    }
   </style>
 </head>
 <body>
   <h1>Time Tracker Settings</h1>
   
-  <!-- Statistics Overview -->
-  <div class="stats-card">
-    <h2 style="color: white; margin-top: 0;">Your Tracking Statistics</h2>
-    <div class="stats-grid">
-      <div class="stat-item">
-        <span class="stat-value" id="totalTrackedHours">0</span>
-        <span class="stat-label">Total Hours Tracked</span>
-      </div>
-      <div class="stat-item">
-        <span class="stat-value" id="totalEntries">0</span>
-        <span class="stat-label">Time Entries</span>
-      </div>
-      <div class="stat-item">
-        <span class="stat-value" id="multitaskPercent">0%</span>
-        <span class="stat-label">Multi-tasking Rate</span>
-      </div>
-      <div class="stat-item">
-        <span class="stat-value" id="avgDailyHours">0</span>
-        <span class="stat-label">Avg Daily Hours</span>
-      </div>
-    </div>
+  <!-- Tab Navigation -->
+  <div class="tab-navigation">
+    <button class="tab-button active" data-tab="overview">Overview</button>
+    <button class="tab-button" data-tab="goals">Goals & Deliverables</button>
+    <button class="tab-button" data-tab="tracking">Tracking</button>
+    <button class="tab-button" data-tab="export">Export</button>
+    <button class="tab-button" data-tab="data">Data</button>
   </div>
   
-  <!-- Calendar Accounts -->
-  <div class="card">
-    <h2>Calendar Accounts <span class="feature-badge">New!</span></h2>
-    <p class="section-description">
-      Connect your calendars to automatically import meetings. Google Calendar offers one-click setup, while Outlook requires Azure configuration.
-    </p>
-    
-    <!-- Google Calendar -->
-    <div class="account-card" id="googleAccountCard">
-      <div class="account-info">
-        <div class="account-icon">
-          <svg width="40" height="40" viewBox="0 0 24 24">
-            <path fill="#4285F4" d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/>
-          </svg>
+  <!-- Overview Tab -->
+  <div class="tab-content active" id="overviewTab">
+    <!-- Statistics Overview -->
+    <div class="stats-card">
+      <h2 style="color: white; margin-top: 0;">Your Tracking Statistics</h2>
+      <div class="stats-grid">
+        <div class="stat-item">
+          <span class="stat-value" id="totalTrackedHours">0</span>
+          <span class="stat-label">Total Hours Tracked</span>
         </div>
-        <div class="account-details">
-          <h3>Google Calendar <span class="provider-tag google">Easy Setup</span></h3>
-          <div class="account-email" id="googleAccountEmail">Not connected</div>
+        <div class="stat-item">
+          <span class="stat-value" id="totalEntries">0</span>
+          <span class="stat-label">Time Entries</span>
         </div>
-      </div>
-      <div id="googleAccountActions">
-        <p style="margin: 0; color: #605e5c; font-size: 13px;">Connect via extension popup</p>
+        <div class="stat-item">
+          <span class="stat-value" id="multitaskPercent">0%</span>
+          <span class="stat-label">Multi-tasking Rate</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-value" id="avgDailyHours">0</span>
+          <span class="stat-label">Avg Daily Hours</span>
+        </div>
       </div>
     </div>
     
-    <!-- Microsoft Outlook -->
-    <div class="account-card" id="outlookAccountCard">
-      <div class="account-info">
-        <div class="account-icon">
-          <svg width="40" height="40" viewBox="0 0 24 24">
-            <path fill="#0078D4" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10h5v-2h-5c-4.34 0-8-3.66-8-8s3.66-8 8-8 8 3.66 8 8v1.43c0 .79-.71 1.57-1.5 1.57s-1.5-.78-1.5-1.57V12c0-2.76-2.24-5-5-5s-5 2.24-5 5 2.24 5 5 5c1.38 0 2.64-.56 3.54-1.47.65.89 1.77 1.47 2.96 1.47 1.97 0 3.5-1.6 3.5-3.57V12c0-5.52-4.48-10-10-10zm0 13c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3z"/>
-          </svg>
+    <!-- Calendar Accounts -->
+    <div class="card">
+      <h2>Calendar Accounts <span class="feature-badge">New!</span></h2>
+      <p class="section-description">
+        Connect your calendars to automatically import meetings. Google Calendar offers one-click setup, while Outlook requires Azure configuration.
+      </p>
+      
+      <!-- Google Calendar -->
+      <div class="account-card" id="googleAccountCard">
+        <div class="account-info">
+          <div class="account-icon">
+            <svg width="40" height="40" viewBox="0 0 24 24">
+              <path fill="#4285F4" d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/>
+            </svg>
+          </div>
+          <div class="account-details">
+            <h3>Google Calendar <span class="provider-tag google">Easy Setup</span></h3>
+            <div class="account-email" id="googleAccountEmail">Not connected</div>
+          </div>
         </div>
-        <div class="account-details">
-          <h3>Outlook Calendar <span class="provider-tag outlook">Azure Setup</span></h3>
-          <div class="account-email" id="outlookAccountEmail">Not connected</div>
+        <div id="googleAccountActions">
+          <p style="margin: 0; color: #605e5c; font-size: 13px;">Connect via extension popup</p>
         </div>
       </div>
-      <div id="outlookAccountActions">
-        <div class="input-group">
-          <label>Azure App Client ID:</label>
-          <input type="text" id="clientIdInput" placeholder="Enter your Azure App Client ID">
-          <small>
-            To get a Client ID:<br>
-            1. Go to <a href="https://portal.azure.com" target="_blank">Azure Portal</a><br>
-            2. Navigate to App registrations → New registration<br>
-            3. Set redirect URI to: <code id="redirectUri">Loading...</code><br>
-            4. Copy the Application (client) ID
-          </small>
+      
+      <!-- Microsoft Outlook -->
+      <div class="account-card" id="outlookAccountCard">
+        <div class="account-info">
+          <div class="account-icon">
+            <svg width="40" height="40" viewBox="0 0 24 24">
+              <path fill="#0078D4" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10h5v-2h-5c-4.34 0-8-3.66-8-8s3.66-8 8-8 8 3.66 8 8v1.43c0 .79-.71 1.57-1.5 1.57s-1.5-.78-1.5-1.57V12c0-2.76-2.24-5-5-5s-5 2.24-5 5 2.24 5 5 5c1.38 0 2.64-.56 3.54-1.47.65.89 1.77 1.47 2.96 1.47 1.97 0 3.5-1.6 3.5-3.57V12c0-5.52-4.48-10-10-10zm0 13c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3z"/>
+            </svg>
+          </div>
+          <div class="account-details">
+            <h3>Outlook Calendar <span class="provider-tag outlook">Azure Setup</span></h3>
+            <div class="account-email" id="outlookAccountEmail">Not connected</div>
+          </div>
         </div>
-        <button class="button" id="saveClientIdBtn">Save Client ID</button>
+        <div id="outlookAccountActions">
+          <div class="input-group">
+            <label>Azure App Client ID:</label>
+            <input type="text" id="clientIdInput" placeholder="Enter your Azure App Client ID">
+            <small>
+              To get a Client ID:<br>
+              1. Go to <a href="https://portal.azure.com" target="_blank">Azure Portal</a><br>
+              2. Navigate to App registrations → New registration<br>
+              3. Set redirect URI to: <code id="redirectUri">Loading...</code><br>
+              4. Copy the Application (client) ID
+            </small>
+          </div>
+          <button class="button" id="saveClientIdBtn">Save Client ID</button>
+        </div>
       </div>
+      
+      <div class="success-message" id="accountSuccess">Account settings updated!</div>
+    </div>
+  </div>
+  
+  <!-- Goals & Deliverables Tab -->
+  <div class="tab-content" id="goalsTab">
+    <div class="card">
+      <h2>Goals & Impact Tracking <span class="feature-badge">New!</span></h2>
+      <p class="section-description">
+        Define your goals and the impact you want to achieve. Track deliverables that contribute to these goals and monitor your progress over time.
+      </p>
+      
+      <!-- Global visibility controls -->
+      <div class="visibility-controls">
+        <label class="visibility-option">
+          <input type="checkbox" id="showCompletedGoals" checked>
+          <span>Show completed goals</span>
+        </label>
+        <label class="visibility-option">
+          <input type="checkbox" id="showCompletedDeliverables" checked>
+          <span>Show completed deliverables</span>
+        </label>
+      </div>
+      
+      <button class="button success" id="addGoalBtn" style="margin-top: 15px;">+ Add New Goal</button>
+      <div class="success-message" id="goalsSuccess">Goals updated successfully!</div>
+      
+      <div id="goalsList" style="margin-top: 20px;">
+        <!-- Goals will be populated here -->
+      </div>
+      
+      <div id="completedGoalsSection" style="margin-top: 30px; padding-top: 20px; border-top: 2px dashed #e1dfdd;">
+        <h3 style="font-size: 16px; margin-bottom: 15px; color: #605e5c;">
+          Completed Goals 🎉
+        </h3>
+        <div id="completedGoalsList">
+          <!-- Completed goals will be shown here -->
+        </div>
+      </div>
+      
+      <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e1dfdd;">
+        <h3 style="font-size: 16px; margin-bottom: 15px;">Unassigned Deliverables</h3>
+        <p class="section-description">
+          These deliverables are not yet assigned to any goal. Drag them to a goal above or create a new goal for them.
+        </p>
+        <div id="unassignedDeliverables">
+          <!-- Unassigned deliverables will be shown here -->
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- Tracking Tab -->
+  <div class="tab-content" id="trackingTab">
+    <!-- Quick Actions Configuration -->
+    <div class="card">
+      <h2>Quick Actions</h2>
+      <p class="section-description">
+        Select which categories appear as quick action buttons in the popup (maximum 6).
+      </p>
+      <div class="checkbox-group" id="quickActionsList">
+        <!-- Will be populated dynamically -->
+      </div>
+      <button class="button" id="saveQuickActionsBtn">Save Quick Actions</button>
+      <div class="success-message" id="quickActionSuccess">Quick actions updated!</div>
     </div>
     
-    <div class="success-message" id="accountSuccess">Account settings updated!</div>
+    <!-- Category Management -->
+    <div class="card">
+      <h2>Task Categories</h2>
+      <p class="section-description">
+        Manage your task categories. Drag to reorder, which affects the order in quick actions and dropdowns.
+      </p>
+      <ul class="category-list" id="categoryList">
+        <!-- Will be populated dynamically -->
+      </ul>
+      <div class="input-group" style="display: flex; gap: 10px;">
+        <input type="text" id="newCategoryInput" placeholder="Add new category" style="flex: 1;">
+        <button class="button" id="addCategoryBtn">Add Category</button>
+      </div>
+      <div class="success-message" id="categorySuccess">Categories updated!</div>
+    </div>
+    
+    <!-- Multi-tasking Settings -->
+    <div class="card">
+      <h2>Multi-tasking Settings</h2>
+      <p class="section-description">
+        Configure how multi-tasking is tracked and analyzed in your time reports.
+      </p>
+      <div class="input-group">
+        <label>Productivity Score Weight:</label>
+        <select id="productivityWeight">
+          <option value="25">Light (25% penalty for multi-tasking)</option>
+          <option value="50" selected>Medium (50% penalty for multi-tasking)</option>
+          <option value="75">Heavy (75% penalty for multi-tasking)</option>
+          <option value="100">Strict (100% penalty for multi-tasking)</option>
+        </select>
+        <small>How much multi-tasking affects your productivity score in reports</small>
+      </div>
+      <div class="input-group">
+        <label>
+          <input type="checkbox" id="autoEndMeeting" checked>
+          Warn before ending meetings with active tasks
+        </label>
+      </div>
+      <div class="input-group">
+        <label>
+          <input type="checkbox" id="showMultitaskWarning">
+          Show warning when starting multi-tasking
+        </label>
+      </div>
+      <button class="button" id="saveMultitaskingBtn">Save Multi-tasking Settings</button>
+      <div class="success-message" id="multitaskingSuccess">Multi-tasking settings saved!</div>
+    </div>
+    
+    <!-- Auto-Tracking Settings -->
+    <div class="card">
+      <h2>Auto-Tracking Settings <span class="feature-badge">Auto!</span></h2>
+      <p class="section-description">
+        Automatically start tracking meetings when their scheduled time begins. Works with both Google and Outlook calendars.
+      </p>
+      <div class="input-group">
+        <label>
+          <input type="checkbox" id="autoTrackMeetings">
+          <strong>Enable auto-tracking for calendar meetings</strong>
+        </label>
+        <small>Meetings will automatically start tracking at their scheduled time and stop at the scheduled end time. You can always end them early if needed.</small>
+      </div>
+      <div class="input-group">
+        <label>Auto-start grace period:</label>
+        <select id="autoTrackGracePeriod">
+          <option value="0">Start exactly on time</option>
+          <option value="2" selected>2 minutes before</option>
+          <option value="5">5 minutes before</option>
+          <option value="10">10 minutes before</option>
+        </select>
+        <small>Start tracking meetings slightly before their scheduled time</small>
+      </div>
+      <div class="input-group">
+        <label>
+          <input type="checkbox" id="autoTrackNotifications" checked>
+          Show notifications when auto-tracking starts/ends
+        </label>
+      </div>
+      <div class="input-group">
+        <label>
+          <input type="checkbox" id="autoEndMeetings" checked>
+          Automatically end meetings at scheduled time
+        </label>
+        <small>If unchecked, meetings will continue until manually stopped</small>
+      </div>
+      <button class="button" id="saveAutoTrackingBtn">Save Auto-Tracking Settings</button>
+      <div class="success-message" id="autoTrackingSuccess">Auto-tracking settings saved!</div>
+    </div>
   </div>
   
-  <!-- Multi-tasking Settings -->
-  <div class="card">
-    <h2>Multi-tasking Settings</h2>
-    <p class="section-description">
-      Configure how multi-tasking is tracked and analyzed in your time reports.
-    </p>
-    <div class="input-group">
-      <label>Productivity Score Weight:</label>
-      <select id="productivityWeight">
-        <option value="25">Light (25% penalty for multi-tasking)</option>
-        <option value="50" selected>Medium (50% penalty for multi-tasking)</option>
-        <option value="75">Heavy (75% penalty for multi-tasking)</option>
-        <option value="100">Strict (100% penalty for multi-tasking)</option>
-      </select>
-      <small>How much multi-tasking affects your productivity score in reports</small>
+  <!-- Export Tab -->
+  <div class="tab-content" id="exportTab">
+    <!-- Export Settings -->
+    <div class="card">
+      <h2>Export Settings</h2>
+      <p class="section-description">
+        Configure default settings for data exports.
+      </p>
+      <div class="input-group">
+        <label>Default date range for exports:</label>
+        <select id="dateRangeSelect">
+          <option value="today">Today</option>
+          <option value="yesterday">Yesterday</option>
+          <option value="week" selected>This Week</option>
+          <option value="lastweek">Last Week</option>
+          <option value="month">This Month</option>
+          <option value="all">All Time</option>
+        </select>
+      </div>
+      <div class="input-group">
+        <label>
+          <input type="checkbox" id="includeMultitaskAnalysis" checked>
+          Include multi-tasking analysis sheet in exports
+        </label>
+      </div>
+      <div class="input-group">
+        <label>
+          <input type="checkbox" id="includeSummarySheet" checked>
+          Include summary sheet in exports
+        </label>
+      </div>
+      <button class="button" id="saveExportSettingsBtn">Save Export Settings</button>
+      <div class="success-message" id="exportSuccess">Export settings saved!</div>
     </div>
-    <div class="input-group">
-      <label>
-        <input type="checkbox" id="autoEndMeeting" checked>
-        Warn before ending meetings with active tasks
-      </label>
-    </div>
-    <div class="input-group">
-      <label>
-        <input type="checkbox" id="showMultitaskWarning">
-        Show warning when starting multi-tasking
-      </label>
-    </div>
-    <button class="button" id="saveMultitaskingBtn">Save Multi-tasking Settings</button>
-    <div class="success-message" id="multitaskingSuccess">Multi-tasking settings saved!</div>
   </div>
   
-  <!-- Auto-Tracking Settings -->
-  <div class="card">
-    <h2>Auto-Tracking Settings <span class="feature-badge">Auto!</span></h2>
-    <p class="section-description">
-      Automatically start tracking meetings when their scheduled time begins. Works with both Google and Outlook calendars.
-    </p>
-    <div class="input-group">
-      <label>
-        <input type="checkbox" id="autoTrackMeetings">
-        <strong>Enable auto-tracking for calendar meetings</strong>
-      </label>
-      <small>Meetings will automatically start tracking at their scheduled time and stop at the scheduled end time. You can always end them early if needed.</small>
+  <!-- Data Tab -->
+  <div class="tab-content" id="dataTab">
+    <!-- Data Management -->
+    <div class="card">
+      <h2>Data Management</h2>
+      <p class="section-description">
+        Export, import, or clear your time tracking data. Use with caution - clearing data cannot be undone.
+      </p>
+      <div class="import-export-buttons">
+        <button class="button" id="exportAllBtn">📊 Export All Data</button>
+        <button class="button secondary" id="backupBtn">💾 Create Backup</button>
+        <button class="button secondary" id="importBtn">📥 Import Data</button>
+      </div>
+      <input type="file" id="importFile" accept=".json" style="display: none;">
+      <hr style="margin: 20px 0; border: none; border-top: 1px solid #edebe9;">
+      <button class="button danger" id="clearDataBtn">🗑️ Clear All Data</button>
+      <div class="success-message" id="dataSuccess">Operation completed successfully!</div>
     </div>
-    <div class="input-group">
-      <label>Auto-start grace period:</label>
-      <select id="autoTrackGracePeriod">
-        <option value="0">Start exactly on time</option>
-        <option value="2" selected>2 minutes before</option>
-        <option value="5">5 minutes before</option>
-        <option value="10">10 minutes before</option>
-      </select>
-      <small>Start tracking meetings slightly before their scheduled time</small>
+    
+    <!-- About Section -->
+    <div class="card">
+      <h2>About</h2>
+      <p class="section-description">
+        <strong>Universal Time Tracker with Deliverables & Goals</strong><br>
+        Version 2.3.0<br><br>
+        
+        This extension helps you track your time accurately across Google Calendar and Outlook, including when you're multi-tasking during meetings. Now with deliverables and goals tracking to help you focus on what matters most.<br><br>
+        
+        <strong>New Features:</strong><br>
+        • Goals & Impact tracking - Define what you want to achieve<br>
+        • Deliverables management - Track work towards specific outcomes<br>
+        • Progress visualization - See how you're doing against goals<br>
+        • Google Calendar integration with one-click setup<br>
+        • Universal calendar view for both Google and Outlook<br>
+        • Meeting mode with multi-tasking support<br>
+        • Auto-tracking for scheduled meetings<br>
+        • Dual timer display for simultaneous tracking<br>
+        • Multi-tasking analysis in exports<br>
+        • Productivity scoring based on focus time<br><br>
+        
+        <strong>Privacy:</strong> All data is stored locally in your browser. No information is sent to external servers except for calendar sync with your authenticated accounts.
+      </p>
     </div>
-    <div class="input-group">
-      <label>
-        <input type="checkbox" id="autoTrackNotifications" checked>
-        Show notifications when auto-tracking starts/ends
-      </label>
-    </div>
-    <div class="input-group">
-      <label>
-        <input type="checkbox" id="autoEndMeetings" checked>
-        Automatically end meetings at scheduled time
-      </label>
-      <small>If unchecked, meetings will continue until manually stopped</small>
-    </div>
-    <button class="button" id="saveAutoTrackingBtn">Save Auto-Tracking Settings</button>
-    <div class="success-message" id="autoTrackingSuccess">Auto-tracking settings saved!</div>
   </div>
   
-  <!-- Export Settings -->
-  <div class="card">
-    <h2>Export Settings</h2>
-    <p class="section-description">
-      Configure default settings for data exports.
-    </p>
-    <div class="input-group">
-      <label>Default date range for exports:</label>
-      <select id="dateRangeSelect">
-        <option value="today">Today</option>
-        <option value="yesterday">Yesterday</option>
-        <option value="week" selected>This Week</option>
-        <option value="lastweek">Last Week</option>
-        <option value="month">This Month</option>
-        <option value="all">All Time</option>
-      </select>
+  <!-- Goal Modal -->
+  <div class="modal-overlay" id="goalModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title" id="goalModalTitle">Add New Goal</h3>
+        <button class="modal-close" id="closeGoalModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-row">
+          <label>Goal Name *</label>
+          <input type="text" id="goalName" placeholder="e.g., Launch new product feature">
+        </div>
+        <div class="form-row">
+          <label>Impact Statement *</label>
+          <textarea id="goalImpact" placeholder="What impact will achieving this goal have? e.g., Improve user engagement by 25%"></textarea>
+          <small>Describe the measurable impact or outcome you want to achieve</small>
+        </div>
+        <div class="form-row">
+          <label>Daily Target (hours)</label>
+          <input type="number" id="goalDailyTarget" min="0" max="24" step="0.5" placeholder="0">
+          <small>Optional: Set a daily time target to work towards this goal</small>
+        </div>
+        <div class="form-row">
+          <label>Target Date</label>
+          <input type="date" id="goalTargetDate">
+          <small>Optional: When do you want to achieve this goal by?</small>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="button secondary" id="cancelGoalBtn">Cancel</button>
+        <button class="button success" id="saveGoalBtn">Save Goal</button>
+      </div>
     </div>
-    <div class="input-group">
-      <label>
-        <input type="checkbox" id="includeMultitaskAnalysis" checked>
-        Include multi-tasking analysis sheet in exports
-      </label>
-    </div>
-    <div class="input-group">
-      <label>
-        <input type="checkbox" id="includeSummarySheet" checked>
-        Include summary sheet in exports
-      </label>
-    </div>
-    <button class="button" id="saveExportSettingsBtn">Save Export Settings</button>
-    <div class="success-message" id="exportSuccess">Export settings saved!</div>
-  </div>
-  
-  <!-- Quick Actions Configuration -->
-  <div class="card">
-    <h2>Quick Actions</h2>
-    <p class="section-description">
-      Select which categories appear as quick action buttons in the popup (maximum 6).
-    </p>
-    <div class="checkbox-group" id="quickActionsList">
-      <!-- Will be populated dynamically -->
-    </div>
-    <button class="button" id="saveQuickActionsBtn">Save Quick Actions</button>
-    <div class="success-message" id="quickActionSuccess">Quick actions updated!</div>
-  </div>
-  
-  <!-- Category Management -->
-  <div class="card">
-    <h2>Task Categories</h2>
-    <p class="section-description">
-      Manage your task categories. Drag to reorder, which affects the order in quick actions and dropdowns.
-    </p>
-    <ul class="category-list" id="categoryList">
-      <!-- Will be populated dynamically -->
-    </ul>
-    <div class="input-group" style="display: flex; gap: 10px;">
-      <input type="text" id="newCategoryInput" placeholder="Add new category" style="flex: 1;">
-      <button class="button" id="addCategoryBtn">Add Category</button>
-    </div>
-    <div class="success-message" id="categorySuccess">Categories updated!</div>
-  </div>
-  
-  <!-- Data Management -->
-  <div class="card">
-    <h2>Data Management</h2>
-    <p class="section-description">
-      Export, import, or clear your time tracking data. Use with caution - clearing data cannot be undone.
-    </p>
-    <div class="import-export-buttons">
-      <button class="button" id="exportAllBtn">📊 Export All Data</button>
-      <button class="button secondary" id="backupBtn">💾 Create Backup</button>
-      <button class="button secondary" id="importBtn">📥 Import Data</button>
-    </div>
-    <input type="file" id="importFile" accept=".json" style="display: none;">
-    <hr style="margin: 20px 0; border: none; border-top: 1px solid #edebe9;">
-    <button class="button danger" id="clearDataBtn">🗑️ Clear All Data</button>
-    <div class="success-message" id="dataSuccess">Operation completed successfully!</div>
-  </div>
-  
-  <!-- About Section -->
-  <div class="card">
-    <h2>About</h2>
-    <p class="section-description">
-      <strong>Universal Time Tracker with Multi-tasking Support</strong><br>
-      Version 2.2.0<br><br>
-      
-      This extension helps you track your time accurately across Google Calendar and Outlook, including when you're multi-tasking during meetings. 
-      Use the insights to optimize your schedule and improve productivity.<br><br>
-      
-      <strong>New Features:</strong><br>
-      • Google Calendar integration with one-click setup<br>
-      • Universal calendar view for both Google and Outlook<br>
-      • Meeting mode with multi-tasking support<br>
-      • Auto-tracking for scheduled meetings<br>
-      • Dual timer display for simultaneous tracking<br>
-      • Multi-tasking analysis in exports<br>
-      • Productivity scoring based on focus time<br><br>
-      
-      <strong>Privacy:</strong> All data is stored locally in your browser. No information is sent to external servers except for calendar sync with your authenticated accounts.
-    </p>
   </div>
   
   <script src="xlsx.min.js"></script>

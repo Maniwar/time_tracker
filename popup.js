@@ -1,20 +1,24 @@
-// Complete popup.js with Meeting Multi-tasking Support, Auto-Tracking, Google Calendar, and Fixed Export Settings
-// Version 2.2.0 - Universal Calendar Support
+// Complete popup.js with Deliverables and Goals Support
+// Version 2.3.0 - Now with Deliverables and Goals tracking
 
 let currentTimer = null;
 let startTime = null;
 let currentTask = null;
 let currentTaskDescription = null;
+let currentDeliverable = null; // NEW: Track current deliverable
 
 // Meeting-specific variables for multi-tasking
 let meetingTimer = null;
 let meetingStartTime = null;
 let meetingDescription = null;
 let isInMeeting = false;
-let scheduledMeetingEndTime = null; // Track scheduled end for auto-tracked meetings
-let currentMeetingId = null; // Track current meeting ID to prevent duplicates
+let scheduledMeetingEndTime = null;
+let currentMeetingId = null;
 
-let currentDateRange = 'today'; // Default, will be overridden by settings
+// Quick action state
+let pendingQuickAction = null;
+
+let currentDateRange = 'today';
 let customStartDate = null;
 let customEndDate = null;
 
@@ -23,7 +27,7 @@ let autoTrackInterval = null;
 
 // Calendar service instances
 let googleCalendarService = null;
-let activeCalendarProvider = 'all'; // 'all', 'google', or 'outlook'
+let activeCalendarProvider = 'all';
 let connectedProviders = [];
 
 // Initialize Google Calendar service
@@ -58,15 +62,215 @@ async function initializeApp() {
   setupEventListeners();
   setupCalendarProviderListeners();
   loadCategories();
+  loadDeliverables(); // NEW: Load deliverables
+  loadGoalsProgress(); // NEW: Load goals progress
   initializeDateInputs();
   loadDataForDateRange();
   loadCategoryTotals();
   checkForRunningTimers();
   setInterval(updateTimers, 1000);
   setInterval(loadCategoryTotals, 30000);
+  setInterval(loadGoalsProgress, 60000); // Update goals every minute
   
   // Start auto-tracking check
   startAutoTrackingCheck();
+}
+
+// NEW: Load deliverables for dropdowns
+function loadDeliverables() {
+  chrome.storage.local.get(['deliverables', 'goals'], (result) => {
+    const deliverables = result.deliverables || [];
+    const goals = result.goals || [];
+    
+    // Filter out completed items
+    const activeDeliverables = deliverables.filter(d => !d.completed);
+    const activeGoals = goals.filter(g => !g.completed);
+    
+    // Group deliverables by active goals
+    const deliverablesByGoal = {};
+    const unassignedDeliverables = [];
+    
+    activeDeliverables.forEach(deliverable => {
+      if (deliverable.goalId && activeGoals.find(g => g.id === deliverable.goalId)) {
+        if (!deliverablesByGoal[deliverable.goalId]) {
+          deliverablesByGoal[deliverable.goalId] = [];
+        }
+        deliverablesByGoal[deliverable.goalId].push(deliverable);
+      } else {
+        unassignedDeliverables.push(deliverable);
+      }
+    });
+    
+    // Update all deliverable dropdowns
+    const dropdowns = [
+      document.getElementById('manualDeliverable'),
+      document.getElementById('quickDeliverable')
+    ];
+    
+    dropdowns.forEach(select => {
+      if (!select) return;
+      
+      // Preserve current selection
+      const currentValue = select.value;
+      
+      // Build options HTML
+      let optionsHTML = `
+        <option value="">No deliverable</option>
+        <option value="_new">+ Create new deliverable...</option>
+      `;
+      
+      // Add deliverables grouped by active goals
+      activeGoals.forEach(goal => {
+        if (deliverablesByGoal[goal.id] && deliverablesByGoal[goal.id].length > 0) {
+          optionsHTML += `<optgroup label="${goal.name}">`;
+          deliverablesByGoal[goal.id].forEach(deliverable => {
+            optionsHTML += `<option value="${deliverable.id}">${deliverable.name}</option>`;
+          });
+          optionsHTML += `</optgroup>`;
+        }
+      });
+      
+      // Add unassigned deliverables
+      if (unassignedDeliverables.length > 0) {
+        optionsHTML += `<optgroup label="Other Deliverables">`;
+        unassignedDeliverables.forEach(deliverable => {
+          optionsHTML += `<option value="${deliverable.id}">${deliverable.name}</option>`;
+        });
+        optionsHTML += `</optgroup>`;
+      }
+      
+      select.innerHTML = optionsHTML;
+      
+      // Restore selection if it still exists and isn't completed
+      if (currentValue && select.querySelector(`option[value="${currentValue}"]`)) {
+        select.value = currentValue;
+      }
+    });
+  });
+}
+
+// NEW: Load and display goals progress
+function loadGoalsProgress() {
+  chrome.storage.local.get(['goals', 'deliverables', 'timeEntries'], (result) => {
+    const goals = result.goals || [];
+    const deliverables = result.deliverables || [];
+    const timeEntries = result.timeEntries || {};
+    
+    // Filter to only active (non-completed) goals
+    const activeGoals = goals.filter(g => !g.completed);
+    
+    if (activeGoals.length === 0) {
+      document.getElementById('goalsProgress').classList.remove('active');
+      return;
+    }
+    
+    // Calculate time spent on each active goal today
+    const today = new Date().toDateString();
+    const todayEntries = timeEntries[today] || [];
+    
+    const goalProgress = {};
+    activeGoals.forEach(goal => {
+      goalProgress[goal.id] = {
+        goal: goal,
+        timeSpent: 0,
+        deliverableIds: deliverables.filter(d => d.goalId === goal.id && !d.completed).map(d => d.id)
+      };
+    });
+    
+    // Sum up time for each goal based on active deliverables
+    todayEntries.forEach(entry => {
+      if (entry.deliverableId) {
+        Object.values(goalProgress).forEach(progress => {
+          if (progress.deliverableIds.includes(entry.deliverableId)) {
+            progress.timeSpent += entry.duration;
+          }
+        });
+      }
+    });
+    
+    // Filter to show only goals with time today or daily targets
+    const activeGoalsWithProgress = Object.values(goalProgress).filter(progress => 
+      progress.timeSpent > 0 || (progress.goal.dailyTarget && progress.goal.dailyTarget > 0)
+    );
+    
+    if (activeGoalsWithProgress.length === 0) {
+      document.getElementById('goalsProgress').classList.remove('active');
+      return;
+    }
+    
+    // Display goals progress
+    const progressList = document.getElementById('goalsProgressList');
+    progressList.innerHTML = activeGoalsWithProgress.map(progress => {
+      const hours = progress.timeSpent / 3600000;
+      const target = progress.goal.dailyTarget || 0;
+      const percentage = target > 0 ? Math.min((hours / target) * 100, 100) : 0;
+      
+      return `
+        <div class="goal-item">
+          <div class="goal-name">
+            <span>${progress.goal.name}</span>
+            <span>${hours.toFixed(1)}h${target > 0 ? ` / ${target}h` : ''}</span>
+          </div>
+          ${target > 0 ? `
+            <div class="goal-progress-bar">
+              <div class="goal-progress-fill" style="width: ${percentage}%"></div>
+            </div>
+          ` : ''}
+        </div>
+      `;
+    }).join('');
+    
+    document.getElementById('goalsProgress').classList.add('active');
+  });
+}
+
+// NEW: Create deliverable quickly
+async function createQuickDeliverable(name, selectElement) {
+  if (!name || !name.trim()) return null;
+  
+  const deliverableId = `deliverable_${Date.now()}`;
+  const newDeliverable = {
+    id: deliverableId,
+    name: name.trim(),
+    createdAt: new Date().toISOString(),
+    goalId: null, // Can be assigned to a goal later in settings
+    completed: false // Explicitly set as not completed
+  };
+  
+  // Save to storage
+  return new Promise((resolve) => {
+    chrome.storage.local.get(['deliverables'], (result) => {
+      const deliverables = result.deliverables || [];
+      deliverables.push(newDeliverable);
+      
+      chrome.storage.local.set({ deliverables }, () => {
+        // Reload deliverables in all dropdowns
+        loadDeliverables();
+        
+        // Select the new deliverable
+        setTimeout(() => {
+          if (selectElement) {
+            selectElement.value = deliverableId;
+          }
+        }, 100);
+        
+        showNotification(`Created deliverable: ${name}`, 'success');
+        resolve(deliverableId);
+      });
+    });
+  });
+}
+
+// Add this helper function to check if a deliverable is completed:
+
+function isDeliverableCompleted(deliverableId) {
+  return new Promise((resolve) => {
+    chrome.storage.local.get(['deliverables'], (result) => {
+      const deliverables = result.deliverables || [];
+      const deliverable = deliverables.find(d => d.id === deliverableId);
+      resolve(deliverable && deliverable.completed);
+    });
+  });
 }
 
 // Helper function to convert from a specific timezone to local time
@@ -628,6 +832,7 @@ async function connectOutlook() {
     }
   });
 }
+
 // Load categories for manual entry dropdown and quick actions
 function loadCategories() {
   chrome.storage.local.get(['categories', 'quickActions', 'runningTimer', 'runningMeetingTimer'], (result) => {
@@ -831,12 +1036,13 @@ function checkForRunningTimers() {
   chrome.storage.local.get(['runningTimer', 'runningMeetingTimer'], (result) => {
     // Check for regular task timer
     if (result.runningTimer) {
-      const { task, description, startTimeStamp } = result.runningTimer;
+      const { task, description, startTimeStamp, deliverableId } = result.runningTimer;
       const elapsed = Date.now() - startTimeStamp;
       
       if (elapsed < 24 * 60 * 60 * 1000) {
         currentTask = task;
         currentTaskDescription = description;
+        currentDeliverable = deliverableId; // Restore deliverable
         startTime = startTimeStamp;
         currentTimer = true;
         
@@ -847,6 +1053,9 @@ function checkForRunningTimers() {
             btn.style.color = 'white';
           }
         });
+        
+        // Update current tracking display
+        updateCurrentTrackingDisplay();
       } else {
         chrome.storage.local.remove('runningTimer');
       }
@@ -913,6 +1122,35 @@ function checkForRunningTimers() {
   });
 }
 
+// Update current tracking display
+function updateCurrentTrackingDisplay() {
+  const trackingDiv = document.getElementById('currentTracking');
+  const taskNameSpan = document.getElementById('currentTaskName');
+  const deliverableNameSpan = document.getElementById('currentDeliverableName');
+  
+  if (currentTimer || meetingTimer) {
+    if (currentTimer) {
+      taskNameSpan.textContent = currentTask + (currentTaskDescription ? ': ' + currentTaskDescription : '');
+    } else {
+      taskNameSpan.textContent = '-';
+    }
+    
+    if (currentDeliverable) {
+      chrome.storage.local.get(['deliverables'], (result) => {
+        const deliverables = result.deliverables || [];
+        const deliverable = deliverables.find(d => d.id === currentDeliverable);
+        deliverableNameSpan.textContent = deliverable ? deliverable.name : 'Unknown';
+      });
+    } else {
+      deliverableNameSpan.textContent = 'None';
+    }
+    
+    trackingDiv.classList.add('active');
+  } else {
+    trackingDiv.classList.remove('active');
+  }
+}
+
 // Update both timers
 function updateTimers() {
   chrome.storage.local.get(['runningTimer', 'runningMeetingTimer'], (result) => {
@@ -963,7 +1201,8 @@ function updateTimers() {
     // Update display
     const timerDisplay = document.getElementById('timerDisplay');
     if (displayText) {
-      timerDisplay.textContent = displayText;
+      const baseDisplay = displayText.split('<div')[0]; // Get just the time part
+      timerDisplay.innerHTML = baseDisplay + timerDisplay.innerHTML.substring(timerDisplay.innerHTML.indexOf('<div'));
       
       // Add visual indicator for multi-tasking
       if (displayText.includes('|')) {
@@ -972,7 +1211,7 @@ function updateTimers() {
         timerDisplay.classList.remove('multitasking');
       }
     } else {
-      timerDisplay.textContent = '00:00:00';
+      timerDisplay.innerHTML = '00:00:00' + timerDisplay.innerHTML.substring(timerDisplay.innerHTML.indexOf('<div'));
       timerDisplay.classList.remove('multitasking');
     }
   });
@@ -1028,6 +1267,12 @@ function setupEventListeners() {
   document.getElementById('dateRangeSelect').addEventListener('change', handleDateRangeChange);
   document.getElementById('applyDateRange').addEventListener('click', applyCustomDateRange);
   
+  // Goals view link
+  document.getElementById('viewGoalsBtn').addEventListener('click', (e) => {
+    e.preventDefault();
+    chrome.runtime.openOptionsPage();
+  });
+  
   // Manual entry form event listeners
   document.getElementById('manualCategory').addEventListener('change', function() {
     if (this.value === 'Other') {
@@ -1035,6 +1280,30 @@ function setupEventListeners() {
       document.getElementById('manualDescription').focus();
     } else {
       document.getElementById('manualDescription').placeholder = 'What did you work on? (optional)';
+    }
+  });
+  
+  // Deliverable selector
+  document.getElementById('manualDeliverable').addEventListener('change', function() {
+    const newDeliverableInput = document.getElementById('newDeliverableInput');
+    if (this.value === '_new') {
+      newDeliverableInput.classList.add('active');
+      document.getElementById('newDeliverableName').focus();
+    } else {
+      newDeliverableInput.classList.remove('active');
+      document.getElementById('newDeliverableName').value = '';
+    }
+  });
+  
+  // New deliverable creation
+  document.getElementById('newDeliverableName').addEventListener('keypress', async function(e) {
+    if (e.key === 'Enter') {
+      const name = this.value.trim();
+      if (name) {
+        const deliverableId = await createQuickDeliverable(name, document.getElementById('manualDeliverable'));
+        document.getElementById('newDeliverableInput').classList.remove('active');
+        this.value = '';
+      }
     }
   });
   
@@ -1096,6 +1365,40 @@ function setupEventListeners() {
       deleteTask(index);
     }
   });
+  
+  // Quick action dialog event listeners
+  document.getElementById('quickDeliverable').addEventListener('change', function() {
+    const newDeliverableDiv = document.getElementById('quickNewDeliverable');
+    if (this.value === '_new') {
+      newDeliverableDiv.classList.add('active');
+      document.getElementById('quickNewDeliverableName').focus();
+    } else {
+      newDeliverableDiv.classList.remove('active');
+      document.getElementById('quickNewDeliverableName').value = '';
+    }
+  });
+  
+  document.getElementById('quickStartBtn').addEventListener('click', handleQuickStart);
+  document.getElementById('quickCancelBtn').addEventListener('click', () => {
+    document.getElementById('quickActionDialog').classList.remove('active');
+    pendingQuickAction = null;
+  });
+  
+  // Enter key to start from quick dialog
+  document.getElementById('quickDescription').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') handleQuickStart();
+  });
+  
+  document.getElementById('quickNewDeliverableName').addEventListener('keypress', async (e) => {
+    if (e.key === 'Enter') {
+      const name = e.target.value.trim();
+      if (name) {
+        await createQuickDeliverable(name, document.getElementById('quickDeliverable'));
+        document.getElementById('quickNewDeliverable').classList.remove('active');
+        e.target.value = '';
+      }
+    }
+  });
 }
 
 // Setup quick task button listeners
@@ -1115,38 +1418,89 @@ function setupQuickTaskListeners() {
         // Stop the current task
         stopTaskTimer();
       } else {
-        // Start new task (can run alongside meeting)
-        let description = null;
-        
-        if (taskType === 'Other') {
-          description = prompt('What type of task is this?');
-          if (!description) return; // Required for "Other"
-        } else if (taskType !== 'Break') {
-          // Show optional prompt for all tasks except Break
-          const promptText = {
-            'Project Work': 'What project are you working on? (optional):',
-            'Email': 'Email subject/recipient (optional):',
-            'Admin': 'What admin task? (optional):',
-            'Planning': 'What are you planning? (optional):',
-            'Training': 'What training/learning activity? (optional):',
-            'Phone Call': 'Who are you calling/what about? (optional):',
-            'Research': 'What are you researching? (optional):'
-          };
-          // Use specific prompt if defined, otherwise generic
-          const promptMessage = promptText[taskType] || `${taskType} details (optional):`;
-          description = prompt(promptMessage);
-        }
-        // Break will skip the prompt entirely
-        
-        // Stop current task timer if running (but keep meeting running)
-        if (currentTimer) {
-          stopTaskTimer();
-        }
-        
-        startTaskTimer(taskType, description);
+        // Show quick action dialog for task details
+        showQuickActionDialog(taskType);
       }
     });
   });
+}
+
+// Show quick action dialog
+function showQuickActionDialog(taskType) {
+  const dialog = document.getElementById('quickActionDialog');
+  const descriptionInput = document.getElementById('quickDescription');
+  const deliverableSelect = document.getElementById('quickDeliverable');
+  
+  // Store pending action
+  pendingQuickAction = { taskType };
+  
+  // Reset form
+  descriptionInput.value = '';
+  deliverableSelect.value = '';
+  document.getElementById('quickNewDeliverable').classList.remove('active');
+  document.getElementById('quickNewDeliverableName').value = '';
+  
+  // Set placeholder based on task type
+  const placeholders = {
+    'Project Work': 'What project are you working on?',
+    'Email': 'Email subject or recipient',
+    'Admin': 'What admin task?',
+    'Planning': 'What are you planning?',
+    'Training': 'What training/learning activity?',
+    'Phone Call': 'Who are you calling?',
+    'Research': 'What are you researching?',
+    'Break': 'Taking a break...',
+    'Other': 'What are you working on?'
+  };
+  
+  descriptionInput.placeholder = placeholders[taskType] || 'What are you working on?';
+  
+  // Show dialog
+  dialog.classList.add('active');
+  
+  // Focus on description for most tasks, but skip for Break
+  if (taskType !== 'Break') {
+    setTimeout(() => descriptionInput.focus(), 100);
+  }
+}
+
+// Handle quick start
+async function handleQuickStart() {
+  if (!pendingQuickAction) return;
+  
+  const { taskType } = pendingQuickAction;
+  const description = document.getElementById('quickDescription').value.trim();
+  const deliverableSelect = document.getElementById('quickDeliverable');
+  let deliverableId = deliverableSelect.value;
+  
+  // Handle new deliverable creation if needed
+  if (deliverableId === '_new') {
+    const newName = document.getElementById('quickNewDeliverableName').value.trim();
+    if (newName) {
+      deliverableId = await createQuickDeliverable(newName, deliverableSelect);
+    } else {
+      deliverableId = '';
+    }
+  }
+  
+  // Validation for "Other" category
+  if (taskType === 'Other' && !description) {
+    document.getElementById('quickDescription').placeholder = 'Description required for "Other" tasks';
+    document.getElementById('quickDescription').focus();
+    return;
+  }
+  
+  // Stop current task timer if running (but keep meeting running)
+  if (currentTimer) {
+    stopTaskTimer();
+  }
+  
+  // Start the new task
+  startTaskTimer(taskType, description, deliverableId);
+  
+  // Hide dialog
+  document.getElementById('quickActionDialog').classList.remove('active');
+  pendingQuickAction = null;
 }
 
 // Setup calendar provider event listeners
@@ -1209,18 +1563,16 @@ function handleMeetingToggle() {
         stopMeetingTimer(true); // true = manual stop
       }
     } else {
-      // Enter meeting mode manually
-      const description = prompt('Meeting topic/attendees (optional):');
-      // Only start meeting if user didn't cancel (null means cancelled)
-      if (description !== null) {
-        startMeetingTimer(description || '');
-      }
+      // Show quick action dialog for meeting
+      showQuickActionDialog('Meeting');
+      // Override the handler for meetings
+      pendingQuickAction = { taskType: 'Meeting', isMeeting: true };
     }
   });
 }
 
 // Start meeting timer
-function startMeetingTimer(description) {
+function startMeetingTimer(description, deliverableId = null) {
   isInMeeting = true;
   meetingDescription = description;
   meetingStartTime = Date.now();
@@ -1233,7 +1585,8 @@ function startMeetingTimer(description) {
     runningMeetingTimer: {
       description: description,
       startTimeStamp: meetingStartTime,
-      autoTracked: false // Manual start
+      autoTracked: false, // Manual start
+      deliverableId: deliverableId
     }
   });
   
@@ -1252,6 +1605,9 @@ function startMeetingTimer(description) {
   updateMultitaskIndicator();
   
   showNotification('Meeting started' + (description ? `: ${description}` : ''));
+  
+  // Update goals progress after starting
+  loadGoalsProgress();
 }
 
 // Stop meeting timer (endedEarly = true if manually stopped before scheduled end)
@@ -1264,6 +1620,7 @@ function stopMeetingTimer(endedEarly = false) {
   chrome.storage.local.get(['runningMeetingTimer', 'endedMeetings'], (result) => {
     const wasAutoTracked = result.runningMeetingTimer && result.runningMeetingTimer.autoTracked;
     const meetingId = result.runningMeetingTimer ? result.runningMeetingTimer.meetingId : null;
+    const deliverableId = result.runningMeetingTimer ? result.runningMeetingTimer.deliverableId : null;
     
     // If ended early and has an ID, add to ended meetings list
     if (endedEarly && meetingId) {
@@ -1302,7 +1659,8 @@ function stopMeetingTimer(endedEarly = false) {
       multitaskingWith: currentTask ? `${currentTask}${currentTaskDescription ? ': ' + currentTaskDescription : ''}` : null,
       autoTracked: wasAutoTracked,
       endedEarly: endedEarly && scheduledMeetingEndTime ? 
-        (Date.now() < scheduledMeetingEndTime.getTime()) : false
+        (Date.now() < scheduledMeetingEndTime.getTime()) : false,
+      deliverableId: deliverableId
     };
     
     // If ended early, note the difference
@@ -1341,13 +1699,17 @@ function stopMeetingTimer(endedEarly = false) {
     if (!wasAutoTracked || endedEarly) {
       showNotification('Meeting ended');
     }
+    
+    // Update goals progress after ending
+    loadGoalsProgress();
   });
 }
 
 // Start task timer
-function startTaskTimer(taskType, description = null) {
+function startTaskTimer(taskType, description = null, deliverableId = null) {
   currentTask = taskType;
   currentTaskDescription = description;
+  currentDeliverable = deliverableId;
   startTime = Date.now();
   currentTimer = true;
   
@@ -1356,7 +1718,8 @@ function startTaskTimer(taskType, description = null) {
     runningTimer: {
       task: taskType,
       description: description,
-      startTimeStamp: startTime
+      startTimeStamp: startTime,
+      deliverableId: deliverableId
     }
   });
   
@@ -1372,7 +1735,11 @@ function startTaskTimer(taskType, description = null) {
   });
   
   updateMultitaskIndicator();
+  updateCurrentTrackingDisplay();
   showNotification(`Started: ${taskType}` + (description ? ` - ${description}` : ''));
+  
+  // Update goals progress after starting
+  loadGoalsProgress();
 }
 
 // Stop task timer
@@ -1395,7 +1762,8 @@ function stopTaskTimer() {
     duration: duration,
     date: new Date().toDateString(),
     wasMultitasking: isInMeeting ? true : false,
-    multitaskingWith: isInMeeting ? `Meeting${meetingDescription ? ': ' + meetingDescription.replace('[AUTO] ', '') : ''}` : null
+    multitaskingWith: isInMeeting ? `Meeting${meetingDescription ? ': ' + meetingDescription.replace('[AUTO] ', '') : ''}` : null,
+    deliverableId: currentDeliverable
   });
   
   // Clear timer from storage
@@ -1406,6 +1774,7 @@ function stopTaskTimer() {
   startTime = null;
   currentTask = null;
   currentTaskDescription = null;
+  currentDeliverable = null;
   
   // Reset UI
   document.querySelectorAll('.quick-task-btn').forEach(btn => {
@@ -1416,7 +1785,11 @@ function stopTaskTimer() {
   });
   
   updateMultitaskIndicator();
+  updateCurrentTrackingDisplay();
   showNotification('Task completed');
+  
+  // Update goals progress after stopping
+  loadGoalsProgress();
 }
 
 // Show notification with types
@@ -1604,6 +1977,7 @@ function displayUnifiedMeetings(meetings) {
   
   setupMeetingTrackButtons();
 }
+
 // Save meetings for auto-tracking
 function saveMeetingsForAutoTracking(meetings) {
   chrome.storage.local.set({ 
@@ -1785,9 +2159,10 @@ function getDateRange() {
 
 // Load data for date range
 function loadDataForDateRange() {
-  chrome.storage.local.get(['timeEntries'], (result) => {
+  chrome.storage.local.get(['timeEntries', 'deliverables'], (result) => {
     const { startDate, endDate } = getDateRange();
     const timeEntries = result.timeEntries || {};
+    const deliverables = result.deliverables || [];
     const tasksList = document.getElementById('tasksList');
     
     // Filter entries based on date range
@@ -1829,11 +2204,19 @@ function loadDataForDateRange() {
         const hours = Math.floor(duration / 60);
         const minutes = Math.round(duration % 60);
         
+        // Find deliverable name if exists
+        let deliverableName = '';
+        if (entry.deliverableId) {
+          const deliverable = deliverables.find(d => d.id === entry.deliverableId);
+          deliverableName = deliverable ? deliverable.name : 'Unknown';
+        }
+        
         let badges = '';
         if (entry.wasMultitasking) badges += '<span class="multitask-tag">Multi-tasked</span>';
         if (entry.autoTracked) badges += '<span class="multitask-tag" style="background: #d1ecf1; color: #0c5460;">Auto-tracked</span>';
         if (entry.endedEarly) badges += '<span class="multitask-tag" style="background: #d4edda; color: #155724;">Ended early</span>';
         if (entry.provider) badges += `<span class="multitask-tag" style="background: ${entry.provider === 'google' ? '#4285F4' : '#0078D4'}; color: white;">${entry.provider}</span>`;
+        if (deliverableName) badges += `<span class="deliverable-tag">📌 ${deliverableName}</span>`;
         
         return `
           <div class="task-item">
@@ -1847,6 +2230,7 @@ function loadDataForDateRange() {
                 <span>${new Date(entry.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                 <span>${hours}h ${minutes}m</span>
               </div>
+              ${deliverableName ? `<div class="task-deliverable">Deliverable: ${deliverableName}</div>` : ''}
             </div>
             <div class="task-actions">
               <button class="edit-btn" data-index="${index}">Edit</button>
@@ -1859,6 +2243,9 @@ function loadDataForDateRange() {
     
     // Refresh category totals
     loadCategoryTotals();
+    
+    // Refresh goals progress
+    loadGoalsProgress();
   });
 }
 
@@ -1876,6 +2263,9 @@ function showManualEntry() {
   document.getElementById('wasMultitasking').checked = false;
   document.getElementById('multitaskingWith').value = '';
   document.getElementById('multitaskingDetails').style.display = 'none';
+  document.getElementById('manualDeliverable').value = '';
+  document.getElementById('newDeliverableInput').classList.remove('active');
+  document.getElementById('newDeliverableName').value = '';
   
   // Hide all conditional groups
   document.getElementById('minutesAgoGroup').style.display = 'none';
@@ -1898,13 +2288,24 @@ function hideManualEntry() {
 }
 
 // Save manual entry with improved logic
-function saveManualEntry() {
+async function saveManualEntry() {
   const category = document.getElementById('manualCategory').value;
   let description = document.getElementById('manualDescription').value;
   const duration = parseInt(document.getElementById('manualDuration').value) * 60000; // Convert to ms
   const when = document.getElementById('manualWhen').value;
   const wasMultitasking = document.getElementById('wasMultitasking').checked;
   const multitaskingWith = document.getElementById('multitaskingWith').value;
+  let deliverableId = document.getElementById('manualDeliverable').value;
+  
+  // Handle new deliverable creation
+  if (deliverableId === '_new') {
+    const newName = document.getElementById('newDeliverableName').value.trim();
+    if (newName) {
+      deliverableId = await createQuickDeliverable(newName, document.getElementById('manualDeliverable'));
+    } else {
+      deliverableId = '';
+    }
+  }
   
   // Validation
   if (!duration || duration <= 0) {
@@ -2024,7 +2425,8 @@ function saveManualEntry() {
       date: startTime.toDateString(),
       wasMultitasking: wasMultitasking,
       multitaskingWith: multitaskingDescription,
-      manualEntry: true // Flag to identify manual entries
+      manualEntry: true, // Flag to identify manual entries
+      deliverableId: deliverableId
     };
     
     saveTimeEntry(entry);
@@ -2042,6 +2444,7 @@ function saveManualEntry() {
     }, 2000);
   });
 }
+
 // Helper function to check for overlapping entries
 async function checkForOverlaps(startTime, endTime) {
   return new Promise((resolve) => {
@@ -2077,6 +2480,7 @@ function saveTimeEntry(entry) {
     chrome.storage.local.set({ timeEntries }, () => {
       loadDataForDateRange();
       loadCategoryTotals(); // Refresh category totals
+      loadGoalsProgress(); // Refresh goals progress
     });
   });
 }
@@ -2085,12 +2489,13 @@ function saveTimeEntry(entry) {
 function editTask(index) {
   const { startDate, endDate } = getDateRange();
   
-  chrome.storage.local.get(['timeEntries', 'categories'], (result) => {
+  chrome.storage.local.get(['timeEntries', 'categories', 'deliverables'], (result) => {
     const timeEntries = result.timeEntries || {};
     const categories = result.categories || [
       'Email', 'Meeting', 'Project Work', 'Admin', 
       'Break', 'Training', 'Planning', 'Other'
     ];
+    const deliverables = result.deliverables || [];
     const allEntries = [];
     
     // Collect all entries in date range
@@ -2109,13 +2514,13 @@ function editTask(index) {
     
     if (allEntries[index]) {
       const { entry, date } = allEntries[index];
-      showEditDialog(entry, date, categories);
+      showEditDialog(entry, date, categories, deliverables);
     }
   });
 }
 
 // Show comprehensive edit dialog with smart multi-tasking selection
-function showEditDialog(entry, entryDate, categories) {
+function showEditDialog(entry, entryDate, categories, deliverables) {
   // Create overlay
   const overlay = document.createElement('div');
   overlay.className = 'edit-dialog-overlay';
@@ -2128,6 +2533,12 @@ function showEditDialog(entry, entryDate, categories) {
   const startDateTime = new Date(entry.startTime);
   const endDateTime = new Date(entry.endTime);
   const duration = Math.round(entry.duration / 60000); // minutes
+  
+  // Build deliverables options
+  let deliverablesOptions = '<option value="">No deliverable</option>';
+  deliverables.forEach(d => {
+    deliverablesOptions += `<option value="${d.id}" ${d.id === entry.deliverableId ? 'selected' : ''}>${d.name}</option>`;
+  });
   
   dialog.innerHTML = `
     <h3>Edit Time Entry</h3>
@@ -2144,6 +2555,13 @@ function showEditDialog(entry, entryDate, categories) {
     <div class="edit-form-group">
       <label>Description:</label>
       <input type="text" id="editDescription" value="${entry.description || ''}">
+    </div>
+    
+    <div class="edit-form-group">
+      <label>Deliverable:</label>
+      <select id="editDeliverable">
+        ${deliverablesOptions}
+      </select>
     </div>
     
     <div class="edit-form-group">
@@ -2383,7 +2801,8 @@ function showEditDialog(entry, entryDate, categories) {
       description: document.getElementById('editDescription').value,
       wasMultitasking: document.getElementById('editMultitasking').checked,
       multitaskingWith: document.getElementById('editMultitasking').checked ? 
-        document.getElementById('editMultitaskingWith').value : null
+        document.getElementById('editMultitaskingWith').value : null,
+      deliverableId: document.getElementById('editDeliverable').value
     };
     
     // ADDED: Ensure type matches category
@@ -2456,6 +2875,7 @@ function saveUpdatedEntry(oldEntry, newEntry, originalDate) {
     chrome.storage.local.set({ timeEntries }, () => {
       loadDataForDateRange();
       loadCategoryTotals();
+      loadGoalsProgress();
       showNotification('Entry updated successfully');
     });
   });
@@ -2492,16 +2912,17 @@ function deleteTask(index) {
         dateEntries.splice(entryIndex, 1);
         chrome.storage.local.set({ timeEntries }, () => {
           loadDataForDateRange();
-          loadCategoryTotals(); // Refresh category totals
+          loadCategoryTotals();
+          loadGoalsProgress();
         });
       }
     }
   });
 }
 
-// Export to Excel with fixed export settings support
+// Export to Excel with deliverables and goals
 async function exportToExcel() {
-  chrome.storage.local.get(['timeEntries', 'multitaskingSettings', 'exportSettings'], async (result) => {
+  chrome.storage.local.get(['timeEntries', 'multitaskingSettings', 'exportSettings', 'deliverables', 'goals'], async (result) => {
     const { startDate, endDate } = getDateRange();
     const timeEntries = result.timeEntries || {};
     const settings = result.multitaskingSettings || { productivityWeight: 50 };
@@ -2509,6 +2930,8 @@ async function exportToExcel() {
       includeMultitaskAnalysis: true,
       includeSummarySheet: true
     };
+    const deliverables = result.deliverables || [];
+    const goals = result.goals || [];
     
     // Filter entries based on date range
     const filteredEntries = {};
@@ -2530,7 +2953,14 @@ async function exportToExcel() {
     // Prepare data with multi-tasking analysis
     const allEntries = [];
     const multiTaskingAnalysis = [];
-    const multiTaskingPairs = []; // New sheet for multi-tasking pairs
+    const multiTaskingPairs = [];
+    const deliverableAnalysis = [];
+    const goalAnalysis = [];
+    const periodCompletions = [];
+    
+    // Track deliverable and goal totals
+    const deliverableTotals = {};
+    const goalTotals = {};
     
     Object.keys(filteredEntries).forEach(date => {
       const entries = filteredEntries[date];
@@ -2549,6 +2979,88 @@ async function exportToExcel() {
         const totalMinutes = Math.round(entry.duration / 60000);
         const displayHours = Math.floor(hours);
         const displayMinutes = Math.round((hours - displayHours) * 60);
+        const entryDate = new Date(entry.startTime);
+        
+        // Find deliverable and goal info
+        let deliverableName = '';
+        let goalName = '';
+        let deliverableStatus = '';
+        let goalStatus = '';
+        let deliverableCompletedDate = '';
+        let goalCompletedDate = '';
+        
+        if (entry.deliverableId) {
+          const deliverable = deliverables.find(d => d.id === entry.deliverableId);
+          if (deliverable) {
+            deliverableName = deliverable.name;
+            deliverableStatus = deliverable.completed ? 'Completed' : 'Active';
+            deliverableCompletedDate = deliverable.completedAt ? new Date(deliverable.completedAt).toLocaleDateString() : '';
+            
+            // Track deliverable totals
+            if (!deliverableTotals[deliverable.id]) {
+              deliverableTotals[deliverable.id] = {
+                name: deliverable.name,
+                status: deliverableStatus,
+                completedAt: deliverable.completedAt,
+                totalHours: 0,
+                entries: 0,
+                firstEntry: entryDate,
+                lastEntry: entryDate,
+                hoursInPeriod: 0
+              };
+            }
+            deliverableTotals[deliverable.id].totalHours += hours;
+            deliverableTotals[deliverable.id].hoursInPeriod += hours;
+            deliverableTotals[deliverable.id].entries++;
+            
+            // Update first and last entry dates
+            if (entryDate < deliverableTotals[deliverable.id].firstEntry) {
+              deliverableTotals[deliverable.id].firstEntry = entryDate;
+            }
+            if (entryDate > deliverableTotals[deliverable.id].lastEntry) {
+              deliverableTotals[deliverable.id].lastEntry = entryDate;
+            }
+            
+            // Find associated goal
+            if (deliverable.goalId) {
+              const goal = goals.find(g => g.id === deliverable.goalId);
+              if (goal) {
+                goalName = goal.name;
+                goalStatus = goal.completed ? 'Completed' : 'Active';
+                goalCompletedDate = goal.completedAt ? new Date(goal.completedAt).toLocaleDateString() : '';
+                
+                // Track goal totals
+                if (!goalTotals[goal.id]) {
+                  goalTotals[goal.id] = {
+                    name: goal.name,
+                    impact: goal.impact,
+                    status: goalStatus,
+                    completedAt: goal.completedAt,
+                    dailyTarget: goal.dailyTarget,
+                    totalHours: 0,
+                    entries: 0,
+                    firstEntry: entryDate,
+                    lastEntry: entryDate,
+                    hoursInPeriod: 0,
+                    deliverables: new Set()
+                  };
+                }
+                goalTotals[goal.id].totalHours += hours;
+                goalTotals[goal.id].hoursInPeriod += hours;
+                goalTotals[goal.id].entries++;
+                goalTotals[goal.id].deliverables.add(deliverable.name);
+                
+                // Update first and last entry dates
+                if (entryDate < goalTotals[goal.id].firstEntry) {
+                  goalTotals[goal.id].firstEntry = entryDate;
+                }
+                if (entryDate > goalTotals[goal.id].lastEntry) {
+                  goalTotals[goal.id].lastEntry = entryDate;
+                }
+              }
+            }
+          }
+        }
         
         // Add to main entries sheet with both hours and minutes
         allEntries.push({
@@ -2557,6 +3069,12 @@ async function exportToExcel() {
           Type: entry.type || 'task',
           Category: entry.category || entry.subject || 'Other',
           Description: entry.description || entry.subject || '',
+          Deliverable: deliverableName,
+          'Deliverable Status': deliverableStatus,
+          'Deliverable Completed': deliverableCompletedDate,
+          Goal: goalName,
+          'Goal Status': goalStatus,
+          'Goal Completed': goalCompletedDate,
           'Start Time': new Date(entry.startTime).toLocaleTimeString(),
           'End Time': new Date(entry.endTime).toLocaleTimeString(),
           'Duration (hours)': hours.toFixed(2),
@@ -2639,12 +3157,102 @@ async function exportToExcel() {
       });
     });
     
+    // Create deliverable analysis for the period
+    Object.values(deliverableTotals).forEach(deliverable => {
+      const workDays = Math.ceil((deliverable.lastEntry - deliverable.firstEntry) / (1000 * 60 * 60 * 24)) + 1;
+      
+      deliverableAnalysis.push({
+        'Deliverable': deliverable.name,
+        'Status': deliverable.status,
+        'Completed Date': deliverable.completedAt ? new Date(deliverable.completedAt).toLocaleDateString() : '',
+        'Hours in Period': deliverable.hoursInPeriod.toFixed(2),
+        'Sessions in Period': deliverable.entries,
+        'First Work in Period': deliverable.firstEntry.toLocaleDateString(),
+        'Last Work in Period': deliverable.lastEntry.toLocaleDateString(),
+        'Work Days in Period': workDays,
+        'Average per Session': (deliverable.hoursInPeriod / deliverable.entries).toFixed(2) + ' hours',
+        'Average per Day': (deliverable.hoursInPeriod / workDays).toFixed(2) + ' hours'
+      });
+    });
+    
+    // Create goal analysis for the period
+    Object.values(goalTotals).forEach(goal => {
+      const workDays = Math.ceil((goal.lastEntry - goal.firstEntry) / (1000 * 60 * 60 * 24)) + 1;
+      const dailyAverage = goal.hoursInPeriod / workDays;
+      const targetAchievement = goal.dailyTarget > 0 ? 
+        ((dailyAverage / goal.dailyTarget) * 100).toFixed(1) + '%' : 'N/A';
+      
+      goalAnalysis.push({
+        'Goal': goal.name,
+        'Impact': goal.impact,
+        'Status': goal.status,
+        'Completed Date': goal.completedAt ? new Date(goal.completedAt).toLocaleDateString() : '',
+        'Hours in Period': goal.hoursInPeriod.toFixed(2),
+        'Sessions in Period': goal.entries,
+        'Work Days in Period': workDays,
+        'Daily Target': goal.dailyTarget || 'None',
+        'Daily Average': dailyAverage.toFixed(2),
+        'Target Achievement': targetAchievement,
+        'Deliverables Worked On': Array.from(goal.deliverables).join(', '),
+        'Average per Session': (goal.hoursInPeriod / goal.entries).toFixed(2) + ' hours'
+      });
+    });
+    
+    // Track completions within the period
+    const completionsInPeriod = {
+      goals: goals.filter(g => {
+        if (g.completedAt) {
+          const completedDate = new Date(g.completedAt);
+          return completedDate >= startDate && completedDate <= endDate;
+        }
+        return false;
+      }),
+      deliverables: deliverables.filter(d => {
+        if (d.completedAt) {
+          const completedDate = new Date(d.completedAt);
+          return completedDate >= startDate && completedDate <= endDate;
+        }
+        return false;
+      })
+    };
+    
+    if (completionsInPeriod.goals.length > 0 || completionsInPeriod.deliverables.length > 0) {
+      periodCompletions.push({
+        'Type': 'Goals Completed in Period',
+        'Count': completionsInPeriod.goals.length,
+        'Names': completionsInPeriod.goals.map(g => g.name).join(', ') || 'None'
+      });
+      periodCompletions.push({
+        'Type': 'Deliverables Completed in Period',
+        'Count': completionsInPeriod.deliverables.length,
+        'Names': completionsInPeriod.deliverables.map(d => d.name).join(', ') || 'None'
+      });
+    }
+    
     // Create workbook with multiple sheets
     const wb = XLSX.utils.book_new();
     
     // Always add detailed entries sheet
     const entriesSheet = XLSX.utils.json_to_sheet(allEntries);
     XLSX.utils.book_append_sheet(wb, entriesSheet, 'Time Entries');
+    
+    // Add deliverable analysis if there are deliverables
+    if (deliverableAnalysis.length > 0) {
+      const deliverableSheet = XLSX.utils.json_to_sheet(deliverableAnalysis);
+      XLSX.utils.book_append_sheet(wb, deliverableSheet, 'Deliverable Analysis');
+    }
+    
+    // Add goal analysis if there are goals
+    if (goalAnalysis.length > 0) {
+      const goalSheet = XLSX.utils.json_to_sheet(goalAnalysis);
+      XLSX.utils.book_append_sheet(wb, goalSheet, 'Goal Analysis');
+    }
+    
+    // Add period completions if any
+    if (periodCompletions.length > 0) {
+      const completionsSheet = XLSX.utils.json_to_sheet(periodCompletions);
+      XLSX.utils.book_append_sheet(wb, completionsSheet, 'Period Completions');
+    }
     
     // Add multi-tasking pairs sheet if there are pairs
     if (multiTaskingPairs.length > 0) {
@@ -2660,7 +3268,7 @@ async function exportToExcel() {
     
     // Conditionally add summary sheet based on settings
     if (exportSettings.includeSummarySheet) {
-      const summary = calculateSummary(filteredEntries, settings.productivityWeight);
+      const summary = calculateSummary(filteredEntries, settings.productivityWeight, deliverables, goals);
       const summarySheet = XLSX.utils.json_to_sheet(summary);
       XLSX.utils.book_append_sheet(wb, summarySheet, 'Summary');
     }
@@ -2675,18 +3283,24 @@ async function exportToExcel() {
   });
 }
 
-// Calculate summary
-function calculateSummary(timeEntries, productivityWeight = 50) {
+// Update the calculateSummary function to include completion info
+function calculateSummary(timeEntries, productivityWeight = 50, deliverables, goals) {
   const summary = [];
   const categoryTotals = {};
   let totalMultitaskingHours = 0;
   let totalMeetingMultitaskingHours = 0;
+  
+  // Track deliverable and goal time by date
+  const dailyDeliverables = {};
+  const dailyGoals = {};
   
   Object.keys(timeEntries).forEach(date => {
     const entries = timeEntries[date];
     let dayTotal = 0;
     let dayMultitasking = 0;
     const dayCategoryTotals = {};
+    const dayDeliverables = {};
+    const dayGoals = {};
     
     entries.forEach(entry => {
       const category = entry.category || entry.subject || 'Other';
@@ -2704,10 +3318,36 @@ function calculateSummary(timeEntries, productivityWeight = 50) {
           totalMeetingMultitaskingHours += duration;
         }
       }
+      
+      // Track deliverable time
+      if (entry.deliverableId) {
+        const deliverable = deliverables.find(d => d.id === entry.deliverableId);
+        if (deliverable) {
+          dayDeliverables[deliverable.name] = (dayDeliverables[deliverable.name] || 0) + duration;
+          
+          // Track goal time
+          if (deliverable.goalId) {
+            const goal = goals.find(g => g.id === deliverable.goalId);
+            if (goal) {
+              dayGoals[goal.name] = (dayGoals[goal.name] || 0) + duration;
+            }
+          }
+        }
+      }
     });
     
     const taskEntries = entries.filter(e => e.type === 'task');
     const meetingEntries = entries.filter(e => e.type === 'meeting' || e.category === 'Meeting');
+    
+    // Get top deliverable and goal for the day
+    const topDeliverable = Object.entries(dayDeliverables).sort((a, b) => b[1] - a[1])[0];
+    const topGoal = Object.entries(dayGoals).sort((a, b) => b[1] - a[1])[0];
+    
+    // Check for completions on this day
+    const completedToday = {
+      goals: goals.filter(g => g.completedAt && new Date(g.completedAt).toDateString() === date),
+      deliverables: deliverables.filter(d => d.completedAt && new Date(d.completedAt).toDateString() === date)
+    };
     
     summary.push({
       Date: date,
@@ -2717,6 +3357,10 @@ function calculateSummary(timeEntries, productivityWeight = 50) {
       'Multi-tasking Hours': dayMultitasking.toFixed(2),
       'Productivity Score': dayTotal > 0 ? 
         (100 - (dayMultitasking / dayTotal * productivityWeight)).toFixed(0) : '100',
+      'Top Deliverable': topDeliverable ? `${topDeliverable[0]} (${topDeliverable[1].toFixed(1)}h)` : '-',
+      'Top Goal': topGoal ? `${topGoal[0]} (${topGoal[1].toFixed(1)}h)` : '-',
+      'Goals Completed': completedToday.goals.length,
+      'Deliverables Completed': completedToday.deliverables.length,
       'Email Hours': (dayCategoryTotals['Email'] || 0).toFixed(2),
       'Project Work Hours': (dayCategoryTotals['Project Work'] || 0).toFixed(2),
       'Other Hours': Object.keys(dayCategoryTotals)

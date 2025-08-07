@@ -39,6 +39,67 @@
       padding: 15px;
     }
     
+    /* Goals Progress Bar */
+    .goals-progress {
+      background: white;
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 15px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      display: none;
+    }
+    
+    .goals-progress.active {
+      display: block;
+    }
+    
+    .goals-progress-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #323130;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .view-goals-btn {
+      font-size: 11px;
+      color: #0078d4;
+      cursor: pointer;
+      text-decoration: none;
+    }
+    
+    .view-goals-btn:hover {
+      text-decoration: underline;
+    }
+    
+    .goal-item {
+      margin-bottom: 8px;
+    }
+    
+    .goal-name {
+      font-size: 11px;
+      color: #605e5c;
+      margin-bottom: 3px;
+      display: flex;
+      justify-content: space-between;
+    }
+    
+    .goal-progress-bar {
+      height: 6px;
+      background: #e1dfdd;
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    
+    .goal-progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #107c10, #14cc60);
+      border-radius: 3px;
+      transition: width 0.3s ease;
+    }
+    
     /* Calendar provider styles */
     .calendar-providers {
       background: white;
@@ -258,6 +319,30 @@
       z-index: -1;
     }
     
+    /* Current tracking info */
+    .current-tracking {
+      font-size: 12px;
+      color: #605e5c;
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px solid #edebe9;
+      display: none;
+    }
+    
+    .current-tracking.active {
+      display: block;
+    }
+    
+    .tracking-detail {
+      display: flex;
+      justify-content: space-between;
+      margin: 2px 0;
+    }
+    
+    .tracking-label {
+      font-weight: 600;
+    }
+    
     /* Dual timer container */
     .dual-timer-container {
       display: none;
@@ -439,11 +524,38 @@
       gap: 10px;
     }
     
+    /* Deliverable info in task list */
+    .task-deliverable {
+      font-size: 11px;
+      color: #5c2d91;
+      margin-top: 2px;
+    }
+    
     /* Multi-task indicator in task list */
     .multitask-tag {
       display: inline-block;
       background: #fff3cd;
       color: #856404;
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 10px;
+      margin-left: 5px;
+    }
+    
+    .deliverable-tag {
+      display: inline-block;
+      background: #e1dfff;
+      color: #5c2d91;
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 10px;
+      margin-left: 5px;
+    }
+    
+    .goal-tag {
+      display: inline-block;
+      background: #d4edda;
+      color: #155724;
       font-size: 10px;
       padding: 2px 6px;
       border-radius: 10px;
@@ -536,6 +648,44 @@
     
     .form-group input[type="checkbox"] {
       margin-right: 6px;
+    }
+    
+    /* Deliverable selector with creation */
+    .deliverable-selector {
+      position: relative;
+    }
+    
+    .deliverable-select-wrapper {
+      display: flex;
+      gap: 5px;
+    }
+    
+    .deliverable-select-wrapper select {
+      flex: 1;
+    }
+    
+    .add-deliverable-inline {
+      padding: 6px 10px;
+      background: #107c10;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+    
+    .add-deliverable-inline:hover {
+      background: #0e5e0e;
+    }
+    
+    .new-deliverable-input {
+      display: none;
+      margin-top: 8px;
+    }
+    
+    .new-deliverable-input.active {
+      display: block;
     }
     
     .form-actions {
@@ -976,6 +1126,81 @@
       vertical-align: middle;
       margin-right: 4px;
     }
+    
+    /* Quick action dialog */
+    .quick-action-dialog {
+      display: none;
+      background: #f8f9fa;
+      padding: 12px;
+      border-radius: 6px;
+      margin-top: 10px;
+      border: 1px solid #d2d0ce;
+    }
+    
+    .quick-action-dialog.active {
+      display: block;
+      animation: slideDown 0.2s ease;
+    }
+    
+    .quick-action-form {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    
+    .inline-form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    
+    .inline-form-group label {
+      font-size: 11px;
+      color: #605e5c;
+      font-weight: 600;
+    }
+    
+    .inline-form-group input,
+    .inline-form-group select {
+      padding: 6px 8px;
+      border: 1px solid #d2d0ce;
+      border-radius: 4px;
+      font-size: 12px;
+    }
+    
+    .quick-action-buttons {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    
+    .quick-action-buttons button {
+      flex: 1;
+      padding: 6px 12px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      transition: all 0.2s;
+    }
+    
+    .start-btn {
+      background: #107c10;
+      color: white;
+    }
+    
+    .start-btn:hover {
+      background: #0e5e0e;
+    }
+    
+    .cancel-quick-btn {
+      background: #e1dfdd;
+      color: #323130;
+    }
+    
+    .cancel-quick-btn:hover {
+      background: #d2d0ce;
+    }
   </style>
 </head>
 <body>
@@ -993,6 +1218,17 @@
     <!-- Multi-tasking Indicator -->
     <div class="multitask-indicator" id="multitaskIndicator">
       ⚡ Multi-tasking Mode Active - Tracking multiple activities
+    </div>
+    
+    <!-- Goals Progress (new) -->
+    <div class="goals-progress" id="goalsProgress">
+      <div class="goals-progress-title">
+        Today's Goal Progress
+        <a href="#" class="view-goals-btn" id="viewGoalsBtn">View all goals</a>
+      </div>
+      <div id="goalsProgressList">
+        <!-- Goals will be populated here -->
+      </div>
     </div>
     
     <!-- Calendar Providers Section -->
@@ -1058,7 +1294,19 @@
     
     <div id="mainContent">
       <!-- Main Timer Display -->
-      <div class="timer-display" id="timerDisplay">00:00:00</div>
+      <div class="timer-display" id="timerDisplay">
+        00:00:00
+        <div class="current-tracking" id="currentTracking">
+          <div class="tracking-detail">
+            <span class="tracking-label">Task:</span>
+            <span id="currentTaskName">-</span>
+          </div>
+          <div class="tracking-detail">
+            <span class="tracking-label">Deliverable:</span>
+            <span id="currentDeliverableName">-</span>
+          </div>
+        </div>
+      </div>
       
       <!-- Dual Timer Container (shows when multi-tasking) -->
       <div class="dual-timer-container" id="dualTimerContainer">
@@ -1081,11 +1329,36 @@
         <div class="section-title">
           Quick Actions
           <span style="font-size: 11px; font-weight: normal; color: #605e5c;">
-            Meeting mode allows multi-tasking
+            Click to start/stop tasks
           </span>
         </div>
         <div class="quick-task-grid" id="quickTaskGrid">
           <!-- Will be populated from categories -->
+        </div>
+        <!-- Quick action dialog for task details -->
+        <div class="quick-action-dialog" id="quickActionDialog">
+          <div class="quick-action-form">
+            <div class="inline-form-group">
+              <label>Description (optional):</label>
+              <input type="text" id="quickDescription" placeholder="What are you working on?">
+            </div>
+            <div class="inline-form-group">
+              <label>Deliverable (optional):</label>
+              <div class="deliverable-select-wrapper">
+                <select id="quickDeliverable">
+                  <option value="">No deliverable</option>
+                  <option value="_new">+ Create new deliverable...</option>
+                </select>
+              </div>
+              <div class="new-deliverable-input" id="quickNewDeliverable">
+                <input type="text" id="quickNewDeliverableName" placeholder="New deliverable name">
+              </div>
+            </div>
+            <div class="quick-action-buttons">
+              <button class="start-btn" id="quickStartBtn">Start Timer</button>
+              <button class="cancel-quick-btn" id="quickCancelBtn">Cancel</button>
+            </div>
+          </div>
         </div>
       </div>
       
@@ -1147,6 +1420,22 @@
           <div class="form-group">
             <label>Description:</label>
             <input type="text" id="manualDescription" placeholder="What did you work on? (optional)">
+          </div>
+          
+          <!-- Deliverable Selection (new) -->
+          <div class="form-group deliverable-selector">
+            <label>Deliverable:</label>
+            <div class="deliverable-select-wrapper">
+              <select id="manualDeliverable">
+                <option value="">No deliverable</option>
+                <option value="_new">+ Create new deliverable...</option>
+                <!-- Deliverables will be populated dynamically -->
+              </select>
+            </div>
+            <div class="new-deliverable-input" id="newDeliverableInput">
+              <input type="text" id="newDeliverableName" placeholder="New deliverable name">
+              <small style="color: #605e5c; font-size: 11px;">Press Enter to create</small>
+            </div>
           </div>
           
           <!-- Duration with quick selections -->
