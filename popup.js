@@ -17,6 +17,9 @@ let currentMeetingId = null;
 
 // Quick action state
 let pendingQuickAction = null;
+// Issues Per Page
+let currentPage = 1;
+let entriesPerPage = 50;
 
 let currentDateRange = 'today';
 let customStartDate = null;
@@ -2192,14 +2195,45 @@ function loadDataForDateRange() {
     document.getElementById('totalHours').textContent = totalHours.toFixed(1);
     document.getElementById('multitaskHours').textContent = multitaskHours.toFixed(1);
     
-    // Display entries
+    // Display entries with pagination
     if (filteredEntries.length === 0) {
       tasksList.innerHTML = '<p style="text-align: center; color: #605e5c; padding: 20px;">No time entries for selected period</p>';
     } else {
       // Sort by date and time (newest first)
       filteredEntries.sort((a, b) => new Date(b.endTime || b.startTime) - new Date(a.endTime || a.startTime));
       
-      tasksList.innerHTML = filteredEntries.slice(0, 10).map((entry, index) => {
+      // Calculate pagination
+      const totalPages = Math.ceil(filteredEntries.length / entriesPerPage);
+      
+      // Ensure current page is valid
+      if (currentPage > totalPages) currentPage = totalPages;
+      if (currentPage < 1) currentPage = 1;
+      
+      const startIndex = (currentPage - 1) * entriesPerPage;
+      const endIndex = Math.min(startIndex + entriesPerPage, filteredEntries.length);
+      const pageEntries = filteredEntries.slice(startIndex, endIndex);
+      
+      // Build HTML with pagination controls
+      let html = `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding: 10px; background: #f8f9fa; border-radius: 4px;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <span style="font-size: 13px; color: #605e5c;">Show:</span>
+            <select id="entriesPerPageSelect" style="padding: 4px 8px; border: 1px solid #d2d0ce; border-radius: 4px; font-size: 12px;">
+              <option value="50" ${entriesPerPage === 50 ? 'selected' : ''}>50 entries</option>
+              <option value="100" ${entriesPerPage === 100 ? 'selected' : ''}>100 entries</option>
+              <option value="500" ${entriesPerPage === 500 ? 'selected' : ''}>500 entries</option>
+              <option value="${filteredEntries.length}" ${entriesPerPage === filteredEntries.length ? 'selected' : ''}>All (${filteredEntries.length})</option>
+            </select>
+          </div>
+          <div style="font-size: 12px; color: #605e5c;">
+            Showing ${startIndex + 1}-${endIndex} of ${filteredEntries.length} entries
+          </div>
+        </div>
+      `;
+      
+      // Add entries
+      html += pageEntries.map((entry, pageIndex) => {
+        const actualIndex = startIndex + pageIndex; // Calculate actual index in full array
         const duration = entry.duration / 60000; // minutes
         const hours = Math.floor(duration / 60);
         const minutes = Math.round(duration % 60);
@@ -2233,12 +2267,105 @@ function loadDataForDateRange() {
               ${deliverableName ? `<div class="task-deliverable">Deliverable: ${deliverableName}</div>` : ''}
             </div>
             <div class="task-actions">
-              <button class="edit-btn" data-index="${index}">Edit</button>
-              <button class="delete-btn" data-index="${index}">Delete</button>
+              <button class="edit-btn" data-index="${actualIndex}">Edit</button>
+              <button class="delete-btn" data-index="${actualIndex}">Delete</button>
             </div>
           </div>
         `;
       }).join('');
+      
+      // Add pagination controls
+      if (totalPages > 1) {
+        html += `
+          <div style="display: flex; justify-content: center; align-items: center; gap: 10px; margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 4px;">
+            <button class="button ${currentPage === 1 ? 'secondary' : ''}" 
+                    id="prevPageBtn" 
+                    ${currentPage === 1 ? 'disabled' : ''}
+                    style="padding: 6px 12px; font-size: 12px;">
+              ← Previous
+            </button>
+            
+            <div style="display: flex; gap: 5px;">
+        `;
+        
+        // Page numbers
+        let pageNumbers = [];
+        if (totalPages <= 7) {
+          // Show all pages if 7 or less
+          for (let i = 1; i <= totalPages; i++) {
+            pageNumbers.push(i);
+          }
+        } else {
+          // Show first, last, current and surrounding pages
+          pageNumbers.push(1);
+          
+          if (currentPage > 3) pageNumbers.push('...');
+          
+          for (let i = Math.max(2, currentPage - 1); i <= Math.min(totalPages - 1, currentPage + 1); i++) {
+            if (!pageNumbers.includes(i)) pageNumbers.push(i);
+          }
+          
+          if (currentPage < totalPages - 2) pageNumbers.push('...');
+          
+          if (!pageNumbers.includes(totalPages)) pageNumbers.push(totalPages);
+        }
+        
+        pageNumbers.forEach(pageNum => {
+          if (pageNum === '...') {
+            html += '<span style="padding: 6px;">...</span>';
+          } else {
+            html += `
+              <button class="button ${pageNum === currentPage ? '' : 'secondary'} page-number-btn" 
+                      data-page="${pageNum}"
+                      style="padding: 6px 12px; font-size: 12px; min-width: 35px;">
+                ${pageNum}
+              </button>
+            `;
+          }
+        });
+        
+        html += `
+            </div>
+            
+            <button class="button ${currentPage === totalPages ? 'secondary' : ''}" 
+                    id="nextPageBtn" 
+                    ${currentPage === totalPages ? 'disabled' : ''}
+                    style="padding: 6px 12px; font-size: 12px;">
+              Next →
+            </button>
+          </div>
+        `;
+      }
+      
+      tasksList.innerHTML = html;
+      
+      // Add event listeners for pagination
+      document.getElementById('entriesPerPageSelect')?.addEventListener('change', (e) => {
+        entriesPerPage = parseInt(e.target.value);
+        currentPage = 1; // Reset to first page
+        loadDataForDateRange();
+      });
+      
+      document.getElementById('prevPageBtn')?.addEventListener('click', () => {
+        if (currentPage > 1) {
+          currentPage--;
+          loadDataForDateRange();
+        }
+      });
+      
+      document.getElementById('nextPageBtn')?.addEventListener('click', () => {
+        if (currentPage < totalPages) {
+          currentPage++;
+          loadDataForDateRange();
+        }
+      });
+      
+      document.querySelectorAll('.page-number-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          currentPage = parseInt(e.target.dataset.page);
+          loadDataForDateRange();
+        });
+      });
     }
     
     // Refresh category totals
@@ -2247,6 +2374,19 @@ function loadDataForDateRange() {
     // Refresh goals progress
     loadGoalsProgress();
   });
+}
+
+// Also update the handleDateRangeChange function to reset pagination:
+function handleDateRangeChange(e) {
+  currentDateRange = e.target.value;
+  currentPage = 1; // Reset to first page when changing date range
+  
+  if (currentDateRange === 'custom') {
+    document.getElementById('customDateRange').style.display = 'flex';
+  } else {
+    document.getElementById('customDateRange').style.display = 'none';
+    loadDataForDateRange();
+  }
 }
 
 // Show manual entry form with improved UI
