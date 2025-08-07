@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <style>
+    /* Same styles as before - no changes needed */
     body {
       width: 350px;
       min-height: 400px;
@@ -1210,17 +1211,244 @@
   </div>
   
   <div class="container">
-    <!-- Meeting Status Bar -->
-    <div class="meeting-status" id="meetingStatus">
-      <span>👥 Currently in a meeting - You can start other tasks while meeting continues</span>
-    </div>
+    <!-- REORDERED SECTIONS FOR BETTER UX -->
     
-    <!-- Multi-tasking Indicator -->
+    <!-- Main Content Wrapper (required by JavaScript) -->
+    <div id="mainContent">
+      <!-- 1. Meeting Status Bar (stays at top for visibility) -->
+      <div class="meeting-status" id="meetingStatus">
+        <span>👥 Currently in a meeting - You can start other tasks while meeting continues</span>
+      </div>
+    
+    <!-- 2. Multi-tasking Indicator (important status) -->
     <div class="multitask-indicator" id="multitaskIndicator">
       ⚡ Multi-tasking Mode Active - Tracking multiple activities
     </div>
     
-    <!-- Goals Progress (new) -->
+    <!-- 3. Main Timer Display (moved up for prominence) -->
+    <div class="timer-display" id="timerDisplay">
+      00:00:00
+      <div class="current-tracking" id="currentTracking">
+        <div class="tracking-detail">
+          <span class="tracking-label">Task:</span>
+          <span id="currentTaskName">-</span>
+        </div>
+        <div class="tracking-detail">
+          <span class="tracking-label">Deliverable:</span>
+          <span id="currentDeliverableName">-</span>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 4. Dual Timer Container (when multi-tasking) -->
+    <div class="dual-timer-container" id="dualTimerContainer">
+      <div class="timer-row">
+        <span class="timer-label">
+          <span style="color: #d83b01;">👥</span> Meeting
+        </span>
+        <span class="timer-value" id="meetingTime">00:00:00</span>
+      </div>
+      <div class="timer-row">
+        <span class="timer-label">
+          <span style="color: #0078d4;">💼</span> <span id="taskName">Task</span>
+        </span>
+        <span class="timer-value" id="taskTime">00:00:00</span>
+      </div>
+    </div>
+    
+    <!-- 5. Quick Actions Section (moved up per request) -->
+    <div class="section">
+      <div class="section-title">
+        Quick Actions
+        <span style="font-size: 11px; font-weight: normal; color: #605e5c;">
+          Click to start/stop tasks
+        </span>
+      </div>
+      <div class="quick-task-grid" id="quickTaskGrid">
+        <!-- Will be populated from categories -->
+      </div>
+      <!-- Quick action dialog for task details -->
+      <div class="quick-action-dialog" id="quickActionDialog">
+        <div class="quick-action-form">
+          <div class="inline-form-group">
+            <label>Description (optional):</label>
+            <input type="text" id="quickDescription" placeholder="What are you working on?">
+          </div>
+          <div class="inline-form-group">
+            <label>Deliverable (optional):</label>
+            <div class="deliverable-select-wrapper">
+              <select id="quickDeliverable">
+                <option value="">No deliverable</option>
+                <option value="_new">+ Create new deliverable...</option>
+              </select>
+            </div>
+            <div class="new-deliverable-input" id="quickNewDeliverable">
+              <input type="text" id="quickNewDeliverableName" placeholder="New deliverable name">
+            </div>
+          </div>
+          <div class="quick-action-buttons">
+            <button class="start-btn" id="quickStartBtn">Start Timer</button>
+            <button class="cancel-quick-btn" id="quickCancelBtn">Cancel</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 6. Manual Entry Section (moved up to be with Quick Actions) -->
+    <div class="section">
+      <div class="section-title">Manual Entry</div>
+      <button class="button" id="showManualEntryBtn">+ Add Time Entry</button>
+      
+      <div id="manualEntryForm" style="display: none; margin-top: 10px;">
+        <!-- Manual entry form content -->
+        <div class="form-group">
+          <label>Category:</label>
+          <select id="manualCategory">
+            <!-- Categories will be populated dynamically -->
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label>Description:</label>
+          <input type="text" id="manualDescription" placeholder="What did you work on? (optional)">
+        </div>
+        
+        <div class="form-group deliverable-selector">
+          <label>Deliverable:</label>
+          <div class="deliverable-select-wrapper">
+            <select id="manualDeliverable">
+              <option value="">No deliverable</option>
+              <option value="_new">+ Create new deliverable...</option>
+            </select>
+          </div>
+          <div class="new-deliverable-input" id="newDeliverableInput">
+            <input type="text" id="newDeliverableName" placeholder="New deliverable name">
+            <small style="color: #605e5c; font-size: 11px;">Press Enter to create</small>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label>Duration (minutes):</label>
+          <input type="number" id="manualDuration" value="30" min="1">
+          <div style="display: flex; gap: 5px; flex-wrap: wrap; margin-top: 8px;">
+            <span class="duration-chip" data-minutes="15">15m</span>
+            <span class="duration-chip selected" data-minutes="30">30m</span>
+            <span class="duration-chip" data-minutes="45">45m</span>
+            <span class="duration-chip" data-minutes="60">1h</span>
+            <span class="duration-chip" data-minutes="90">1.5h</span>
+            <span class="duration-chip" data-minutes="120">2h</span>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label>When:</label>
+          <select id="manualWhen">
+            <option value="just-now">Just finished</option>
+            <option value="minutes-ago">Minutes ago...</option>
+            <option value="hours-ago">Hours ago...</option>
+            <option value="specific-time">Specific time today...</option>
+            <option value="specific-datetime">Different day...</option>
+          </select>
+        </div>
+        
+        <div id="minutesAgoGroup" style="display: none;">
+          <div class="form-group">
+            <label>How many minutes ago:</label>
+            <input type="number" id="minutesAgo" value="15" min="1" max="120">
+          </div>
+        </div>
+        
+        <div id="hoursAgoGroup" style="display: none;">
+          <div class="form-group">
+            <label>When exactly:</label>
+            <select id="hoursAgo">
+              <option value="1">1 hour ago</option>
+              <option value="2">2 hours ago</option>
+              <option value="3">3 hours ago</option>
+              <option value="4">4 hours ago</option>
+              <option value="5">5 hours ago</option>
+              <option value="morning">This morning (9 AM)</option>
+              <option value="lunch">After lunch (1 PM)</option>
+            </select>
+          </div>
+        </div>
+        
+        <div id="specificTimeGroup" style="display: none;">
+          <div class="form-group">
+            <label>End time:</label>
+            <input type="time" id="specificEndTime">
+            <input type="date" id="specificDate" style="margin-top: 5px; display: none;">
+          </div>
+        </div>
+        
+        <div class="form-group" style="background: #fff3cd; padding: 10px; border-radius: 4px;">
+          <label style="display: flex; align-items: center;">
+            <input type="checkbox" id="wasMultitasking" style="margin-right: 6px;">
+            I was multi-tasking during this time
+          </label>
+          
+          <div id="multitaskingDetails" style="display: none; margin-top: 8px;">
+            <select id="multitaskingWith" style="width: 100%;">
+              <option value="">What else were you doing?</option>
+              <option value="Meeting">👥 In a meeting</option>
+              <option value="Email">📧 Checking email</option>
+              <option value="Slack/Chat">💬 On Slack/Chat</option>
+              <option value="Phone Call">📞 On a call</option>
+              <option value="Admin">📋 Admin work</option>
+              <option value="Other">Other task</option>
+            </select>
+          </div>
+        </div>
+        
+        <div class="form-actions">
+          <button class="button" id="saveManualBtn">Save Entry</button>
+          <button class="button secondary" id="cancelManualBtn">Cancel</button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 7. Time Entries Section with Date Controls -->
+    <div class="section">
+      <div class="section-title">Time Entries</div>
+      <div class="date-controls">
+        <select id="dateRangeSelect">
+          <option value="today">Today</option>
+          <option value="yesterday">Yesterday</option>
+          <option value="week">This Week</option>
+          <option value="lastweek">Last Week</option>
+          <option value="month">This Month</option>
+          <option value="custom">Custom Range</option>
+          <option value="all">All Time</option>
+        </select>
+        
+        <div id="customDateRange" style="display: none;">
+          <input type="date" id="startDate">
+          <span>to</span>
+          <input type="date" id="endDate">
+          <button class="button" id="applyDateRange" style="width: 100%;">Apply Range</button>
+        </div>
+      </div>
+      
+      <div id="tasksList" style="margin-top: 10px;">
+        <!-- Tasks will be listed here -->
+      </div>
+      
+      <div class="stats-summary">
+        <div class="stat-item">
+          <div class="stat-value" id="totalHours">0.0</div>
+          <div class="stat-label">Total Hours</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value" id="multitaskHours">0.0</div>
+          <div class="stat-label">Multi-task Hours</div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 8. Category Totals Section (will be inserted here dynamically) -->
+    <!-- This keeps it near Time Entries as requested -->
+    
+    <!-- 9. Goals Progress (moved down closer to category totals) -->
     <div class="goals-progress" id="goalsProgress">
       <div class="goals-progress-title">
         Today's Goal Progress
@@ -1231,7 +1459,28 @@
       </div>
     </div>
     
-    <!-- Calendar Providers Section -->
+    <!-- 10. Meetings Section (if connected) -->
+    <div class="section" id="meetingsSection" style="display: none;">
+      <div class="section-title">
+        Today's Meetings
+        <button class="button" id="syncBtn" style="font-size: 11px; padding: 4px 8px;">
+          Sync
+        </button>
+      </div>
+      <div id="meetingsList">
+        <!-- Meetings will be loaded here -->
+      </div>
+    </div>
+    
+    <!-- 11. Export Section -->
+    <div class="section">
+      <div class="section-title">Export & Analysis</div>
+      <button class="button" id="exportBtn" style="width: 100%;">
+        📊 Export to Excel with Multi-task Analysis
+      </button>
+    </div>
+    
+    <!-- 12. Calendar Providers Section (moved to bottom) -->
     <div class="calendar-providers" id="calendarProviders">
       <div class="provider-header">
         <span class="provider-title">📅 Calendar Connections</span>
@@ -1245,7 +1494,6 @@
         <div class="provider-item" id="googleProvider">
           <div class="provider-info">
             <div class="provider-icon">
-              <!-- Google Calendar Icon SVG -->
               <svg width="20" height="20" viewBox="0 0 24 24">
                 <path fill="#4285F4" d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/>
               </svg>
@@ -1263,7 +1511,6 @@
         <div class="provider-item" id="outlookProvider">
           <div class="provider-info">
             <div class="provider-icon">
-              <!-- Outlook Icon SVG -->
               <svg width="20" height="20" viewBox="0 0 24 24">
                 <path fill="#0078D4" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10h5v-2h-5c-4.34 0-8-3.66-8-8s3.66-8 8-8 8 3.66 8 8v1.43c0 .79-.71 1.57-1.5 1.57s-1.5-.78-1.5-1.57V12c0-2.76-2.24-5-5-5s-5 2.24-5 5 2.24 5 5 5c1.38 0 2.64-.56 3.54-1.47.65.89 1.77 1.47 2.96 1.47 1.97 0 3.5-1.6 3.5-3.57V12c0-5.52-4.48-10-10-10zm0 13c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3z"/>
               </svg>
@@ -1279,7 +1526,7 @@
       </div>
     </div>
     
-    <!-- Calendar Selector (shown when multiple calendars connected) -->
+    <!-- 13. Calendar Selector (shown when multiple calendars connected) -->
     <div class="calendar-selector" id="calendarSelector" style="display: none;">
       <div class="calendar-tab active" data-provider="all" id="allTab">
         All Calendars
@@ -1291,263 +1538,7 @@
         Outlook
       </div>
     </div>
-    
-    <div id="mainContent">
-      <!-- Main Timer Display -->
-      <div class="timer-display" id="timerDisplay">
-        00:00:00
-        <div class="current-tracking" id="currentTracking">
-          <div class="tracking-detail">
-            <span class="tracking-label">Task:</span>
-            <span id="currentTaskName">-</span>
-          </div>
-          <div class="tracking-detail">
-            <span class="tracking-label">Deliverable:</span>
-            <span id="currentDeliverableName">-</span>
-          </div>
-        </div>
-      </div>
-      
-      <!-- Dual Timer Container (shows when multi-tasking) -->
-      <div class="dual-timer-container" id="dualTimerContainer">
-        <div class="timer-row">
-          <span class="timer-label">
-            <span style="color: #d83b01;">👥</span> Meeting
-          </span>
-          <span class="timer-value" id="meetingTime">00:00:00</span>
-        </div>
-        <div class="timer-row">
-          <span class="timer-label">
-            <span style="color: #0078d4;">💼</span> <span id="taskName">Task</span>
-          </span>
-          <span class="timer-value" id="taskTime">00:00:00</span>
-        </div>
-      </div>
-      
-      <!-- Quick Actions Section -->
-      <div class="section">
-        <div class="section-title">
-          Quick Actions
-          <span style="font-size: 11px; font-weight: normal; color: #605e5c;">
-            Click to start/stop tasks
-          </span>
-        </div>
-        <div class="quick-task-grid" id="quickTaskGrid">
-          <!-- Will be populated from categories -->
-        </div>
-        <!-- Quick action dialog for task details -->
-        <div class="quick-action-dialog" id="quickActionDialog">
-          <div class="quick-action-form">
-            <div class="inline-form-group">
-              <label>Description (optional):</label>
-              <input type="text" id="quickDescription" placeholder="What are you working on?">
-            </div>
-            <div class="inline-form-group">
-              <label>Deliverable (optional):</label>
-              <div class="deliverable-select-wrapper">
-                <select id="quickDeliverable">
-                  <option value="">No deliverable</option>
-                  <option value="_new">+ Create new deliverable...</option>
-                </select>
-              </div>
-              <div class="new-deliverable-input" id="quickNewDeliverable">
-                <input type="text" id="quickNewDeliverableName" placeholder="New deliverable name">
-              </div>
-            </div>
-            <div class="quick-action-buttons">
-              <button class="start-btn" id="quickStartBtn">Start Timer</button>
-              <button class="cancel-quick-btn" id="quickCancelBtn">Cancel</button>
-            </div>
-          </div>
-        </div>
-      </div>
-      
-      <!-- Time Entries Section -->
-      <div class="section">
-        <div class="section-title">Time Entries</div>
-        <div class="date-controls">
-          <select id="dateRangeSelect">
-            <option value="today">Today</option>
-            <option value="yesterday">Yesterday</option>
-            <option value="week">This Week</option>
-            <option value="lastweek">Last Week</option>
-            <option value="month">This Month</option>
-            <option value="custom">Custom Range</option>
-            <option value="all">All Time</option>
-          </select>
-          
-          <div id="customDateRange" style="display: none;">
-            <input type="date" id="startDate">
-            <span>to</span>
-            <input type="date" id="endDate">
-            <button class="button" id="applyDateRange" style="width: 100%;">Apply Range</button>
-          </div>
-        </div>
-        
-        <div id="tasksList" style="margin-top: 10px;">
-          <!-- Tasks will be listed here -->
-        </div>
-        
-        <div class="stats-summary">
-          <div class="stat-item">
-            <div class="stat-value" id="totalHours">0.0</div>
-            <div class="stat-label">Total Hours</div>
-          </div>
-          <div class="stat-item">
-            <div class="stat-value" id="multitaskHours">0.0</div>
-            <div class="stat-label">Multi-task Hours</div>
-          </div>
-        </div>
-      </div>
-      
-      <!-- Category Totals Section (will be inserted here dynamically) -->
-      
-      <!-- Manual Entry Section -->
-      <div class="section">
-        <div class="section-title">Manual Entry</div>
-        <button class="button" id="showManualEntryBtn">+ Add Time Entry</button>
-        
-        <div id="manualEntryForm" style="display: none; margin-top: 10px;">
-          <!-- Category Selection -->
-          <div class="form-group">
-            <label>Category:</label>
-            <select id="manualCategory">
-              <!-- Categories will be populated dynamically -->
-            </select>
-          </div>
-          
-          <!-- Description -->
-          <div class="form-group">
-            <label>Description:</label>
-            <input type="text" id="manualDescription" placeholder="What did you work on? (optional)">
-          </div>
-          
-          <!-- Deliverable Selection (new) -->
-          <div class="form-group deliverable-selector">
-            <label>Deliverable:</label>
-            <div class="deliverable-select-wrapper">
-              <select id="manualDeliverable">
-                <option value="">No deliverable</option>
-                <option value="_new">+ Create new deliverable...</option>
-                <!-- Deliverables will be populated dynamically -->
-              </select>
-            </div>
-            <div class="new-deliverable-input" id="newDeliverableInput">
-              <input type="text" id="newDeliverableName" placeholder="New deliverable name">
-              <small style="color: #605e5c; font-size: 11px;">Press Enter to create</small>
-            </div>
-          </div>
-          
-          <!-- Duration with quick selections -->
-          <div class="form-group">
-            <label>Duration (minutes):</label>
-            <input type="number" id="manualDuration" value="30" min="1">
-            
-            <!-- Quick duration buttons -->
-            <div style="display: flex; gap: 5px; flex-wrap: wrap; margin-top: 8px;">
-              <span class="duration-chip" data-minutes="15">15m</span>
-              <span class="duration-chip selected" data-minutes="30">30m</span>
-              <span class="duration-chip" data-minutes="45">45m</span>
-              <span class="duration-chip" data-minutes="60">1h</span>
-              <span class="duration-chip" data-minutes="90">1.5h</span>
-              <span class="duration-chip" data-minutes="120">2h</span>
-            </div>
-          </div>
-          
-          <!-- When did it end -->
-          <div class="form-group">
-            <label>When:</label>
-            <select id="manualWhen">
-              <option value="just-now">Just finished</option>
-              <option value="minutes-ago">Minutes ago...</option>
-              <option value="hours-ago">Hours ago...</option>
-              <option value="specific-time">Specific time today...</option>
-              <option value="specific-datetime">Different day...</option>
-            </select>
-          </div>
-          
-          <!-- Minutes ago input (hidden by default) -->
-          <div id="minutesAgoGroup" style="display: none;">
-            <div class="form-group">
-              <label>How many minutes ago:</label>
-              <input type="number" id="minutesAgo" value="15" min="1" max="120">
-            </div>
-          </div>
-          
-          <!-- Hours ago dropdown (hidden by default) -->
-          <div id="hoursAgoGroup" style="display: none;">
-            <div class="form-group">
-              <label>When exactly:</label>
-              <select id="hoursAgo">
-                <option value="1">1 hour ago</option>
-                <option value="2">2 hours ago</option>
-                <option value="3">3 hours ago</option>
-                <option value="4">4 hours ago</option>
-                <option value="5">5 hours ago</option>
-                <option value="morning">This morning (9 AM)</option>
-                <option value="lunch">After lunch (1 PM)</option>
-              </select>
-            </div>
-          </div>
-          
-          <!-- Specific time input (hidden by default) -->
-          <div id="specificTimeGroup" style="display: none;">
-            <div class="form-group">
-              <label>End time:</label>
-              <input type="time" id="specificEndTime">
-              <input type="date" id="specificDate" style="margin-top: 5px; display: none;">
-            </div>
-          </div>
-          
-          <!-- Multi-tasking section -->
-          <div class="form-group" style="background: #fff3cd; padding: 10px; border-radius: 4px;">
-            <label style="display: flex; align-items: center;">
-              <input type="checkbox" id="wasMultitasking" style="margin-right: 6px;">
-              I was multi-tasking during this time
-            </label>
-            
-            <div id="multitaskingDetails" style="display: none; margin-top: 8px;">
-              <select id="multitaskingWith" style="width: 100%;">
-                <option value="">What else were you doing?</option>
-                <option value="Meeting">👥 In a meeting</option>
-                <option value="Email">📧 Checking email</option>
-                <option value="Slack/Chat">💬 On Slack/Chat</option>
-                <option value="Phone Call">📞 On a call</option>
-                <option value="Admin">📋 Admin work</option>
-                <option value="Other">Other task</option>
-              </select>
-            </div>
-          </div>
-          
-          <!-- Action buttons -->
-          <div class="form-actions">
-            <button class="button" id="saveManualBtn">Save Entry</button>
-            <button class="button secondary" id="cancelManualBtn">Cancel</button>
-          </div>
-        </div>
-      </div>
-      
-      <!-- Export Section -->
-      <div class="section">
-        <div class="section-title">Export & Analysis</div>
-        <button class="button" id="exportBtn" style="width: 100%;">
-          📊 Export to Excel with Multi-task Analysis
-        </button>
-      </div>
-      
-      <!-- Meetings Section (if connected) -->
-      <div class="section" id="meetingsSection" style="display: none;">
-        <div class="section-title">
-          Today's Meetings
-          <button class="button" id="syncBtn" style="font-size: 11px; padding: 4px 8px;">
-            Sync
-          </button>
-        </div>
-        <div id="meetingsList">
-          <!-- Meetings will be loaded here -->
-        </div>
-      </div>
-    </div>
+    </div> <!-- End of mainContent -->
   </div>
   
   <!-- Notification Toast -->
