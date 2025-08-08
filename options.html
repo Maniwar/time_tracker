@@ -784,6 +784,8 @@
     <button class="tab-button" data-tab="tracking">Tracking</button>
     <button class="tab-button" data-tab="export">Export</button>
     <button class="tab-button" data-tab="data">Data</button>
+    <button class="tab-button" data-tab="support" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none;">
+      💖 Support Development</button>
   </div>
   
   <!-- Overview Tab -->
@@ -1100,7 +1102,180 @@
       </p>
     </div>
   </div>
+  <!-- Support Tab -->
+<div class="tab-content" id="supportTab">
+  <!-- Hero Card -->
+  <div class="card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-align: center; padding: 40px;">
+    <h1 style="color: white; margin: 0 0 20px 0; font-size: 28px;">
+      This Tool is Free Forever
+    </h1>
+    <p style="font-size: 16px; margin-bottom: 25px; opacity: 0.95;">
+      No premium tiers. No locked features. No BS.<br>
+      If it helped you, maybe buy me a coffee. Or don't. Really.
+    </p>
+    <div>
+      <a href="https://github.com/sponsors/Maniwar" target="_blank" class="button" 
+         style="background: white; color: #764ba2; font-weight: 600; padding: 12px 30px; font-size: 16px;">
+        💖 Sponsor on GitHub
+      </a>
+      <a href="https://github.com/Maniwar/time_tracker" target="_blank" class="button" 
+         style="background: rgba(255,255,255,0.2); color: white; border: 2px solid white; margin-left: 15px; padding: 12px 30px;">
+        ⭐ Star on GitHub
+      </a>
+    </div>
+  </div>
+
+  <!-- Impact Stories -->
+  <div class="card">
+    <h2>📈 Impact I'd like to see</h2>
+    <div style="display: grid; gap: 15px; margin-top: 20px;">
+      <div style="background: #f0f8f0; padding: 15px; border-radius: 6px; border-left: 4px solid #107c10;">
+        <p style="margin: 0; font-style: italic;">
+          "Used your extension to show we spend 70% of time in meetings. We now have no-meeting Wednesdays."
+        </p>
+        <small style="color: #605e5c;">— Engineering Manager, 50-person startup</small>
+      </div>
+      
+      <div style="background: #f0f8f0; padding: 15px; border-radius: 6px; border-left: 4px solid #107c10;">
+        <p style="margin: 0; font-style: italic;">
+          "Finally got the two headcount we needed. Your multi-tasking reports made the difference."
+        </p>
+        <small style="color: #605e5c;">— Tech Lead, Fortune 500</small>
+      </div>
+      
+      <div style="background: #f0f8f0; padding: 15px; border-radius: 6px; border-left: 4px solid #107c10;">
+        <p style="margin: 0; font-style: italic;">
+          "Proved that 'quick questions' take 15 hours/week. Now we have office hours instead."
+        </p>
+        <small style="color: #605e5c;">— Senior Developer</small>
+      </div>
+    </div>
+  </div>
+
+  <!-- Why Support -->
+  <div class="card">
+    <h2>☕ Why Support?</h2>
+    <div class="section-description" style="line-height: 1.8;">
+      <p>
+        <strong>Your sponsorship helps me:</strong>
+      </p>
+      <ul style="list-style: none; padding: 0;">
+        <li>🔧 Keep the extension updated with Chrome changes</li>
+        <li>🚀 Add features the community requests</li>
+        <li>☁️ Pay for infrastructure and hosting</li>
+        <li>📚 Create better documentation and tutorials</li>
+        <li>⏰ Justify spending weekends on this instead of paid work</li>
+        <li>🎯 Build more free tools (BERTopic clustering, categorization apps)</li>
+      </ul>
+      
+      <p style="margin-top: 20px;">
+        <strong>What you get:</strong><br>
+        Everything. Forever. This isn't a freemium model - everyone gets all features whether they sponsor or not.
+        Your support just helps me keep building.
+      </p>
+    </div>
+  </div>
+
+<!-- Other Ways to Help -->
+<div class="card">
+  <h2>🤝 Other Ways to Contribute</h2>
+  <div class="section-description">
+    <p><strong>Can't sponsor? No problem! You can help by:</strong></p>
+    
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 20px;">
+      <a href="https://github.com/Maniwar/time_tracker" target="_blank" class="button secondary" style="text-align: center;">
+        ⭐ Star the Repo
+      </a>
+      <a href="https://github.com/Maniwar/time_tracker/issues" target="_blank" class="button secondary" style="text-align: center;">
+        🐛 Report Bugs
+      </a>
+      <a href="https://github.com/Maniwar/time_tracker/pulls" target="_blank" class="button secondary" style="text-align: center;">
+        🔧 Submit PRs
+      </a>
+      <button class="button secondary" id="copyLinkBtn" style="text-align: center;">
+        📋 Copy Link
+      </button>
+    </div>
+    
+    <!-- Social Media Sharing Section -->
+    <div style="margin-top: 25px; padding-top: 20px; border-top: 1px solid #e1dfdd;">
+      <p><strong>📢 Share Your Success Story:</strong></p>
+      <p style="font-size: 13px; color: #605e5c; margin-bottom: 15px;">
+        Got headcount approved? Reduced meetings? Share your win and help others discover the tool!
+      </p>
+      
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px;">
+        <button class="button" id="shareLinkedIn" style="background: #0077B5; color: white;">
+          <span style="font-weight: bold;">in</span> LinkedIn
+        </button>
+        <button class="button" id="shareTwitter" style="background: #1DA1F2; color: white;">
+          𝕏 Twitter/X
+        </button>
+        <button class="button" id="shareReddit" style="background: #FF4500; color: white;">
+          🔥 Reddit
+        </button>
+        <button class="button" id="shareFacebook" style="background: #1877F2; color: white;">
+          f Facebook
+        </button>
+        <button class="button" id="shareEmail" style="background: #605e5c; color: white;">
+          ✉️ Email
+        </button>
+        <button class="button success" id="shareSuccess" style="background: #107c10;">
+          🎯 I Got Headcount!
+        </button>
+      </div>
+    </div>
+    
+    <p style="margin-top: 20px;">
+      <strong>Have a success story?</strong><br>
+      Got headcount approved? Reduced meetings? Saved your sanity?<br>
+      Drop me a message - these stories keep me motivated!
+    </p>
+  </div>
+</div>
+
+<!-- My Other Projects -->
+<div class="card">
+  <h2>🚀 My Other Free Tools</h2>
+  <div class="section-description">
+    <p>I build tools that solve real problems:</p>
+    <ul>
+      <li><strong>BERTopic Clustering Apps</strong> - Make sense of messy text data</li>
+      <li><strong>Smart Categorization Tools</strong> - Auto-organize anything</li>
+      <li><strong>More coming...</strong> - What do you need?</li>
+    </ul>
+    <p style="margin-top: 15px;">
+      All free. All open source. Because good tools should be accessible to everyone.
+    </p>
+  </div>
+</div>
+
+<!-- Final CTA -->
+<div class="card" style="text-align: center; background: #f8f9fa;">
+  <h2>The Bottom Line</h2>
+  <p class="section-description" style="font-size: 15px;">
+    <strong>This extension will always be free.</strong><br><br>
+    
+    If it saved you time, got you headcount, or just made your day better -<br>
+    consider throwing a few bucks in the jar. Or don't.<br><br>
+    
+    Either way, thanks for using it. That's enough.
+  </p>
   
+  <div style="margin-top: 25px;">
+    <a href="https://github.com/sponsors/Maniwar" target="_blank" class="button" 
+       style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 12px 40px; font-size: 15px;">
+      💖 Become a GitHub Sponsor
+    </a>
+  </div>
+  
+  <p style="margin-top: 20px; color: #605e5c; font-size: 13px;">
+    "In a world of subscriptions, be the person who makes things free."<br>
+    — @Maniwar
+  </p>
+</div>
+
+
   <!-- Goal Modal -->
   <div class="modal-overlay" id="goalModal">
     <div class="modal-content">
