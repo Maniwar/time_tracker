@@ -281,7 +281,7 @@ time_tracker/
 └── icons/              # Extension icons
 ```
 
-## 📈 Success Stories
+## 📈 Aspirational Success Stories
 
 > "Used Universal Time Tracker to show we spend 70% of time in meetings. We now have no-meeting Wednesdays."  
 > — *Engineering Manager, 50-person startup*
