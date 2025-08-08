@@ -12,6 +12,55 @@
 Time doesn't just slip through our fingers—it gets absorbed by meetings, "quick questions," and context switching that never shows up in reports. Without data, these invisible hours become invisible problems.
 
 **Universal Time Tracker** gives you the ammunition to prove what you already know: your team needs more people.
+## 📸 Screenshots
+
+<div align="center">
+
+<table>
+  <tr>
+    <td width="50%">
+      <a href="time_tracker/screenshots/screen_addgoals.png">
+        <img src="time_tracker/screenshots/screen_addgoals.png" alt="Add Goals modal" width="100%" loading="lazy" />
+      </a>
+      <br/>
+      <sub><b>Add Goals</b> — define goals, impact, targets</sub>
+    </td>
+    <td width="50%">
+      <a href="time_tracker/screenshots/screen_timetrackerpop.png">
+        <img src="time_tracker/screenshots/screen_timetrackerpop.png" alt="Time Tracker popup" width="100%" loading="lazy" />
+      </a>
+      <br/>
+      <sub><b>Tracker Popup</b> — one-click quick actions</sub>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%">
+      <a href="time_tracker/screenshots/screen_timebycategorysummary.png">
+        <img src="time_tracker/screenshots/screen_timebycategorysummary.png" alt="Time by Category summary" width="100%" loading="lazy" />
+      </a>
+      <br/>
+      <sub><b>Category Summary</b> — where your time really goes</sub>
+    </td>
+    <td width="50%">
+      <a href="time_tracker/screenshots/screen_timeentries.png">
+        <img src="time_tracker/screenshots/screen_timeentries.png" alt="Time entries list" width="100%" loading="lazy" />
+      </a>
+      <br/>
+      <sub><b>Time Entries</b> — detailed, filterable history</sub>
+    </td>
+  </tr>
+  <tr>
+    <td colspan="2">
+      <a href="time_tracker/screenshots/screen_calendar_export.png">
+        <img src="time_tracker/screenshots/screen_calendar_export.png" alt="Calendar export preview" width="100%" loading="lazy" />
+      </a>
+      <br/>
+      <sub><b>Calendar Export</b> — turn meetings into usable data</sub>
+    </td>
+  </tr>
+</table>
+
+</div>
 
 ## ✨ Features
 
