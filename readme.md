@@ -19,15 +19,15 @@ Time doesn't just slip through our fingers—it gets absorbed by meetings, "quic
 <table>
   <tr>
     <td width="50%">
-      <a href="time_tracker/screenshots/screen_addgoals.png">
-        <img src="time_tracker/screenshots/screen_addgoals.png" alt="Add Goals modal" width="100%" loading="lazy" />
+      <a href="screenshots/screen_addgoals.png">
+        <img src="screenshots/screen_addgoals.png" alt="Add Goals modal" width="100%" loading="lazy" />
       </a>
       <br/>
-      <sub><b>Add Goals</b> — define goals, impact, targets</sub>
+      <sub><b>Add Goals</b> — define goals, impact, and daily targets</sub>
     </td>
     <td width="50%">
-      <a href="time_tracker/screenshots/screen_timetrackerpop.png">
-        <img src="time_tracker/screenshots/screen_timetrackerpop.png" alt="Time Tracker popup" width="100%" loading="lazy" />
+      <a href="screenshots/screen_timetrackerpop.png">
+        <img src="screenshots/screen_timetrackerpop.png" alt="Time Tracker popup" width="100%" loading="lazy" />
       </a>
       <br/>
       <sub><b>Tracker Popup</b> — one-click quick actions</sub>
@@ -35,15 +35,15 @@ Time doesn't just slip through our fingers—it gets absorbed by meetings, "quic
   </tr>
   <tr>
     <td width="50%">
-      <a href="time_tracker/screenshots/screen_timebycategorysummary.png">
-        <img src="time_tracker/screenshots/screen_timebycategorysummary.png" alt="Time by Category summary" width="100%" loading="lazy" />
+      <a href="screenshots/screen_timebycategorysummary.png">
+        <img src="screenshots/screen_timebycategorysummary.png" alt="Time by Category summary" width="100%" loading="lazy" />
       </a>
       <br/>
       <sub><b>Category Summary</b> — where your time really goes</sub>
     </td>
     <td width="50%">
-      <a href="time_tracker/screenshots/screen_timeentries.png">
-        <img src="time_tracker/screenshots/screen_timeentries.png" alt="Time entries list" width="100%" loading="lazy" />
+      <a href="screenshots/screen_timeentries.png">
+        <img src="screenshots/screen_timeentries.png" alt="Time entries list" width="100%" loading="lazy" />
       </a>
       <br/>
       <sub><b>Time Entries</b> — detailed, filterable history</sub>
@@ -51,8 +51,8 @@ Time doesn't just slip through our fingers—it gets absorbed by meetings, "quic
   </tr>
   <tr>
     <td colspan="2">
-      <a href="time_tracker/screenshots/screen_calendar_export.png">
-        <img src="time_tracker/screenshots/screen_calendar_export.png" alt="Calendar export preview" width="100%" loading="lazy" />
+      <a href="screenshots/screen_calendar_export.png">
+        <img src="screenshots/screen_calendar_export.png" alt="Calendar export preview" width="100%" loading="lazy" />
       </a>
       <br/>
       <sub><b>Calendar Export</b> — turn meetings into usable data</sub>
@@ -61,6 +61,7 @@ Time doesn't just slip through our fingers—it gets absorbed by meetings, "quic
 </table>
 
 </div>
+
 
 ## ✨ Features
 
