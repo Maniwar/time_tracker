@@ -1471,7 +1471,7 @@ function showQuickActionDialog(taskType) {
 async function handleQuickStart() {
   if (!pendingQuickAction) return;
   
-  const { taskType } = pendingQuickAction;
+  const { taskType, isMeeting } = pendingQuickAction;
   const description = document.getElementById('quickDescription').value.trim();
   const deliverableSelect = document.getElementById('quickDeliverable');
   let deliverableId = deliverableSelect.value;
@@ -1498,14 +1498,19 @@ async function handleQuickStart() {
     stopTaskTimer();
   }
   
-  // Start the new task
-  startTaskTimer(taskType, description, deliverableId);
+  // Check if this is a meeting or regular task
+  if (isMeeting) {
+    // Start meeting timer
+    startMeetingTimer(description || 'Meeting', deliverableId);
+  } else {
+    // Start regular task timer
+    startTaskTimer(taskType, description, deliverableId);
+  }
   
   // Hide dialog
   document.getElementById('quickActionDialog').classList.remove('active');
   pendingQuickAction = null;
 }
-
 // Setup calendar provider event listeners
 function setupCalendarProviderListeners() {
   // Google connect/disconnect
