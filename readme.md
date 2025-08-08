@@ -20,41 +20,51 @@ Time doesn't just slip through our fingers—it gets absorbed by meetings, "quic
   <tr>
     <td align="center">
       <a href="screenshots/screen_timetrackerpop.png">
-        <img src="screenshots/screen_timetrackerpop.png" alt="Tracker Popup" width="280">
+        <img src="screenshots/screen_timetrackerpop.png" alt="Tracker Popup" width="260">
       </a><br>
       <sub><b>Tracker Popup</b></sub>
     </td>
     <td align="center">
       <a href="screenshots/screen_addgoals.png">
-        <img src="screenshots/screen_addgoals.png" alt="Add Goals" width="280">
+        <img src="screenshots/screen_addgoals.png" alt="Add Goals" width="260">
       </a><br>
       <sub><b>Add Goals</b></sub>
     </td>
     <td align="center">
       <a href="screenshots/screen_timeentries.png">
-        <img src="screenshots/screen_timeentries.png" alt="Time Entries" width="280">
+        <img src="screenshots/screen_timeentries.png" alt="Time Entries" width="260">
       </a><br>
       <sub><b>Time Entries</b></sub>
     </td>
   </tr>
-  <tr>
-    <td align="center">
-      <a href="screenshots/screen_timebycategorysummary.png">
-        <img src="screenshots/screen_timebycategorysummary.png" alt="Category Summary" width="280">
-      </a><br>
-      <sub><b>Category Summary</b></sub>
-    </td>
-    <td align="center">
-      <a href="screenshots/screen_calendar_export.png">
-        <img src="screenshots/screen_calendar_export.png" alt="Calendar Export" width="280">
-      </a><br>
-      <sub><b>Calendar Export</b></sub>
-    </td>
-    <td align="center">
-      <em>&nbsp;</em>
-    </td>
-  </tr>
 </table>
+
+<details>
+  <summary align="right">▶ More screenshots</summary>
+
+  <br>
+
+  <table>
+    <tr>
+      <td align="center">
+        <a href="screenshots/screen_timebycategorysummary.png">
+          <img src="screenshots/screen_timebycategorysummary.png" alt="Category Summary" width="260">
+        </a><br>
+        <sub><b>Category Summary</b></sub>
+      </td>
+      <td align="center">
+        <a href="screenshots/screen_calendar_export.png">
+          <img src="screenshots/screen_calendar_export.png" alt="Calendar Export" width="260">
+        </a><br>
+        <sub><b>Calendar Export</b></sub>
+      </td>
+      <td align="center">
+        <em>&nbsp;</em>
+      </td>
+    </tr>
+  </table>
+
+</details>
 
 
 
