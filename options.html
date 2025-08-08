@@ -503,8 +503,9 @@
       width: 90%;
       max-height: 80vh;
       overflow-y: auto;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
       animation: slideUp 0.3s ease;
+      box-sizing: border-box;   /* ← fix */
     }
     
     @keyframes slideUp {
@@ -753,7 +754,9 @@
     .form-row input,
     .form-row select,
     .form-row textarea {
+      box-sizing: border-box;   /* include padding/border in width */
       width: 100%;
+      max-width: 100%;
       padding: 8px 12px;
       border: 1px solid #d2d0ce;
       border-radius: 4px;
@@ -772,6 +775,30 @@
       color: #a19f9d;
       font-size: 12px;
     }
+/* Specific fix for goal modal */
+#goalModal {
+  display: none !important;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 9999;
+}
+
+#goalModal.active {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.2s ease;
+}
+
+/* Ensure modal content is visible */
+#goalModal .modal-content {
+  position: relative;
+  z-index: 10000;
+}
   </style>
 </head>
 <body>
@@ -1273,6 +1300,7 @@
     "In a world of subscriptions, be the person who makes things free."<br>
     — @Maniwar
   </p>
+</div>
 </div>
 
 
