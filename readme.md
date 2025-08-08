@@ -12,55 +12,50 @@
 Time doesn't just slip through our fingers—it gets absorbed by meetings, "quick questions," and context switching that never shows up in reports. Without data, these invisible hours become invisible problems.
 
 **Universal Time Tracker** gives you the ammunition to prove what you already know: your team needs more people.
-## 📸 Screenshots
 
-<div align="center">
+
+## 📸 Screenshots
 
 <table>
   <tr>
-    <td width="50%">
-      <a href="screenshots/screen_addgoals.png">
-        <img src="screenshots/screen_addgoals.png" alt="Add Goals modal" width="100%" loading="lazy" />
-      </a>
-      <br/>
-      <sub><b>Add Goals</b> — define goals, impact, and daily targets</sub>
-    </td>
-    <td width="50%">
+    <td align="center">
       <a href="screenshots/screen_timetrackerpop.png">
-        <img src="screenshots/screen_timetrackerpop.png" alt="Time Tracker popup" width="100%" loading="lazy" />
-      </a>
-      <br/>
-      <sub><b>Tracker Popup</b> — one-click quick actions</sub>
+        <img src="screenshots/screen_timetrackerpop.png" alt="Tracker Popup" width="280">
+      </a><br>
+      <sub><b>Tracker Popup</b></sub>
     </td>
-  </tr>
-  <tr>
-    <td width="50%">
-      <a href="screenshots/screen_timebycategorysummary.png">
-        <img src="screenshots/screen_timebycategorysummary.png" alt="Time by Category summary" width="100%" loading="lazy" />
-      </a>
-      <br/>
-      <sub><b>Category Summary</b> — where your time really goes</sub>
+    <td align="center">
+      <a href="screenshots/screen_addgoals.png">
+        <img src="screenshots/screen_addgoals.png" alt="Add Goals" width="280">
+      </a><br>
+      <sub><b>Add Goals</b></sub>
     </td>
-    <td width="50%">
+    <td align="center">
       <a href="screenshots/screen_timeentries.png">
-        <img src="screenshots/screen_timeentries.png" alt="Time entries list" width="100%" loading="lazy" />
-      </a>
-      <br/>
-      <sub><b>Time Entries</b> — detailed, filterable history</sub>
+        <img src="screenshots/screen_timeentries.png" alt="Time Entries" width="280">
+      </a><br>
+      <sub><b>Time Entries</b></sub>
     </td>
   </tr>
   <tr>
-    <td colspan="2">
+    <td align="center">
+      <a href="screenshots/screen_timebycategorysummary.png">
+        <img src="screenshots/screen_timebycategorysummary.png" alt="Category Summary" width="280">
+      </a><br>
+      <sub><b>Category Summary</b></sub>
+    </td>
+    <td align="center">
       <a href="screenshots/screen_calendar_export.png">
-        <img src="screenshots/screen_calendar_export.png" alt="Calendar export preview" width="100%" loading="lazy" />
-      </a>
-      <br/>
-      <sub><b>Calendar Export</b> — turn meetings into usable data</sub>
+        <img src="screenshots/screen_calendar_export.png" alt="Calendar Export" width="280">
+      </a><br>
+      <sub><b>Calendar Export</b></sub>
+    </td>
+    <td align="center">
+      <em>&nbsp;</em>
     </td>
   </tr>
 </table>
 
-</div>
 
 
 ## ✨ Features
