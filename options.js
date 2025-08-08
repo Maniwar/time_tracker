@@ -1040,6 +1040,114 @@ function setupEventListeners() {
       document.getElementById('goalModal').classList.remove('active');
     }
   });
+// Social sharing buttons
+document.getElementById('copyLinkBtn')?.addEventListener('click', () => {
+  const link = 'https://github.com/Maniwar/time_tracker';
+  navigator.clipboard.writeText(link).then(() => {
+    const btn = document.getElementById('copyLinkBtn');
+    const originalText = btn.textContent;
+    btn.textContent = '✓ Copied!';
+    btn.style.background = '#107c10';
+    btn.style.color = 'white';
+    setTimeout(() => {
+      btn.textContent = originalText;
+      btn.style.background = '';
+      btn.style.color = '';
+    }, 2000);
+  });
+});
+
+// LinkedIn Share
+document.getElementById('shareLinkedIn')?.addEventListener('click', () => {
+  const url = 'https://github.com/Maniwar/time_tracker';
+  const text = `Just discovered Universal Time Tracker - a free Chrome extension that helped me prove we needed more headcount with actual data! 
+
+It tracks multi-tasking during meetings (we all do it), auto-syncs with calendars, and exports reports that managers understand.
+
+No premium tiers, no locked features - completely free forever.`;
+  
+  const linkedInUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}&summary=${encodeURIComponent(text)}`;
+  window.open(linkedInUrl, '_blank', 'width=600,height=600');
+});
+
+// Twitter/X Share
+document.getElementById('shareTwitter')?.addEventListener('click', () => {
+  const text = `Found a time tracker that actually admits we multitask during meetings 😅
+
+Universal Time Tracker helped me prove we needed 2 more devs - and we got them!
+
+Free forever, no BS: `;
+  const url = 'https://github.com/Maniwar/time_tracker';
+  const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}&hashtags=productivity,timetracking,developertools`;
+  window.open(twitterUrl, '_blank', 'width=600,height=400');
+});
+
+// Reddit Share
+document.getElementById('shareReddit')?.addEventListener('click', () => {
+  const url = 'https://github.com/Maniwar/time_tracker';
+  const title = 'Universal Time Tracker - Free Chrome extension that helped me get headcount approved';
+  const redditUrl = `https://www.reddit.com/submit?url=${encodeURIComponent(url)}&title=${encodeURIComponent(title)}`;
+  window.open(redditUrl, '_blank', 'width=900,height=600');
+});
+
+// Facebook Share
+document.getElementById('shareFacebook')?.addEventListener('click', () => {
+  const url = 'https://github.com/Maniwar/time_tracker';
+  const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`;
+  window.open(facebookUrl, '_blank', 'width=600,height=400');
+});
+
+// Email Share
+document.getElementById('shareEmail')?.addEventListener('click', () => {
+  const subject = 'Check out Universal Time Tracker - It helped me get headcount!';
+  const body = `Hey,
+
+I've been using Universal Time Tracker and it's been a game-changer for proving we need more people on the team.
+
+Key features:
+- Tracks multi-tasking during meetings (finally, honest data!)
+- Auto-syncs with Google Calendar and Outlook
+- Exports reports that actually make sense to managers
+- Completely free forever (no premium BS)
+
+The multi-tasking data was key - it showed we're in meetings 60% of the time but multitasking through 40% of them because they're not relevant.
+
+Check it out: https://github.com/Maniwar/time_tracker
+
+Thought you might find it useful for your team too!`;
+  
+  const mailtoUrl = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  window.location.href = mailtoUrl;
+});
+
+// Success Story Share (Special LinkedIn post)
+document.getElementById('shareSuccess')?.addEventListener('click', () => {
+  const url = 'https://github.com/Maniwar/time_tracker';
+  const text = `🎉 SUCCESS STORY: We just got 2 additional headcount approved!
+
+How? Data beats opinions every time.
+
+Using Universal Time Tracker, I showed leadership:
+📊 67% of our time was in meetings
+⚡ 40% of meeting time involved multitasking
+🔥 Core project work got only 2 hours/day
+📈 We were 6 weeks behind due to context switching
+
+The result? Immediate approval for 2 new developers.
+
+The best part? This tool is completely free. No premium tiers. No locked features.
+
+If you're struggling to justify headcount, you need this data.`;
+  
+  const linkedInUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}&summary=${encodeURIComponent(text)}`;
+  window.open(linkedInUrl, '_blank', 'width=600,height=600');
+  
+  // Also track this as a success metric
+  chrome.storage.local.get(['successStories'], (result) => {
+    const count = (result.successStories || 0) + 1;
+    chrome.storage.local.set({ successStories: count });
+  });
+});
 }
 
 // Save client ID
@@ -1448,3 +1556,4 @@ window.addEventListener('dragend', function() {
     loadQuickActions(); // Refresh quick actions with new order
   });
 });
+
