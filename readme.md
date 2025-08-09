@@ -13,6 +13,15 @@ Time doesn't just slip through our fingers—it gets absorbed by meetings, "quic
 
 **Universal Time Tracker** gives you the ammunition to prove what you already know: your team needs more people.
 
+## 🎥 Demo Video
+
+<p align="center">
+  <a href="https://www.youtube.com/watch?v=RmL0jU15L8o">
+    <img src="https://img.youtube.com/vi/RmL0jU15L8o/hqdefault.jpg" alt="Universal Time Tracker — Demo Video" width="720" />
+  </a>
+  <br/>
+  <sub>Click to watch on YouTube</sub>
+</p>
 
 ## 📸 Screenshots
 
