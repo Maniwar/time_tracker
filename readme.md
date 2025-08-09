@@ -98,7 +98,7 @@ Time doesn't just slip through our fingers—it gets absorbed by meetings, "quic
 
 ### Quick Install (For Your Team)
 
-1. **Download** the extension folder from [Releases](https://github.com/Maniwar/time_tracker/releases)
+1. **Download** the extension folder from [here](https://github.com/Maniwar/time_tracker/archive/refs/heads/main.zip)
 2. Open Chrome and go to `chrome://extensions/`
 3. Enable **Developer mode** (top right)
 4. Click **Load unpacked**
