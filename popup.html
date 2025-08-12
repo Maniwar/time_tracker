@@ -3,1542 +3,1565 @@
 <head>
   <meta charset="UTF-8">
   <style>
-    /* Same styles as before - no changes needed */
-    body {
-      width: 350px;
-      min-height: 400px;
-      margin: 0;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: #f3f2f1;
-    }
-    
-    .header {
-      background: #0078d4;
-      color: white;
-      padding: 15px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-    
-    .header h1 {
-      margin: 0;
-      font-size: 18px;
-      font-weight: 600;
-    }
-    
-    .auth-status {
-      font-size: 11px;
-      opacity: 0.9;
-      background: rgba(255,255,255,0.2);
-      padding: 4px 8px;
-      border-radius: 3px;
-    }
-    
-    .container {
-      padding: 15px;
-    }
-    
-    /* Goals Progress Bar */
-    .goals-progress {
-      background: white;
-      border-radius: 8px;
-      padding: 12px;
-      margin-bottom: 15px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-      display: none;
-    }
-    
-    .goals-progress.active {
-      display: block;
-    }
-    
-    .goals-progress-title {
-      font-size: 13px;
-      font-weight: 600;
-      color: #323130;
-      margin-bottom: 10px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    
-    .view-goals-btn {
-      font-size: 11px;
-      color: #0078d4;
-      cursor: pointer;
-      text-decoration: none;
-    }
-    
-    .view-goals-btn:hover {
-      text-decoration: underline;
-    }
-    
-    .goal-item {
-      margin-bottom: 8px;
-    }
-    
-    .goal-name {
-      font-size: 11px;
-      color: #605e5c;
-      margin-bottom: 3px;
-      display: flex;
-      justify-content: space-between;
-    }
-    
-    .goal-progress-bar {
-      height: 6px;
-      background: #e1dfdd;
-      border-radius: 3px;
-      overflow: hidden;
-    }
-    
-    .goal-progress-fill {
-      height: 100%;
-      background: linear-gradient(90deg, #107c10, #14cc60);
-      border-radius: 3px;
-      transition: width 0.3s ease;
-    }
-    
-    /* Calendar provider styles */
-    .calendar-providers {
-      background: white;
-      border-radius: 8px;
-      padding: 15px;
-      margin-bottom: 15px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-    }
-    
-    .provider-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 10px;
-    }
-    
-    .provider-title {
-      font-size: 14px;
-      font-weight: 600;
-      color: #323130;
-    }
-    
-    .provider-list {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-    
-    .provider-item {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 8px;
-      border: 1px solid #e1dfdd;
-      border-radius: 4px;
-      transition: all 0.2s;
-    }
-    
-    .provider-item.connected {
-      background: #f0f8f0;
-      border-color: #107c10;
-    }
-    
-    .provider-info {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      flex: 1;
-    }
-    
-    .provider-icon {
-      width: 24px;
-      height: 24px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    
-    .provider-icon img {
-      width: 20px;
-      height: 20px;
-    }
-    
-    .provider-details {
-      flex: 1;
-    }
-    
-    .provider-name {
-      font-size: 13px;
-      font-weight: 600;
-      color: #323130;
-    }
-    
-    .provider-email {
-      font-size: 11px;
-      color: #605e5c;
-    }
-    
-    .provider-status {
-      font-size: 11px;
-      color: #605e5c;
-      font-style: italic;
-    }
-    
-    .connect-btn {
-      padding: 4px 12px;
-      font-size: 12px;
-      border: none;
-      border-radius: 3px;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    
-    .connect-btn.primary {
-      background: #0078d4;
-      color: white;
-    }
-    
-    .connect-btn.primary:hover {
-      background: #106ebe;
-    }
-    
-    .connect-btn.disconnect {
-      background: #e1dfdd;
-      color: #323130;
-    }
-    
-    .connect-btn.disconnect:hover {
-      background: #d2d0ce;
-    }
-    
-    /* Calendar selector */
-    .calendar-selector {
-      display: flex;
-      gap: 5px;
-      margin-bottom: 10px;
-      padding: 0 15px;
-    }
-    
-    .calendar-tab {
-      flex: 1;
-      padding: 6px 12px;
-      border: 1px solid #d2d0ce;
-      background: white;
-      cursor: pointer;
-      text-align: center;
-      font-size: 12px;
-      transition: all 0.2s;
-      border-radius: 4px;
-    }
-    
-    .calendar-tab.active {
-      background: #0078d4;
-      color: white;
-      border-color: #0078d4;
-    }
-    
-    .calendar-tab:hover:not(.active) {
-      background: #f3f2f1;
-    }
-    
-    /* Meeting Status Bar */
-    .meeting-status {
-      display: none;
-      background: linear-gradient(90deg, #d83b01, #e74c0e);
-      color: white;
-      padding: 8px;
-      margin: -15px -15px 15px -15px;
-      text-align: center;
-      font-size: 12px;
-      animation: slideDown 0.3s ease;
-    }
-    
-    .meeting-status.active {
-      display: block;
-    }
-    
-    @keyframes slideDown {
-      from {
-        transform: translateY(-100%);
-        opacity: 0;
-      }
-      to {
-        transform: translateY(0);
-        opacity: 1;
-      }
-    }
-    
-    /* Multi-tasking Indicator */
-    .multitask-indicator {
-      display: none;
-      padding: 8px;
-      background: #fff3cd;
-      border: 1px solid #ffc107;
-      border-radius: 4px;
-      margin-bottom: 10px;
-      font-size: 13px;
-      text-align: center;
-    }
-    
-    .multitask-indicator.active {
-      display: block;
-      animation: pulse 2s infinite;
-    }
-    
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.7; }
-    }
-    
-    .timer-display {
-      font-size: 32px;
-      font-weight: 300;
-      text-align: center;
-      padding: 20px;
-      background: white;
-      border-radius: 8px;
-      margin-bottom: 15px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-      transition: all 0.3s ease;
-      position: relative;
-    }
-    
-    /* Enhanced timer display for multi-tasking */
-    .timer-display.multitasking {
-      background: linear-gradient(135deg, #fff 0%, #f0f8ff 100%);
-      border: 2px solid transparent;
-      background-clip: padding-box;
-    }
-    
-    .timer-display.multitasking::before {
-      content: '';
-      position: absolute;
-      inset: -2px;
-      background: linear-gradient(90deg, #d83b01, #0078d4);
-      border-radius: 8px;
-      z-index: -1;
-    }
-    
-    /* Current tracking info */
-    .current-tracking {
-      font-size: 12px;
-      color: #605e5c;
-      margin-top: 8px;
-      padding-top: 8px;
-      border-top: 1px solid #edebe9;
-      display: none;
-    }
-    
-    .current-tracking.active {
-      display: block;
-    }
-    
-    .tracking-detail {
-      display: flex;
-      justify-content: space-between;
-      margin: 2px 0;
-    }
-    
-    .tracking-label {
-      font-weight: 600;
-    }
-    
-    /* Dual timer container */
-    .dual-timer-container {
-      display: none;
-      padding: 10px;
-      background: #f8f9fa;
-      border-radius: 6px;
-      margin-top: 10px;
-      animation: fadeIn 0.3s ease;
-    }
-    
-    .dual-timer-container.active {
-      display: block;
-    }
-    
-    @keyframes fadeIn {
-      from { opacity: 0; }
-      to { opacity: 1; }
-    }
-    
-    .timer-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 5px 0;
-    }
-    
-    .timer-label {
-      font-size: 12px;
-      color: #605e5c;
-      display: flex;
-      align-items: center;
-      gap: 5px;
-    }
-    
-    .timer-value {
-      font-size: 14px;
-      font-weight: 600;
-      font-family: 'Courier New', monospace;
-    }
-    
-    .section {
-      background: white;
-      border-radius: 8px;
-      padding: 12px;
-      margin-bottom: 15px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-    }
-    
-    .section-title {
-      font-size: 14px;
-      font-weight: 600;
-      margin-bottom: 10px;
-      color: #323130;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    
-    .quick-task-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 8px;
-    }
-    
-    .quick-task-btn {
-      padding: 12px 8px;
-      border: none;
-      background: #e1dfdd;
-      color: #323130;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 12px;
-      transition: all 0.2s;
-      text-align: center;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      position: relative;
-      overflow: hidden;
-    }
-    
-    .quick-task-btn:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-    
-    .quick-task-btn.active {
-      background: #0078d4;
-      color: white;
-    }
-    
-    .quick-task-btn.meeting-active {
-      background: #d83b01;
-      color: white;
-      animation: meeting-pulse 3s infinite;
-    }
-    
-    @keyframes meeting-pulse {
-      0%, 100% { box-shadow: 0 0 0 0 rgba(216, 59, 1, 0.4); }
-      50% { box-shadow: 0 0 0 8px rgba(216, 59, 1, 0); }
-    }
-    
-    .button {
-      background: #0078d4;
-      color: white;
-      border: none;
-      padding: 8px 16px;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 13px;
-      transition: background 0.2s;
-    }
-    
-    .button:hover {
-      background: #106ebe;
-    }
-    
-    .button:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
-    }
-    
-    .button.secondary {
-      background: #605e5c;
-    }
-    
-    .button.secondary:hover {
-      background: #4a4847;
-    }
-    
-    .button.danger {
-      background: #d83b01;
-    }
-    
-    .button.danger:hover {
-      background: #a52a00;
-    }
-    
-    .task-item {
-      padding: 10px;
-      border-bottom: 1px solid #edebe9;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      transition: background 0.2s;
-    }
-    
-    .task-item:hover {
-      background: #faf9f8;
-    }
-    
-    .task-item:last-child {
-      border-bottom: none;
-    }
-    
-    .task-info {
-      flex: 1;
-    }
-    
-    .task-type {
-      font-size: 11px;
-      font-weight: 600;
-      color: #605e5c;
-      text-transform: uppercase;
-      margin-bottom: 2px;
-    }
-    
-    .task-description {
-      font-size: 13px;
-      color: #323130;
-      margin-bottom: 4px;
-    }
-    
-    .task-time {
-      font-size: 11px;
-      color: #a19f9d;
-      display: flex;
-      gap: 10px;
-    }
-    
-    /* Deliverable info in task list */
-    .task-deliverable {
-      font-size: 11px;
-      color: #5c2d91;
-      margin-top: 2px;
-    }
-    
-    /* Multi-task indicator in task list */
-    .multitask-tag {
-      display: inline-block;
-      background: #fff3cd;
-      color: #856404;
-      font-size: 10px;
-      padding: 2px 6px;
-      border-radius: 10px;
-      margin-left: 5px;
-    }
-    
-    .deliverable-tag {
-      display: inline-block;
-      background: #e1dfff;
-      color: #5c2d91;
-      font-size: 10px;
-      padding: 2px 6px;
-      border-radius: 10px;
-      margin-left: 5px;
-    }
-    
-    .goal-tag {
-      display: inline-block;
-      background: #d4edda;
-      color: #155724;
-      font-size: 10px;
-      padding: 2px 6px;
-      border-radius: 10px;
-      margin-left: 5px;
-    }
-    
-    .task-actions {
-      display: flex;
-      gap: 5px;
-    }
-    
-    .task-actions button {
-      padding: 4px 8px;
-      font-size: 11px;
-      border: none;
-      border-radius: 3px;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    
-    .edit-btn {
-      background: #e1dfdd;
-      color: #323130;
-    }
-    
-    .edit-btn:hover {
-      background: #d2d0ce;
-    }
-    
-    .delete-btn {
-      background: #fde7e9;
-      color: #a80000;
-    }
-    
-    .delete-btn:hover {
-      background: #fdc5c9;
-    }
-    
-    /* Stats summary */
-    .stats-summary {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 8px;
-      margin-top: 10px;
-      padding-top: 10px;
-      border-top: 1px solid #edebe9;
-    }
-    
-    .stat-item {
-      text-align: center;
-    }
-    
-    .stat-value {
-      font-size: 18px;
-      font-weight: 600;
-      color: #0078d4;
-    }
-    
-    .stat-label {
-      font-size: 11px;
-      color: #605e5c;
-      margin-top: 2px;
-    }
-    
-    /* Form styling */
-    .form-group {
-      margin-bottom: 10px;
-    }
-    
-    .form-group label {
-      display: block;
-      font-size: 12px;
-      color: #605e5c;
-      margin-bottom: 4px;
-    }
-    
-    .form-group input[type="text"],
-    .form-group input[type="number"],
-    .form-group input[type="datetime-local"],
-    .form-group input[type="time"],
-    .form-group input[type="date"],
-    .form-group select {
-      width: 100%;
-      padding: 6px 8px;
-      border: 1px solid #d2d0ce;
-      border-radius: 4px;
-      font-size: 13px;
-      box-sizing: border-box;
-    }
-    
-    .form-group input[type="checkbox"] {
-      margin-right: 6px;
-    }
-    
-    /* Deliverable selector with creation */
-    .deliverable-selector {
-      position: relative;
-    }
-    
-    .deliverable-select-wrapper {
-      display: flex;
-      gap: 5px;
-    }
-    
-    .deliverable-select-wrapper select {
-      flex: 1;
-    }
-    
-    .add-deliverable-inline {
-      padding: 6px 10px;
-      background: #107c10;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 12px;
-      white-space: nowrap;
-    }
-    
-    .add-deliverable-inline:hover {
-      background: #0e5e0e;
-    }
-    
-    .new-deliverable-input {
-      display: none;
-      margin-top: 8px;
-    }
-    
-    .new-deliverable-input.active {
-      display: block;
-    }
-    
-    .form-actions {
-      display: flex;
-      gap: 8px;
-      margin-top: 12px;
-    }
-    
-    .date-controls {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-    
-    .date-controls select {
-      padding: 8px;
-      border: 1px solid #d2d0ce;
-      border-radius: 4px;
-      font-size: 13px;
-      background: white;
-    }
-    
-    .date-controls input[type="date"] {
-      padding: 6px;
-      border: 1px solid #d2d0ce;
-      border-radius: 4px;
-      font-size: 13px;
-    }
-    
-    #customDateRange {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      flex-wrap: wrap;
-    }
-    
-    .date-summary {
-      background: #f8f9fa;
-      padding: 10px;
-      border-radius: 4px;
-      margin-bottom: 10px;
-      text-align: center;
-      font-size: 14px;
-      color: #495057;
-    }
-    
-    /* Meeting item styling */
-    .meeting-item {
-      padding: 10px;
-      border-bottom: 1px solid #edebe9;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    
-    .meeting-item:last-child {
-      border-bottom: none;
-    }
-    
-    .loading {
-      text-align: center;
-      padding: 20px;
-      color: #605e5c;
-    }
-    
-    /* Notification toast */
-    .notification {
-      position: fixed;
-      top: 60px;
-      right: 10px;
-      background: #323130;
-      color: white;
-      padding: 10px 15px;
-      border-radius: 4px;
-      z-index: 1000;
-      opacity: 0;
-      transition: opacity 0.3s;
-      font-size: 13px;
-      max-width: 200px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-      pointer-events: none;
-    }
-    
-    .notification.show {
-      opacity: 1;
-    }
-    
-    .notification.success {
-      background: linear-gradient(135deg, #10893e, #14cc60);
-      color: white;
-    }
-    
-    .notification.error {
-      background: linear-gradient(135deg, #d83b01, #e74c0e);
-      color: white;
-    }
-    
-    .notification.info {
-      background: linear-gradient(135deg, #0078d4, #106ebe);
-      color: white;
-    }
-    
-    #loginSection, #mainContent {
-      display: none;
-    }
-    
-    .info-message {
-      background: #e1f5fe;
-      color: #0277bd;
-      padding: 12px;
-      border-radius: 4px;
-      margin-bottom: 15px;
-      font-size: 13px;
-    }
-    
-    /* Manual entry improvements */
-    .duration-chip {
-      display: inline-block;
-      padding: 4px 10px;
-      background: #e1dfdd;
-      border: 1px solid #d2d0ce;
-      border-radius: 12px;
-      cursor: pointer;
-      font-size: 11px;
-      transition: all 0.2s;
-    }
-    
-    .duration-chip:hover {
-      background: #d2d0ce;
-    }
-    
-    .duration-chip.selected {
-      background: #0078d4;
-      color: white;
-      border-color: #0078d4;
-    }
-    
-    #multitaskingDetails select {
-      padding: 6px 8px;
-      border: 1px solid #d2d0ce;
-      border-radius: 4px;
-      font-size: 13px;
-    }
-    
-    #specificTimeGroup input[type="date"] {
-      width: 100%;
-    }
-    
-    #minutesAgoGroup input,
-    #hoursAgoGroup select {
-      width: 100%;
-    }
-    
-    /* Category Totals Styles */
-    .category-totals-list {
-      margin-top: 10px;
-    }
-    
-    .category-total-item {
-      margin-bottom: 12px;
-      padding: 8px;
-      background: #f8f9fa;
-      border-radius: 4px;
-      transition: background 0.2s;
-    }
-    
-    .category-total-item:hover {
-      background: #f3f2f1;
-    }
-    
-    .category-total-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 6px;
-    }
-    
-    .category-name {
-      font-size: 13px;
-      font-weight: 600;
-      color: #323130;
-    }
-    
-    .category-time {
-      font-size: 13px;
-      font-weight: 600;
-      color: #0078d4;
-    }
-    
-    .category-total-bar {
-      height: 20px;
-      background: #e1dfdd;
-      border-radius: 10px;
-      overflow: hidden;
-      margin-bottom: 4px;
-    }
-    
-    .category-total-fill {
-      height: 100%;
-      background: linear-gradient(90deg, #0078d4, #106ebe);
-      border-radius: 10px;
-      transition: width 0.3s ease;
-      min-width: 2%;
-    }
-    
-    .category-percentage {
-      font-size: 11px;
-      color: #605e5c;
-      text-align: right;
-    }
-    
-    /* Edit Dialog Styles */
-    .edit-dialog-overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(0, 0, 0, 0.5);
-      z-index: 10000;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      animation: fadeIn 0.2s ease;
-    }
-    
-    .edit-dialog {
-      background: white;
-      border-radius: 8px;
-      padding: 20px;
-      max-width: 400px;
-      width: 90%;
-      max-height: 80vh;
-      overflow-y: auto;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-      animation: slideUp 0.3s ease;
-    }
-    
-    @keyframes slideUp {
-      from {
-        transform: translateY(20px);
-        opacity: 0;
-      }
-      to {
-        transform: translateY(0);
-        opacity: 1;
-      }
-    }
-    
-    .edit-dialog h3 {
-      margin: 0 0 15px 0;
-      color: #323130;
-      font-size: 16px;
-      border-bottom: 2px solid #0078d4;
-      padding-bottom: 8px;
-    }
-    
-    .edit-form-group {
-      margin-bottom: 12px;
-    }
-    
-    .edit-form-group label {
-      display: block;
-      margin-bottom: 4px;
-      color: #605e5c;
-      font-size: 13px;
-      font-weight: 600;
-    }
-    
-    .edit-form-group input,
-    .edit-form-group select {
-      width: 100%;
-      padding: 6px 8px;
-      border: 1px solid #d2d0ce;
-      border-radius: 4px;
-      font-size: 13px;
-      box-sizing: border-box;
-      transition: border-color 0.2s;
-    }
-    
-    .edit-form-group input:focus,
-    .edit-form-group select:focus {
-      outline: none;
-      border-color: #0078d4;
-      box-shadow: 0 0 0 1px #0078d4;
-    }
-    
-    /* Duration slider styling */
-    input[type="range"] {
-      -webkit-appearance: none;
-      width: 100%;
-      height: 6px;
-      border-radius: 3px;
-      background: #d2d0ce;
-      outline: none;
-      margin: 10px 0;
-    }
-    
-    input[type="range"]::-webkit-slider-thumb {
-      -webkit-appearance: none;
-      appearance: none;
-      width: 18px;
-      height: 18px;
-      border-radius: 50%;
-      background: #0078d4;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-    
-    input[type="range"]::-webkit-slider-thumb:hover {
-      background: #106ebe;
-      transform: scale(1.1);
-    }
-    
-    /* Quick duration buttons for edit dialog */
-    .duration-quick-select {
-      display: flex;
-      gap: 5px;
-      flex-wrap: wrap;
-      margin-top: 8px;
-    }
-    
-    .duration-quick-btn {
-      padding: 4px 10px;
-      background: #e1dfdd;
-      border: 1px solid #d2d0ce;
-      border-radius: 12px;
-      cursor: pointer;
-      font-size: 11px;
-      transition: all 0.2s;
-    }
-    
-    .duration-quick-btn:hover {
-      background: #d2d0ce;
-      transform: translateY(-1px);
-    }
-    
-    .duration-quick-btn.active {
-      background: #0078d4;
-      color: white;
-      border-color: #0078d4;
-    }
-    
-    /* Time input grid */
-    .time-input-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-      margin-bottom: 12px;
-    }
-    
-    /* Multi-tasking section in edit dialog */
-    .edit-multitask-section {
-      background: #fff3cd;
-      padding: 10px;
-      border-radius: 4px;
-      border: 1px solid #ffc107;
-      margin-bottom: 12px;
-    }
-    
-    .edit-multitask-section label {
-      display: flex;
-      align-items: center;
-      font-size: 13px;
-      cursor: pointer;
-    }
-    
-    .edit-multitask-section input[type="checkbox"] {
-      margin-right: 6px;
-      cursor: pointer;
-    }
-    
-    /* Button styling for edit dialog */
-    .edit-dialog-buttons {
-      display: flex;
-      gap: 8px;
-      margin-top: 15px;
-    }
-    
-    .edit-dialog-buttons button {
-      flex: 1;
-      padding: 10px;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 13px;
-      font-weight: 600;
-      transition: all 0.2s;
-    }
-    
-    .edit-dialog-buttons button:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-    
-    .edit-dialog-buttons .save-btn {
-      background: #0078d4;
-      color: white;
-    }
-    
-    .edit-dialog-buttons .save-btn:hover {
-      background: #106ebe;
-    }
-    
-    .edit-dialog-buttons .cancel-btn {
-      background: #605e5c;
-      color: white;
-    }
-    
-    .edit-dialog-buttons .cancel-btn:hover {
-      background: #4a4847;
-    }
-    
-    /* Scrollbar styling for dialog */
-    .edit-dialog::-webkit-scrollbar {
-      width: 8px;
-    }
-    
-    .edit-dialog::-webkit-scrollbar-track {
-      background: #f1f1f1;
-      border-radius: 4px;
-    }
-    
-    .edit-dialog::-webkit-scrollbar-thumb {
-      background: #888;
-      border-radius: 4px;
-    }
-    
-    .edit-dialog::-webkit-scrollbar-thumb:hover {
-      background: #555;
-    }
-    
-    /* Provider icon in meetings */
-    .provider-indicator {
-      display: inline-block;
-      width: 14px;
-      height: 14px;
-      vertical-align: middle;
-      margin-right: 4px;
-    }
-    
-    /* Quick action dialog */
-    .quick-action-dialog {
-      display: none;
-      background: #f8f9fa;
-      padding: 12px;
-      border-radius: 6px;
-      margin-top: 10px;
-      border: 1px solid #d2d0ce;
-    }
-    
-    .quick-action-dialog.active {
-      display: block;
-      animation: slideDown 0.2s ease;
-    }
-    
-    .quick-action-form {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-    
-    .inline-form-group {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-    
-    .inline-form-group label {
-      font-size: 11px;
-      color: #605e5c;
-      font-weight: 600;
-    }
-    
-    .inline-form-group input,
-    .inline-form-group select {
-      padding: 6px 8px;
-      border: 1px solid #d2d0ce;
-      border-radius: 4px;
-      font-size: 12px;
-    }
-    
-    .quick-action-buttons {
-      display: flex;
-      gap: 8px;
-      margin-top: 8px;
-    }
-    
-    .quick-action-buttons button {
-      flex: 1;
-      padding: 6px 12px;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 12px;
-      transition: all 0.2s;
-    }
-    
-    .start-btn {
-      background: #107c10;
-      color: white;
-    }
-    
-    .start-btn:hover {
-      background: #0e5e0e;
-    }
-    
-    .cancel-quick-btn {
-      background: #e1dfdd;
-      color: #323130;
-    }
-    
-    .cancel-quick-btn:hover {
-      background: #d2d0ce;
-    }
+/* Same styles as before - no changes needed */
+body {
+  width: 350px;
+  min-height: 400px;
+  margin: 0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: #f3f2f1;
+}
+
+.header {
+  background: #0078d4;
+  color: white;
+  padding: 15px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.header h1 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.auth-status {
+  font-size: 11px;
+  opacity: 0.9;
+  background: rgba(255,255,255,0.2);
+  padding: 4px 8px;
+  border-radius: 3px;
+}
+
+.container {
+  padding: 15px;
+}
+
+/* Goals Progress Bar */
+.goals-progress {
+  background: white;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 15px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  display: none;
+}
+
+.goals-progress.active {
+  display: block;
+}
+
+.goals-progress-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #323130;
+  margin-bottom: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.view-goals-btn {
+  font-size: 11px;
+  color: #0078d4;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.view-goals-btn:hover {
+  text-decoration: underline;
+}
+
+.goal-item {
+  margin-bottom: 8px;
+}
+
+.goal-name {
+  font-size: 11px;
+  color: #605e5c;
+  margin-bottom: 3px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.goal-progress-bar {
+  height: 6px;
+  background: #e1dfdd;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.goal-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #107c10, #14cc60);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+/* Calendar provider styles */
+.calendar-providers {
+  background: white;
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 15px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+
+.provider-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.provider-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #323130;
+}
+
+.provider-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.provider-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px;
+  border: 1px solid #e1dfdd;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.provider-item.connected {
+  background: #f0f8f0;
+  border-color: #107c10;
+}
+
+.provider-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+}
+
+.provider-icon {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.provider-icon img {
+  width: 20px;
+  height: 20px;
+}
+
+.provider-details {
+  flex: 1;
+}
+
+.provider-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #323130;
+}
+
+.provider-email {
+  font-size: 11px;
+  color: #605e5c;
+}
+
+.provider-status {
+  font-size: 11px;
+  color: #605e5c;
+  font-style: italic;
+}
+
+.connect-btn {
+  padding: 4px 12px;
+  font-size: 12px;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.connect-btn.primary {
+  background: #0078d4;
+  color: white;
+}
+
+.connect-btn.primary:hover {
+  background: #106ebe;
+}
+
+.connect-btn.disconnect {
+  background: #e1dfdd;
+  color: #323130;
+}
+
+.connect-btn.disconnect:hover {
+  background: #d2d0ce;
+}
+
+/* Calendar selector */
+.calendar-selector {
+  display: flex;
+  gap: 5px;
+  margin-bottom: 10px;
+  padding: 0 15px;
+}
+
+.calendar-tab {
+  flex: 1;
+  padding: 6px 12px;
+  border: 1px solid #d2d0ce;
+  background: white;
+  cursor: pointer;
+  text-align: center;
+  font-size: 12px;
+  transition: all 0.2s;
+  border-radius: 4px;
+}
+
+.calendar-tab.active {
+  background: #0078d4;
+  color: white;
+  border-color: #0078d4;
+}
+
+.calendar-tab:hover:not(.active) {
+  background: #f3f2f1;
+}
+
+/* Meeting Status Bar */
+.meeting-status {
+  display: none;
+  background: linear-gradient(90deg, #d83b01, #e74c0e);
+  color: white;
+  padding: 8px;
+  margin: -15px -15px 15px -15px;
+  text-align: center;
+  font-size: 12px;
+  animation: slideDown 0.3s ease;
+}
+
+.meeting-status.active {
+  display: block;
+}
+
+@keyframes slideDown {
+  from {
+transform: translateY(-100%);
+opacity: 0;
+  }
+  to {
+transform: translateY(0);
+opacity: 1;
+  }
+}
+
+/* Multi-tasking Indicator */
+.multitask-indicator {
+  display: none;
+  padding: 8px;
+  background: #fff3cd;
+  border: 1px solid #ffc107;
+  border-radius: 4px;
+  margin-bottom: 10px;
+  font-size: 13px;
+  text-align: center;
+}
+
+.multitask-indicator.active {
+  display: block;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.timer-display {
+  font-size: 32px;
+  font-weight: 300;
+  text-align: center;
+  padding: 20px;
+  background: white;
+  border-radius: 8px;
+  margin-bottom: 15px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+/* Enhanced timer display for multi-tasking */
+.timer-display.multitasking {
+  background: linear-gradient(135deg, #fff 0%, #f0f8ff 100%);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.timer-display.multitasking::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  background: linear-gradient(90deg, #d83b01, #0078d4);
+  border-radius: 8px;
+  z-index: -1;
+}
+
+/* Current tracking info */
+.current-tracking {
+  font-size: 12px;
+  color: #605e5c;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #edebe9;
+  display: none;
+}
+
+.current-tracking.active {
+  display: block;
+}
+
+.tracking-detail {
+  display: flex;
+  justify-content: space-between;
+  margin: 2px 0;
+}
+
+.tracking-label {
+  font-weight: 600;
+}
+
+/* Dual timer container */
+.dual-timer-container {
+  display: none;
+  padding: 10px;
+  background: #f8f9fa;
+  border-radius: 6px;
+  margin-top: 10px;
+  animation: fadeIn 0.3s ease;
+}
+
+.dual-timer-container.active {
+  display: block;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.timer-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 5px 0;
+}
+
+.timer-label {
+  font-size: 12px;
+  color: #605e5c;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.timer-value {
+  font-size: 14px;
+  font-weight: 600;
+  font-family: 'Courier New', monospace;
+}
+
+.section {
+  background: white;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 15px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+
+.section-title {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 10px;
+  color: #323130;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.quick-task-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.quick-task-btn {
+  padding: 12px 8px;
+  border: none;
+  background: #e1dfdd;
+  color: #323130;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.2s;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.quick-task-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.quick-task-btn.active {
+  background: #0078d4;
+  color: white;
+}
+
+.quick-task-btn.meeting-active {
+  background: #d83b01;
+  color: white;
+  animation: meeting-pulse 3s infinite;
+}
+
+@keyframes meeting-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(216, 59, 1, 0.4); }
+  50% { box-shadow: 0 0 0 8px rgba(216, 59, 1, 0); }
+}
+
+.button {
+  background: #0078d4;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: background 0.2s;
+}
+
+.button:hover {
+  background: #106ebe;
+}
+
+.button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.button.secondary {
+  background: #605e5c;
+}
+
+.button.secondary:hover {
+  background: #4a4847;
+}
+
+.button.danger {
+  background: #d83b01;
+}
+
+.button.danger:hover {
+  background: #a52a00;
+}
+
+.task-item {
+  padding: 10px;
+  border-bottom: 1px solid #edebe9;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: background 0.2s;
+}
+
+.task-item:hover {
+  background: #faf9f8;
+}
+
+.task-item:last-child {
+  border-bottom: none;
+}
+
+.task-info {
+  flex: 1;
+}
+
+.task-type {
+  font-size: 11px;
+  font-weight: 600;
+  color: #605e5c;
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+
+.task-description {
+  font-size: 13px;
+  color: #323130;
+  margin-bottom: 4px;
+}
+
+.task-time {
+  font-size: 11px;
+  color: #a19f9d;
+  display: flex;
+  gap: 10px;
+}
+
+/* Deliverable info in task list */
+.task-deliverable {
+  font-size: 11px;
+  color: #5c2d91;
+  margin-top: 2px;
+}
+
+/* Multi-task indicator in task list */
+.multitask-tag {
+  display: inline-block;
+  background: #fff3cd;
+  color: #856404;
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 10px;
+  margin-left: 5px;
+}
+
+.deliverable-tag {
+  display: inline-block;
+  background: #e1dfff;
+  color: #5c2d91;
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 10px;
+  margin-left: 5px;
+}
+
+.goal-tag {
+  display: inline-block;
+  background: #d4edda;
+  color: #155724;
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 10px;
+  margin-left: 5px;
+}
+
+.task-actions {
+  display: flex;
+  gap: 5px;
+}
+
+.task-actions button {
+  padding: 4px 8px;
+  font-size: 11px;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.edit-btn {
+  background: #e1dfdd;
+  color: #323130;
+}
+
+.edit-btn:hover {
+  background: #d2d0ce;
+}
+
+.delete-btn {
+  background: #fde7e9;
+  color: #a80000;
+}
+
+.delete-btn:hover {
+  background: #fdc5c9;
+}
+
+/* Stats summary */
+.stats-summary {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #edebe9;
+}
+
+.stat-item {
+  text-align: center;
+}
+
+.stat-value {
+  font-size: 18px;
+  font-weight: 600;
+  color: #0078d4;
+}
+
+.stat-label {
+  font-size: 11px;
+  color: #605e5c;
+  margin-top: 2px;
+}
+
+/* Form styling */
+.form-group {
+  margin-bottom: 10px;a
+}
+
+.form-group label {
+  display: block;
+  font-size: 12px;
+  color: #605e5c;
+  margin-bottom: 4px;
+}
+
+.form-group input[type="text"],
+.form-group input[type="number"],
+.form-group input[type="datetime-local"],
+.form-group input[type="time"],
+.form-group input[type="date"],
+.form-group select {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid #d2d0ce;
+  border-radius: 4px;
+  font-size: 13px;
+  box-sizing: border-box;
+}
+
+.form-group input[type="checkbox"] {
+  margin-right: 6px;
+}
+
+/* Deliverable selector with creation */
+.deliverable-selector {
+  position: relative;
+}
+
+.deliverable-select-wrapper {
+  display: flex;
+  gap: 5px;
+}
+
+/* Custom styling for select elements to prevent overflow */
+.deliverable-select-wrapper select {
+  max-width: 100%;
+  transition: all 0.2s ease;
+}
+
+.add-deliverable-inline {
+  padding: 6px 10px;
+  background: #107c10;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.add-deliverable-inline:hover {
+  background: #0e5e0e;
+}
+
+.new-deliverable-input {
+  display: none;
+  margin-top: 8px;
+}
+
+.new-deliverable-input.active {
+  display: block;
+}
+
+.form-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.date-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.date-controls select {
+  padding: 8px;
+  border: 1px solid #d2d0ce;
+  border-radius: 4px;
+  font-size: 13px;
+  background: white;
+}
+
+.date-controls input[type="date"] {
+  padding: 6px;
+  border: 1px solid #d2d0ce;
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+#customDateRange {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+.date-summary {
+  background: #f8f9fa;
+  padding: 10px;
+  border-radius: 4px;
+  margin-bottom: 10px;
+  text-align: center;
+  font-size: 14px;
+  color: #495057;
+}
+
+/* Meeting item styling */
+.meeting-item {
+  padding: 10px;
+  border-bottom: 1px solid #edebe9;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.meeting-item:last-child {
+  border-bottom: none;
+}
+
+.loading {
+  text-align: center;
+  padding: 20px;
+  color: #605e5c;
+}
+
+/* Notification toast */
+.notification {
+  position: fixed;
+  top: 60px;
+  right: 10px;
+  background: #323130;
+  color: white;
+  padding: 10px 15px;
+  border-radius: 4px;
+  z-index: 1000;
+  opacity: 0;
+  transition: opacity 0.3s;
+  font-size: 13px;
+  max-width: 200px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  pointer-events: none;
+}
+
+.notification.show {
+  opacity: 1;
+}
+
+.notification.success {
+  background: linear-gradient(135deg, #10893e, #14cc60);
+  color: white;
+}
+
+.notification.error {
+  background: linear-gradient(135deg, #d83b01, #e74c0e);
+  color: white;
+}
+
+.notification.info {
+  background: linear-gradient(135deg, #0078d4, #106ebe);
+  color: white;
+}
+
+#loginSection, #mainContent {
+  display: none;
+}
+
+.info-message {
+  background: #e1f5fe;
+  color: #0277bd;
+  padding: 12px;
+  border-radius: 4px;
+  margin-bottom: 15px;
+  font-size: 13px;
+}
+
+/* Manual entry improvements */
+.duration-chip {
+  display: inline-block;
+  padding: 4px 10px;
+  background: #e1dfdd;
+  border: 1px solid #d2d0ce;
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 11px;
+  transition: all 0.2s;
+}
+
+.duration-chip:hover {
+  background: #d2d0ce;
+}
+
+.duration-chip.selected {
+  background: #0078d4;
+  color: white;
+  border-color: #0078d4;
+}
+
+#multitaskingDetails select {
+  padding: 6px 8px;
+  border: 1px solid #d2d0ce;
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+#specificTimeGroup input[type="date"] {
+  width: 100%;
+}
+
+#minutesAgoGroup input,
+#hoursAgoGroup select {
+  width: 100%;
+}
+
+/* Category Totals Styles */
+.category-totals-list {
+  margin-top: 10px;
+}
+
+.category-total-item {
+  margin-bottom: 12px;
+  padding: 8px;
+  background: #f8f9fa;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.category-total-item:hover {
+  background: #f3f2f1;
+}
+
+.category-total-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.category-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #323130;
+}
+
+.category-time {
+  font-size: 13px;
+  font-weight: 600;
+  color: #0078d4;
+}
+
+.category-total-bar {
+  height: 20px;
+  background: #e1dfdd;
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 4px;
+}
+
+.category-total-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #0078d4, #106ebe);
+  border-radius: 10px;
+  transition: width 0.3s ease;
+  min-width: 2%;
+}
+
+.category-percentage {
+  font-size: 11px;
+  color: #605e5c;
+  text-align: right;
+}
+
+/* Edit Dialog Styles */
+.edit-dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.2s ease;
+}
+
+.edit-dialog {
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  max-width: 400px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from {
+transform: translateY(20px);
+opacity: 0;
+  }
+  to {
+transform: translateY(0);
+opacity: 1;
+  }
+}
+
+.edit-dialog h3 {
+  margin: 0 0 15px 0;
+  color: #323130;
+  font-size: 16px;
+  border-bottom: 2px solid #0078d4;
+  padding-bottom: 8px;
+}
+
+.edit-form-group {
+  margin-bottom: 12px;
+}
+
+.edit-form-group label {
+  display: block;
+  margin-bottom: 4px;
+  color: #605e5c;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.edit-form-group input,
+.edit-form-group select {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid #d2d0ce;
+  border-radius: 4px;
+  font-size: 13px;
+  box-sizing: border-box;
+  transition: border-color 0.2s;
+}
+
+.edit-form-group input:focus,
+.edit-form-group select:focus {
+  outline: none;
+  border-color: #0078d4;
+  box-shadow: 0 0 0 1px #0078d4;
+}
+
+/* Duration slider styling */
+input[type="range"] {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: #d2d0ce;
+  outline: none;
+  margin: 10px 0;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #0078d4;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+  background: #106ebe;
+  transform: scale(1.1);
+}
+
+/* Quick duration buttons for edit dialog */
+.duration-quick-select {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.duration-quick-btn {
+  padding: 4px 10px;
+  background: #e1dfdd;
+  border: 1px solid #d2d0ce;
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 11px;
+  transition: all 0.2s;
+}
+
+.duration-quick-btn:hover {
+  background: #d2d0ce;
+  transform: translateY(-1px);
+}
+
+.duration-quick-btn.active {
+  background: #0078d4;
+  color: white;
+  border-color: #0078d4;
+}
+
+/* Time input grid */
+.time-input-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+/* Multi-tasking section in edit dialog */
+.edit-multitask-section {
+  background: #fff3cd;
+  padding: 10px;
+  border-radius: 4px;
+  border: 1px solid #ffc107;
+  margin-bottom: 12px;
+}
+
+.edit-multitask-section label {
+  display: flex;
+  align-items: center;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.edit-multitask-section input[type="checkbox"] {
+  margin-right: 6px;
+  cursor: pointer;
+}
+
+/* Button styling for edit dialog */
+.edit-dialog-buttons {
+  display: flex;
+  gap: 8px;
+  margin-top: 15px;
+}
+
+.edit-dialog-buttons button {
+  flex: 1;
+  padding: 10px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.edit-dialog-buttons button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.edit-dialog-buttons .save-btn {
+  background: #0078d4;
+  color: white;
+}
+
+.edit-dialog-buttons .save-btn:hover {
+  background: #106ebe;
+}
+
+.edit-dialog-buttons .cancel-btn {
+  background: #605e5c;
+  color: white;
+}
+
+.edit-dialog-buttons .cancel-btn:hover {
+  background: #4a4847;
+}
+
+/* Scrollbar styling for dialog */
+.edit-dialog::-webkit-scrollbar {
+  width: 8px;
+}
+
+.edit-dialog::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.edit-dialog::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+.edit-dialog::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* Provider icon in meetings */
+.provider-indicator {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  vertical-align: middle;
+  margin-right: 4px;
+}
+
+/* Quick action dialog */
+.quick-action-dialog {
+  display: none;
+  background: #f8f9fa;
+  padding: 12px;
+  border-radius: 6px;
+  margin-top: 10px;
+  border: 1px solid #d2d0ce;
+  position: relative;
+  max-height: 300px;
+  overflow-y: auto;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.quick-action-dialog.active {
+  display: block;
+  animation: slideDown 0.2s ease;
+}
+
+/* Fix for dropdown overflow */
+.quick-action-dialog select {
+  max-height: 150px;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Style for expanded select */
+.quick-action-dialog select[size]:not([size="1"]) {
+  overflow-y: auto;
+  border: 1px solid #0078d4;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+
+.quick-action-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.inline-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.inline-form-group label {
+  font-size: 11px;
+  color: #605e5c;
+  font-weight: 600;
+}
+
+.inline-form-group input,
+.inline-form-group select {
+  padding: 6px 8px;
+  border: 1px solid #d2d0ce;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.quick-action-buttons {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.quick-action-buttons button {
+  flex: 1;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.2s;
+}
+
+.start-btn {
+  background: #107c10;
+  color: white;
+}
+
+.start-btn:hover {
+  background: #0e5e0e;
+}
+
+.cancel-quick-btn {
+  background: #e1dfdd;
+  color: #323130;
+}
+
+.cancel-quick-btn:hover {
+  background: #d2d0ce;
+}
   </style>
 </head>
 <body>
   <div class="header">
-    <h1>Time Tracker</h1>
-    <div class="auth-status" id="authStatus">Universal</div>
+<h1>Time Tracker</h1>
+<div class="auth-status" id="authStatus">Universal</div>
   </div>
   
   <div class="container">
-    <!-- REORDERED SECTIONS FOR BETTER UX -->
-    
-    <!-- Main Content Wrapper (required by JavaScript) -->
-    <div id="mainContent">
-      <!-- 1. Meeting Status Bar (stays at top for visibility) -->
-      <div class="meeting-status" id="meetingStatus">
-        <span>👥 Currently in a meeting - You can start other tasks while meeting continues</span>
-      </div>
-    
-    <!-- 2. Multi-tasking Indicator (important status) -->
-    <div class="multitask-indicator" id="multitaskIndicator">
-      ⚡ Multi-tasking Mode Active - Tracking multiple activities
-    </div>
-    
-    <!-- 3. Main Timer Display (moved up for prominence) -->
-    <div class="timer-display" id="timerDisplay">
-      00:00:00
-      <div class="current-tracking" id="currentTracking">
-        <div class="tracking-detail">
-          <span class="tracking-label">Task:</span>
-          <span id="currentTaskName">-</span>
-        </div>
-        <div class="tracking-detail">
-          <span class="tracking-label">Deliverable:</span>
-          <span id="currentDeliverableName">-</span>
-        </div>
-      </div>
-    </div>
-    
-    <!-- 4. Dual Timer Container (when multi-tasking) -->
-    <div class="dual-timer-container" id="dualTimerContainer">
-      <div class="timer-row">
-        <span class="timer-label">
-          <span style="color: #d83b01;">👥</span> Meeting
-        </span>
-        <span class="timer-value" id="meetingTime">00:00:00</span>
-      </div>
-      <div class="timer-row">
-        <span class="timer-label">
-          <span style="color: #0078d4;">💼</span> <span id="taskName">Task</span>
-        </span>
-        <span class="timer-value" id="taskTime">00:00:00</span>
-      </div>
-    </div>
-    
-    <!-- 5. Quick Actions Section (moved up per request) -->
-    <div class="section">
-      <div class="section-title">
-        Quick Actions
-        <span style="font-size: 11px; font-weight: normal; color: #605e5c;">
-          Click to start/stop tasks
-        </span>
-      </div>
-      <div class="quick-task-grid" id="quickTaskGrid">
-        <!-- Will be populated from categories -->
-      </div>
-      <!-- Quick action dialog for task details -->
-      <div class="quick-action-dialog" id="quickActionDialog">
-        <div class="quick-action-form">
-          <div class="inline-form-group">
-            <label>Description (optional):</label>
-            <input type="text" id="quickDescription" placeholder="What are you working on?">
-          </div>
-          <div class="inline-form-group">
-            <label>Deliverable (optional):</label>
-            <div class="deliverable-select-wrapper">
-              <select id="quickDeliverable">
-                <option value="">No deliverable</option>
-                <option value="_new">+ Create new deliverable...</option>
-              </select>
-            </div>
-            <div class="new-deliverable-input" id="quickNewDeliverable">
-              <input type="text" id="quickNewDeliverableName" placeholder="New deliverable name">
-            </div>
-          </div>
-          <div class="quick-action-buttons">
-            <button class="start-btn" id="quickStartBtn">Start Timer</button>
-            <button class="cancel-quick-btn" id="quickCancelBtn">Cancel</button>
-          </div>
-        </div>
-      </div>
-    </div>
-    
-    <!-- 6. Manual Entry Section (moved up to be with Quick Actions) -->
-    <div class="section">
-      <div class="section-title">Manual Entry</div>
-      <button class="button" id="showManualEntryBtn">+ Add Time Entry</button>
-      
-      <div id="manualEntryForm" style="display: none; margin-top: 10px;">
-        <!-- Manual entry form content -->
-        <div class="form-group">
-          <label>Category:</label>
-          <select id="manualCategory">
-            <!-- Categories will be populated dynamically -->
-          </select>
-        </div>
-        
-        <div class="form-group">
-          <label>Description:</label>
-          <input type="text" id="manualDescription" placeholder="What did you work on? (optional)">
-        </div>
-        
-        <div class="form-group deliverable-selector">
-          <label>Deliverable:</label>
-          <div class="deliverable-select-wrapper">
-            <select id="manualDeliverable">
-              <option value="">No deliverable</option>
-              <option value="_new">+ Create new deliverable...</option>
-            </select>
-          </div>
-          <div class="new-deliverable-input" id="newDeliverableInput">
-            <input type="text" id="newDeliverableName" placeholder="New deliverable name">
-            <small style="color: #605e5c; font-size: 11px;">Press Enter to create</small>
-          </div>
-        </div>
-        
-        <div class="form-group">
-          <label>Duration (minutes):</label>
-          <input type="number" id="manualDuration" value="30" min="1">
-          <div style="display: flex; gap: 5px; flex-wrap: wrap; margin-top: 8px;">
-            <span class="duration-chip" data-minutes="15">15m</span>
-            <span class="duration-chip selected" data-minutes="30">30m</span>
-            <span class="duration-chip" data-minutes="45">45m</span>
-            <span class="duration-chip" data-minutes="60">1h</span>
-            <span class="duration-chip" data-minutes="90">1.5h</span>
-            <span class="duration-chip" data-minutes="120">2h</span>
-          </div>
-        </div>
-        
-        <div class="form-group">
-          <label>When:</label>
-          <select id="manualWhen">
-            <option value="just-now">Just finished</option>
-            <option value="minutes-ago">Minutes ago...</option>
-            <option value="hours-ago">Hours ago...</option>
-            <option value="specific-time">Specific time today...</option>
-            <option value="specific-datetime">Different day...</option>
-          </select>
-        </div>
-        
-        <div id="minutesAgoGroup" style="display: none;">
-          <div class="form-group">
-            <label>How many minutes ago:</label>
-            <input type="number" id="minutesAgo" value="15" min="1" max="120">
-          </div>
-        </div>
-        
-        <div id="hoursAgoGroup" style="display: none;">
-          <div class="form-group">
-            <label>When exactly:</label>
-            <select id="hoursAgo">
-              <option value="1">1 hour ago</option>
-              <option value="2">2 hours ago</option>
-              <option value="3">3 hours ago</option>
-              <option value="4">4 hours ago</option>
-              <option value="5">5 hours ago</option>
-              <option value="morning">This morning (9 AM)</option>
-              <option value="lunch">After lunch (1 PM)</option>
-            </select>
-          </div>
-        </div>
-        
-        <div id="specificTimeGroup" style="display: none;">
-          <div class="form-group">
-            <label>End time:</label>
-            <input type="time" id="specificEndTime">
-            <input type="date" id="specificDate" style="margin-top: 5px; display: none;">
-          </div>
-        </div>
-        
-        <div class="form-group" style="background: #fff3cd; padding: 10px; border-radius: 4px;">
-          <label style="display: flex; align-items: center;">
-            <input type="checkbox" id="wasMultitasking" style="margin-right: 6px;">
-            I was multi-tasking during this time
-          </label>
-          
-          <div id="multitaskingDetails" style="display: none; margin-top: 8px;">
-            <select id="multitaskingWith" style="width: 100%;">
-              <option value="">What else were you doing?</option>
-              <option value="Meeting">👥 In a meeting</option>
-              <option value="Email">📧 Checking email</option>
-              <option value="Slack/Chat">💬 On Slack/Chat</option>
-              <option value="Phone Call">📞 On a call</option>
-              <option value="Admin">📋 Admin work</option>
-              <option value="Other">Other task</option>
-            </select>
-          </div>
-        </div>
-        
-        <div class="form-actions">
-          <button class="button" id="saveManualBtn">Save Entry</button>
-          <button class="button secondary" id="cancelManualBtn">Cancel</button>
-        </div>
-      </div>
-    </div>
-    
-    <!-- 7. Time Entries Section with Date Controls -->
-    <div class="section">
-      <div class="section-title">Time Entries</div>
-      <div class="date-controls">
-        <select id="dateRangeSelect">
-          <option value="today">Today</option>
-          <option value="yesterday">Yesterday</option>
-          <option value="week">This Week</option>
-          <option value="lastweek">Last Week</option>
-          <option value="month">This Month</option>
-          <option value="custom">Custom Range</option>
-          <option value="all">All Time</option>
-        </select>
-        
-        <div id="customDateRange" style="display: none;">
-          <input type="date" id="startDate">
-          <span>to</span>
-          <input type="date" id="endDate">
-          <button class="button" id="applyDateRange" style="width: 100%;">Apply Range</button>
-        </div>
-      </div>
-      
-      <div id="tasksList" style="margin-top: 10px;">
-        <!-- Tasks will be listed here -->
-      </div>
-      
-      <div class="stats-summary">
-        <div class="stat-item">
-          <div class="stat-value" id="totalHours">0.0</div>
-          <div class="stat-label">Total Hours</div>
-        </div>
-        <div class="stat-item">
-          <div class="stat-value" id="multitaskHours">0.0</div>
-          <div class="stat-label">Multi-task Hours</div>
-        </div>
-      </div>
-    </div>
-    
-    <!-- 8. Category Totals Section (will be inserted here dynamically) -->
-    <!-- This keeps it near Time Entries as requested -->
-    
-    <!-- 9. Goals Progress (moved down closer to category totals) -->
-    <div class="goals-progress" id="goalsProgress">
-      <div class="goals-progress-title">
-        Today's Goal Progress
-        <a href="#" class="view-goals-btn" id="viewGoalsBtn">View all goals</a>
-      </div>
-      <div id="goalsProgressList">
-        <!-- Goals will be populated here -->
-      </div>
-    </div>
-    
-    <!-- 10. Meetings Section (if connected) -->
-    <div class="section" id="meetingsSection" style="display: none;">
-      <div class="section-title">
-        Today's Meetings
-        <button class="button" id="syncBtn" style="font-size: 11px; padding: 4px 8px;">
-          Sync
-        </button>
-      </div>
-      <div id="meetingsList">
-        <!-- Meetings will be loaded here -->
-      </div>
-    </div>
-    
-    <!-- 11. Export Section -->
-    <div class="section">
-      <div class="section-title">Export & Analysis</div>
-      <button class="button" id="exportBtn" style="width: 100%;">
-        📊 Export to Excel with Multi-task Analysis
-      </button>
-    </div>
-    
-    <!-- 12. Calendar Providers Section (moved to bottom) -->
-    <div class="calendar-providers" id="calendarProviders">
-      <div class="provider-header">
-        <span class="provider-title">📅 Calendar Connections</span>
-        <button class="button" id="settingsBtn" style="font-size: 11px; padding: 4px 8px;">
-          ⚙️ Settings
-        </button>
-      </div>
-      
-      <div class="provider-list">
-        <!-- Google Calendar -->
-        <div class="provider-item" id="googleProvider">
-          <div class="provider-info">
-            <div class="provider-icon">
-              <svg width="20" height="20" viewBox="0 0 24 24">
-                <path fill="#4285F4" d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/>
-              </svg>
-            </div>
-            <div class="provider-details">
-              <div class="provider-name">Google Calendar</div>
-              <div class="provider-email" id="googleEmail" style="display: none;"></div>
-              <div class="provider-status" id="googleStatus">One-click setup</div>
-            </div>
-          </div>
-          <button class="connect-btn primary" id="googleConnectBtn">Connect</button>
-        </div>
-        
-        <!-- Microsoft Outlook -->
-        <div class="provider-item" id="outlookProvider">
-          <div class="provider-info">
-            <div class="provider-icon">
-              <svg width="20" height="20" viewBox="0 0 24 24">
-                <path fill="#0078D4" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10h5v-2h-5c-4.34 0-8-3.66-8-8s3.66-8 8-8 8 3.66 8 8v1.43c0 .79-.71 1.57-1.5 1.57s-1.5-.78-1.5-1.57V12c0-2.76-2.24-5-5-5s-5 2.24-5 5 2.24 5 5 5c1.38 0 2.64-.56 3.54-1.47.65.89 1.77 1.47 2.96 1.47 1.97 0 3.5-1.6 3.5-3.57V12c0-5.52-4.48-10-10-10zm0 13c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3z"/>
-              </svg>
-            </div>
-            <div class="provider-details">
-              <div class="provider-name">Outlook Calendar</div>
-              <div class="provider-email" id="outlookEmail" style="display: none;"></div>
-              <div class="provider-status" id="outlookStatus">Requires Azure setup</div>
-            </div>
-          </div>
-          <button class="connect-btn primary" id="outlookConnectBtn">Connect</button>
-        </div>
-      </div>
-    </div>
-    
-    <!-- 13. Calendar Selector (shown when multiple calendars connected) -->
-    <div class="calendar-selector" id="calendarSelector" style="display: none;">
-      <div class="calendar-tab active" data-provider="all" id="allTab">
-        All Calendars
-      </div>
-      <div class="calendar-tab" data-provider="google" id="googleTab">
-        Google
-      </div>
-      <div class="calendar-tab" data-provider="outlook" id="outlookTab">
-        Outlook
-      </div>
-    </div>
-    </div> <!-- End of mainContent -->
+<!-- REORDERED SECTIONS FOR BETTER UX -->
+
+<!-- Main Content Wrapper (required by JavaScript) -->
+<div id="mainContent">
+  <!-- 1. Meeting Status Bar (stays at top for visibility) -->
+  <div class="meeting-status" id="meetingStatus">
+<span>👥 Currently in a meeting - You can start other tasks while meeting continues</span>
+  </div>
+
+<!-- 2. Multi-tasking Indicator (important status) -->
+<div class="multitask-indicator" id="multitaskIndicator">
+  ⚡ Multi-tasking Mode Active - Tracking multiple activities
+</div>
+
+<!-- 3. Main Timer Display (moved up for prominence) -->
+<div class="timer-display" id="timerDisplay">
+  00:00:00
+  <div class="current-tracking" id="currentTracking">
+<div class="tracking-detail">
+  <span class="tracking-label">Task:</span>
+  <span id="currentTaskName">-</span>
+</div>
+<div class="tracking-detail">
+  <span class="tracking-label">Deliverable:</span>
+  <span id="currentDeliverableName">-</span>
+</div>
+  </div>
+</div>
+
+<!-- 4. Dual Timer Container (when multi-tasking) -->
+<div class="dual-timer-container" id="dualTimerContainer">
+  <div class="timer-row">
+<span class="timer-label">
+  <span style="color: #d83b01;">👥</span> Meeting
+</span>
+<span class="timer-value" id="meetingTime">00:00:00</span>
+  </div>
+  <div class="timer-row">
+<span class="timer-label">
+  <span style="color: #0078d4;">💼</span> <span id="taskName">Task</span>
+</span>
+<span class="timer-value" id="taskTime">00:00:00</span>
+  </div>
+</div>
+
+<!-- 5. Quick Actions Section (moved up per request) -->
+<div class="section">
+  <div class="section-title">
+Quick Actions
+<span style="font-size: 11px; font-weight: normal; color: #605e5c;">
+  Click to start/stop tasks
+</span>
+  </div>
+  <div class="quick-task-grid" id="quickTaskGrid">
+<!-- Will be populated from categories -->
+  </div>
+  <!-- Quick action dialog for task details -->
+  <div class="quick-action-dialog" id="quickActionDialog">
+<div class="quick-action-form">
+  <div class="inline-form-group">
+<label>Description (optional):</label>
+<input type="text" id="quickDescription" placeholder="What are you working on?">
+  </div>
+  <div class="inline-form-group">
+<label>Deliverable (optional):</label>
+<div class="deliverable-select-wrapper">
+  <select id="quickDeliverable">
+<option value="">No deliverable</option>
+<option value="_new">+ Create new deliverable...</option>
+  </select>
+</div>
+<div class="new-deliverable-input" id="quickNewDeliverable">
+  <input type="text" id="quickNewDeliverableName" placeholder="New deliverable name">
+</div>
+  </div>
+  <div class="quick-action-buttons">
+<button class="start-btn" id="quickStartBtn">Start Timer</button>
+<button class="cancel-quick-btn" id="quickCancelBtn">Cancel</button>
+  </div>
+</div>
+  </div>
+</div>
+
+<!-- 6. Manual Entry Section (moved up to be with Quick Actions) -->
+<div class="section">
+  <div class="section-title">Manual Entry</div>
+  <button class="button" id="showManualEntryBtn">+ Add Time Entry</button>
+  
+  <div id="manualEntryForm" style="display: none; margin-top: 10px;">
+<!-- Manual entry form content -->
+<div class="form-group">
+  <label>Category:</label>
+  <select id="manualCategory">
+<!-- Categories will be populated dynamically -->
+  </select>
+</div>
+
+<div class="form-group">
+  <label>Description:</label>
+  <input type="text" id="manualDescription" placeholder="What did you work on? (optional)">
+</div>
+
+<div class="form-group deliverable-selector">
+  <label>Deliverable:</label>
+  <div class="deliverable-select-wrapper">
+<select id="manualDeliverable">
+  <option value="">No deliverable</option>
+  <option value="_new">+ Create new deliverable...</option>
+</select>
+  </div>
+  <div class="new-deliverable-input" id="newDeliverableInput">
+<input type="text" id="newDeliverableName" placeholder="New deliverable name">
+<small style="color: #605e5c; font-size: 11px;">Press Enter to create</small>
+  </div>
+</div>
+
+<div class="form-group">
+  <label>Duration (minutes):</label>
+  <input type="number" id="manualDuration" value="30" min="1">
+  <div style="display: flex; gap: 5px; flex-wrap: wrap; margin-top: 8px;">
+<span class="duration-chip" data-minutes="15">15m</span>
+<span class="duration-chip selected" data-minutes="30">30m</span>
+<span class="duration-chip" data-minutes="45">45m</span>
+<span class="duration-chip" data-minutes="60">1h</span>
+<span class="duration-chip" data-minutes="90">1.5h</span>
+<span class="duration-chip" data-minutes="120">2h</span>
+  </div>
+</div>
+
+<div class="form-group">
+  <label>When:</label>
+  <select id="manualWhen">
+<option value="just-now">Just finished</option>
+<option value="minutes-ago">Minutes ago...</option>
+<option value="hours-ago">Hours ago...</option>
+<option value="specific-time">Specific time today...</option>
+<option value="specific-datetime">Different day...</option>
+  </select>
+</div>
+
+<div id="minutesAgoGroup" style="display: none;">
+  <div class="form-group">
+<label>How many minutes ago:</label>
+<input type="number" id="minutesAgo" value="15" min="1" max="120">
+  </div>
+</div>
+
+<div id="hoursAgoGroup" style="display: none;">
+  <div class="form-group">
+<label>When exactly:</label>
+<select id="hoursAgo">
+  <option value="1">1 hour ago</option>
+  <option value="2">2 hours ago</option>
+  <option value="3">3 hours ago</option>
+  <option value="4">4 hours ago</option>
+  <option value="5">5 hours ago</option>
+  <option value="morning">This morning (9 AM)</option>
+  <option value="lunch">After lunch (1 PM)</option>
+</select>
+  </div>
+</div>
+
+<div id="specificTimeGroup" style="display: none;">
+  <div class="form-group">
+<label>End time:</label>
+<input type="time" id="specificEndTime">
+<input type="date" id="specificDate" style="margin-top: 5px; display: none;">
+  </div>
+</div>
+
+<div class="form-group" style="background: #fff3cd; padding: 10px; border-radius: 4px;">
+  <label style="display: flex; align-items: center;">
+<input type="checkbox" id="wasMultitasking" style="margin-right: 6px;">
+I was multi-tasking during this time
+  </label>
+  
+  <div id="multitaskingDetails" style="display: none; margin-top: 8px;">
+<select id="multitaskingWith" style="width: 100%;">
+  <option value="">What else were you doing?</option>
+  <option value="Meeting">👥 In a meeting</option>
+  <option value="Email">📧 Checking email</option>
+  <option value="Slack/Chat">💬 On Slack/Chat</option>
+  <option value="Phone Call">📞 On a call</option>
+  <option value="Admin">📋 Admin work</option>
+  <option value="Other">Other task</option>
+</select>
+  </div>
+</div>
+
+<div class="form-actions">
+  <button class="button" id="saveManualBtn">Save Entry</button>
+  <button class="button secondary" id="cancelManualBtn">Cancel</button>
+</div>
+  </div>
+</div>
+
+<!-- 7. Time Entries Section with Date Controls -->
+<div class="section">
+  <div class="section-title">Time Entries</div>
+  <div class="date-controls">
+<select id="dateRangeSelect">
+  <option value="today">Today</option>
+  <option value="yesterday">Yesterday</option>
+  <option value="week">This Week</option>
+  <option value="lastweek">Last Week</option>
+  <option value="month">This Month</option>
+  <option value="custom">Custom Range</option>
+  <option value="all">All Time</option>
+</select>
+
+<div id="customDateRange" style="display: none;">
+  <input type="date" id="startDate">
+  <span>to</span>
+  <input type="date" id="endDate">
+  <button class="button" id="applyDateRange" style="width: 100%;">Apply Range</button>
+</div>
+  </div>
+  
+  <div id="tasksList" style="margin-top: 10px;">
+<!-- Tasks will be listed here -->
+  </div>
+  
+  <div class="stats-summary">
+<div class="stat-item">
+  <div class="stat-value" id="totalHours">0.0</div>
+  <div class="stat-label">Total Hours</div>
+</div>
+<div class="stat-item">
+  <div class="stat-value" id="multitaskHours">0.0</div>
+  <div class="stat-label">Multi-task Hours</div>
+</div>
+  </div>
+</div>
+
+<!-- 8. Category Totals Section (will be inserted here dynamically) -->
+<!-- This keeps it near Time Entries as requested -->
+
+<!-- 9. Goals Progress (moved down closer to category totals) -->
+<div class="goals-progress" id="goalsProgress">
+  <div class="goals-progress-title">
+Today's Goal Progress
+<a href="#" class="view-goals-btn" id="viewGoalsBtn">View all goals</a>
+  </div>
+  <div id="goalsProgressList">
+<!-- Goals will be populated here -->
+  </div>
+</div>
+
+<!-- 10. Meetings Section (if connected) -->
+<div class="section" id="meetingsSection" style="display: none;">
+  <div class="section-title">
+Today's Meetings
+<button class="button" id="syncBtn" style="font-size: 11px; padding: 4px 8px;">
+  Sync
+</button>
+  </div>
+  <div id="meetingsList">
+<!-- Meetings will be loaded here -->
+  </div>
+</div>
+
+<!-- 11. Export Section -->
+<div class="section">
+  <div class="section-title">Export & Analysis</div>
+  <button class="button" id="exportBtn" style="width: 100%;">
+📊 Export to Excel with Multi-task Analysis
+  </button>
+</div>
+
+<!-- 12. Calendar Providers Section (moved to bottom) -->
+<div class="calendar-providers" id="calendarProviders">
+  <div class="provider-header">
+<span class="provider-title">📅 Calendar Connections</span>
+<button class="button" id="settingsBtn" style="font-size: 11px; padding: 4px 8px;">
+  ⚙️ Settings
+</button>
+  </div>
+  
+  <div class="provider-list">
+<!-- Google Calendar -->
+<div class="provider-item" id="googleProvider">
+  <div class="provider-info">
+<div class="provider-icon">
+  <svg width="20" height="20" viewBox="0 0 24 24">
+<path fill="#4285F4" d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/>
+  </svg>
+</div>
+<div class="provider-details">
+  <div class="provider-name">Google Calendar</div>
+  <div class="provider-email" id="googleEmail" style="display: none;"></div>
+  <div class="provider-status" id="googleStatus">One-click setup</div>
+</div>
+  </div>
+  <button class="connect-btn primary" id="googleConnectBtn">Connect</button>
+</div>
+
+<!-- Microsoft Outlook -->
+<div class="provider-item" id="outlookProvider">
+  <div class="provider-info">
+<div class="provider-icon">
+  <svg width="20" height="20" viewBox="0 0 24 24">
+<path fill="#0078D4" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10h5v-2h-5c-4.34 0-8-3.66-8-8s3.66-8 8-8 8 3.66 8 8v1.43c0 .79-.71 1.57-1.5 1.57s-1.5-.78-1.5-1.57V12c0-2.76-2.24-5-5-5s-5 2.24-5 5 2.24 5 5 5c1.38 0 2.64-.56 3.54-1.47.65.89 1.77 1.47 2.96 1.47 1.97 0 3.5-1.6 3.5-3.57V12c0-5.52-4.48-10-10-10zm0 13c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3z"/>
+  </svg>
+</div>
+<div class="provider-details">
+  <div class="provider-name">Outlook Calendar</div>
+  <div class="provider-email" id="outlookEmail" style="display: none;"></div>
+  <div class="provider-status" id="outlookStatus">Requires Azure setup</div>
+</div>
+  </div>
+  <button class="connect-btn primary" id="outlookConnectBtn">Connect</button>
+</div>
+  </div>
+</div>
+
+<!-- 13. Calendar Selector (shown when multiple calendars connected) -->
+<div class="calendar-selector" id="calendarSelector" style="display: none;">
+  <div class="calendar-tab active" data-provider="all" id="allTab">
+All Calendars
+  </div>
+  <div class="calendar-tab" data-provider="google" id="googleTab">
+Google
+  </div>
+  <div class="calendar-tab" data-provider="outlook" id="outlookTab">
+Outlook
+  </div>
+</div>
+</div> <!-- End of mainContent -->
   </div>
   
   <!-- Notification Toast -->
