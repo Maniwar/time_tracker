@@ -1,11 +1,10 @@
 // Complete options.js - Settings Page Logic with Goals and Deliverables Support
-// Version 2.4.0 - With Completion Features and CSP Fix
+// Version 2.4.0 - With Completion Features, CSP Fix, and Sorting/Export
 
 // ============================================
 // GLOBAL VARIABLES
 // ============================================
 let currentEditingGoal = null;
-let draggedDeliverable = null;
 
 // ============================================
 // GOAL MANAGEMENT FUNCTIONS
@@ -29,6 +28,132 @@ function addGoal() {
     document.getElementById('goalName').focus();
   }, 100);
 }
+
+// Export goals and deliverables data
+function exportGoalsAndDeliverables() {
+  chrome.storage.local.get(['goals', 'deliverables', 'timeEntries'], (result) => {
+    const goals = result.goals || [];
+    const deliverables = result.deliverables || [];
+    const timeEntries = result.timeEntries || {};
+    
+    if (goals.length === 0 && deliverables.length === 0) {
+      alert('No goals or deliverables to export');
+      return;
+    }
+    
+    // Calculate time spent for each deliverable and goal
+    const deliverableTimeSpent = {};
+    const goalTimeSpent = {};
+    
+    Object.values(timeEntries).forEach(dayEntries => {
+      dayEntries.forEach(entry => {
+        if (entry.deliverableId) {
+          const hours = entry.duration / 3600000;
+          deliverableTimeSpent[entry.deliverableId] = 
+            (deliverableTimeSpent[entry.deliverableId] || 0) + hours;
+          
+          // Find associated goal
+          const deliverable = deliverables.find(d => d.id === entry.deliverableId);
+          if (deliverable && deliverable.goalId) {
+            goalTimeSpent[deliverable.goalId] = 
+              (goalTimeSpent[deliverable.goalId] || 0) + hours;
+          }
+        }
+      });
+    });
+    
+    // Prepare goals data with sort order preserved
+    const goalsData = goals.map((goal, index) => {
+      const goalDeliverables = deliverables.filter(d => d.goalId === goal.id);
+      const activeDeliverables = goalDeliverables.filter(d => !d.completed);
+      const completedDeliverables = goalDeliverables.filter(d => d.completed);
+      const totalHours = goalTimeSpent[goal.id] || 0;
+      
+      return {
+        'Sort Order': index + 1,
+        'Goal Name': goal.name,
+        'Impact Statement': goal.impact,
+        'Status': goal.completed ? 'Completed' : 'Active',
+        'Created Date': new Date(goal.createdAt).toLocaleDateString(),
+        'Completed Date': goal.completedAt ? new Date(goal.completedAt).toLocaleDateString() : '',
+        'Target Date': goal.targetDate || '',
+        'Daily Target (hours)': goal.dailyTarget || '',
+        'Total Hours Tracked': totalHours.toFixed(2),
+        'Total Deliverables': goalDeliverables.length,
+        'Active Deliverables': activeDeliverables.length,
+        'Completed Deliverables': completedDeliverables.length,
+        'Completion Rate': goalDeliverables.length > 0 ? 
+          ((completedDeliverables.length / goalDeliverables.length) * 100).toFixed(1) + '%' : '0%'
+      };
+    });
+    
+    // Prepare deliverables data with sort order preserved
+    const deliverablesData = deliverables.map((deliverable, index) => {
+      const goal = goals.find(g => g.id === deliverable.goalId);
+      const totalHours = deliverableTimeSpent[deliverable.id] || 0;
+      
+      // Count number of time entries
+      let entryCount = 0;
+      Object.values(timeEntries).forEach(dayEntries => {
+        entryCount += dayEntries.filter(e => e.deliverableId === deliverable.id).length;
+      });
+      
+      return {
+        'Sort Order': index + 1,
+        'Deliverable Name': deliverable.name,
+        'Associated Goal': goal ? goal.name : 'Unassigned',
+        'Status': deliverable.completed ? 'Completed' : 'Active',
+        'Created Date': new Date(deliverable.createdAt).toLocaleDateString(),
+        'Completed Date': deliverable.completedAt ? new Date(deliverable.completedAt).toLocaleDateString() : '',
+        'Total Hours Tracked': totalHours.toFixed(2),
+        'Number of Time Entries': entryCount,
+        'Average Session (hours)': entryCount > 0 ? (totalHours / entryCount).toFixed(2) : '0'
+      };
+    });
+    
+    // Create summary statistics
+    const summaryStats = [{
+      'Metric': 'Total Goals',
+      'Count': goals.length,
+      'Active': goals.filter(g => !g.completed).length,
+      'Completed': goals.filter(g => g.completed).length
+    }, {
+      'Metric': 'Total Deliverables', 
+      'Count': deliverables.length,
+      'Active': deliverables.filter(d => !d.completed).length,
+      'Completed': deliverables.filter(d => d.completed).length
+    }, {
+      'Metric': 'Unassigned Deliverables',
+      'Count': deliverables.filter(d => !d.goalId).length,
+      'Active': deliverables.filter(d => !d.goalId && !d.completed).length,
+      'Completed': deliverables.filter(d => !d.goalId && d.completed).length
+    }];
+    
+    // Create workbook
+    const wb = XLSX.utils.book_new();
+    
+    // Add sheets
+    if (goalsData.length > 0) {
+      const goalsSheet = XLSX.utils.json_to_sheet(goalsData);
+      XLSX.utils.book_append_sheet(wb, goalsSheet, 'Goals');
+    }
+    
+    if (deliverablesData.length > 0) {
+      const deliverablesSheet = XLSX.utils.json_to_sheet(deliverablesData);
+      XLSX.utils.book_append_sheet(wb, deliverablesSheet, 'Deliverables');
+    }
+    
+    const summarySheet = XLSX.utils.json_to_sheet(summaryStats);
+    XLSX.utils.book_append_sheet(wb, summarySheet, 'Summary');
+    
+    // Download
+    const filename = `Goals_Deliverables_${new Date().toISOString().split('T')[0]}.xlsx`;
+    XLSX.writeFile(wb, filename);
+    
+    showSuccess('goalsSuccess');
+  });
+}
+
 // Edit existing goal
 function editGoal(goalId) {
   chrome.storage.local.get(['goals'], (result) => {
@@ -162,6 +287,30 @@ function uncompleteGoal(goalId) {
   });
 }
 
+// Save goals sort order
+function saveGoalsSortOrder() {
+  const goalElements = document.querySelectorAll('#goalsList .goal-item');
+  const sortedIds = Array.from(goalElements).map(el => el.dataset.goalId);
+  
+  chrome.storage.local.get(['goals'], (result) => {
+    const goals = result.goals || [];
+    
+    // Reorder goals based on new sort order
+    const sortedGoals = sortedIds.map(id => goals.find(g => g.id === id)).filter(Boolean);
+    
+    // Add any goals that weren't in the sorted list (shouldn't happen, but safety check)
+    goals.forEach(goal => {
+      if (!sortedGoals.find(g => g.id === goal.id)) {
+        sortedGoals.push(goal);
+      }
+    });
+    
+    chrome.storage.local.set({ goals: sortedGoals }, () => {
+      showSuccess('goalsSuccess');
+    });
+  });
+}
+
 // ============================================
 // DELIVERABLE MANAGEMENT FUNCTIONS
 // ============================================
@@ -269,6 +418,51 @@ function assignDeliverableToGoal(deliverableId, goalId) {
   });
 }
 
+// Save deliverables sort order
+function saveDeliverablesSortOrder(goalId = null) {
+  chrome.storage.local.get(['deliverables'], (result) => {
+    const deliverables = result.deliverables || [];
+    const sortedDeliverables = [];
+    
+    // Get deliverables from each goal's list
+    document.querySelectorAll('.deliverables-list').forEach(list => {
+      const listGoalId = list.dataset.goalId;
+      const deliverableElements = list.querySelectorAll('.deliverable-item');
+      
+      deliverableElements.forEach(el => {
+        const deliverableId = el.dataset.deliverableId;
+        const deliverable = deliverables.find(d => d.id === deliverableId);
+        if (deliverable) {
+          deliverable.goalId = listGoalId; // Update goal assignment if dragged to different goal
+          sortedDeliverables.push(deliverable);
+        }
+      });
+    });
+    
+    // Add unassigned deliverables
+    const unassignedElements = document.querySelectorAll('#unassignedDeliverables .deliverable-item');
+    unassignedElements.forEach(el => {
+      const deliverableId = el.dataset.deliverableId;
+      const deliverable = deliverables.find(d => d.id === deliverableId);
+      if (deliverable) {
+        deliverable.goalId = null;
+        sortedDeliverables.push(deliverable);
+      }
+    });
+    
+    // Add any deliverables that weren't found (shouldn't happen, but safety check)
+    deliverables.forEach(deliverable => {
+      if (!sortedDeliverables.find(d => d.id === deliverable.id)) {
+        sortedDeliverables.push(deliverable);
+      }
+    });
+    
+    chrome.storage.local.set({ deliverables: sortedDeliverables }, () => {
+      showSuccess('goalsSuccess');
+    });
+  });
+}
+
 // ============================================
 // CATEGORY MANAGEMENT FUNCTIONS
 // ============================================
@@ -317,7 +511,23 @@ function deleteCategory(categoryToDelete) {
 
 // Get element after drag position
 function getDragAfterElement(container, y) {
-  const draggableElements = [...container.querySelectorAll('.category-item:not(.dragging)')];
+  const draggableElements = [...container.querySelectorAll('.category-item:not(.dragging), .goal-item:not(.dragging)')];
+  
+  return draggableElements.reduce((closest, child) => {
+    const box = child.getBoundingClientRect();
+    const offset = y - box.top - box.height / 2;
+    
+    if (offset < 0 && offset > closest.offset) {
+      return { offset: offset, element: child };
+    } else {
+      return closest;
+    }
+  }, { offset: Number.NEGATIVE_INFINITY }).element;
+}
+
+// Get element after drag position for deliverables
+function getDragAfterDeliverableElement(container, y) {
+  const draggableElements = [...container.querySelectorAll('.deliverable-item:not(.dragging)')];
   
   return draggableElements.reduce((closest, child) => {
     const box = child.getBoundingClientRect();
@@ -872,7 +1082,7 @@ function loadGoals() {
         const daysRemaining = targetDate ? Math.ceil((targetDate - new Date()) / (1000 * 60 * 60 * 24)) : null;
         
         return `
-          <div class="goal-item" data-goal-id="${goal.id}">
+          <div class="goal-item" data-goal-id="${goal.id}" draggable="true">
             <div class="goal-header">
               <div class="goal-name">
                 ${goal.name}
@@ -1042,6 +1252,7 @@ function loadGoals() {
     
     // Setup event listeners for goals and deliverables
     setupGoalEventListeners();
+    setupDragAndDropGoals();
     setupDragAndDropDeliverables();
   });
 }
@@ -1301,11 +1512,57 @@ function setupGoalEventListeners() {
   });
 }
 
-// Setup drag and drop for deliverables
+// Setup drag and drop for goals
+function setupDragAndDropGoals() {
+  const goalItems = document.querySelectorAll('#goalsList .goal-item[draggable="true"]');
+  let draggedGoal = null;
+  
+  goalItems.forEach(item => {
+    // Prevent dragging from buttons or interactive elements
+    item.addEventListener('mousedown', (e) => {
+      if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT' || 
+          e.target.classList.contains('deliverable-item')) {
+        item.draggable = false;
+      } else {
+        item.draggable = true;
+      }
+    });
+    
+    item.addEventListener('dragstart', (e) => {
+      draggedGoal = item;
+      item.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    
+    item.addEventListener('dragend', (e) => {
+      item.classList.remove('dragging');
+      draggedGoal = null;
+      item.draggable = true;
+      saveGoalsSortOrder();
+    });
+    
+    item.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      const afterElement = getDragAfterElement(document.getElementById('goalsList'), e.clientY);
+      const goalsList = document.getElementById('goalsList');
+      
+      if (draggedGoal && draggedGoal !== item) {
+        if (afterElement == null) {
+          goalsList.appendChild(draggedGoal);
+        } else {
+          goalsList.insertBefore(draggedGoal, afterElement);
+        }
+      }
+    });
+  });
+}
+
+// Setup drag and drop for deliverables with sorting
 function setupDragAndDropDeliverables() {
   const deliverableItems = document.querySelectorAll('.deliverable-item[draggable="true"]');
   const deliverableLists = document.querySelectorAll('.deliverables-list');
   const unassignedArea = document.getElementById('unassignedDeliverables');
+  let draggedDeliverable = null;
   
   deliverableItems.forEach(item => {
     item.addEventListener('dragstart', (e) => {
@@ -1313,20 +1570,33 @@ function setupDragAndDropDeliverables() {
         id: item.dataset.deliverableId,
         element: item
       };
-      item.style.opacity = '0.5';
+      item.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
     });
     
     item.addEventListener('dragend', (e) => {
-      item.style.opacity = '';
+      item.classList.remove('dragging');
+      if (draggedDeliverable) {
+        saveDeliverablesSortOrder();
+      }
       draggedDeliverable = null;
     });
   });
   
-  // Make goal deliverable lists droppable
+  // Make goal deliverable lists droppable with sorting
   deliverableLists.forEach(list => {
     list.addEventListener('dragover', (e) => {
       e.preventDefault();
       list.style.background = '#e3f2fd';
+      
+      if (draggedDeliverable) {
+        const afterElement = getDragAfterDeliverableElement(list, e.clientY);
+        if (afterElement == null) {
+          list.appendChild(draggedDeliverable.element);
+        } else {
+          list.insertBefore(draggedDeliverable.element, afterElement);
+        }
+      }
     });
     
     list.addEventListener('dragleave', (e) => {
@@ -1336,19 +1606,23 @@ function setupDragAndDropDeliverables() {
     list.addEventListener('drop', (e) => {
       e.preventDefault();
       list.style.background = '';
-      
-      if (draggedDeliverable) {
-        const goalId = list.dataset.goalId;
-        assignDeliverableToGoal(draggedDeliverable.id, goalId);
-      }
     });
   });
   
-  // Make unassigned area droppable
+  // Make unassigned area droppable with sorting
   if (unassignedArea) {
     unassignedArea.addEventListener('dragover', (e) => {
       e.preventDefault();
       unassignedArea.style.background = '#f8f9fa';
+      
+      if (draggedDeliverable) {
+        const afterElement = getDragAfterDeliverableElement(unassignedArea, e.clientY);
+        if (afterElement == null) {
+          unassignedArea.appendChild(draggedDeliverable.element);
+        } else {
+          unassignedArea.insertBefore(draggedDeliverable.element, afterElement);
+        }
+      }
     });
     
     unassignedArea.addEventListener('dragleave', (e) => {
@@ -1358,10 +1632,6 @@ function setupDragAndDropDeliverables() {
     unassignedArea.addEventListener('drop', (e) => {
       e.preventDefault();
       unassignedArea.style.background = '';
-      
-      if (draggedDeliverable) {
-        assignDeliverableToGoal(draggedDeliverable.id, null);
-      }
     });
   }
 }
@@ -1422,6 +1692,12 @@ function setupEventListeners() {
     addGoalBtn.addEventListener('click', addGoal);
   } else {
     console.error('✗ Add Goal button not found!');
+  }
+  
+  // Export goals and deliverables button
+  const exportGoalsBtn = document.getElementById('exportGoalsDeliverables');
+  if (exportGoalsBtn) {
+    exportGoalsBtn.addEventListener('click', exportGoalsAndDeliverables);
   }
   
   const saveGoalBtn = document.getElementById('saveGoalBtn');

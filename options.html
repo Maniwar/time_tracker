@@ -175,6 +175,13 @@
       margin-bottom: 15px;
       border-radius: 6px;
       border: 1px solid #90caf9;
+      cursor: move;
+      transition: all 0.2s;
+    }
+    
+    .goal-item.dragging {
+      opacity: 0.5;
+      transform: scale(0.98);
     }
     
     .goal-header {
@@ -233,10 +240,16 @@
       justify-content: space-between;
       align-items: center;
       font-size: 13px;
+      cursor: move;
+      transition: all 0.2s;
     }
     
     .deliverable-item:hover {
       background: #e1dfdd;
+    }
+    
+    .deliverable-item.dragging {
+      opacity: 0.5;
     }
     
     .deliverable-name {
@@ -505,7 +518,7 @@
       overflow-y: auto;
       box-shadow: 0 4px 12px rgba(0,0,0,0.15);
       animation: slideUp 0.3s ease;
-      box-sizing: border-box;   /* ← fix */
+      box-sizing: border-box;
     }
     
     @keyframes slideUp {
@@ -561,183 +574,117 @@
       justify-content: flex-end;
       gap: 10px;
     }
-  /* Completion styles */
-  .complete-btn {
-    background: #107c10;
-    color: white;
-    border: none;
-    padding: 4px 10px;
-    border-radius: 3px;
-    cursor: pointer;
-    font-size: 11px;
-    transition: background 0.2s;
-  }
-  
-  .complete-btn:hover {
-    background: #0e5e0e;
-  }
-  
-  .uncomplete-btn {
-    background: #605e5c;
-    color: white;
-    border: none;
-    padding: 4px 10px;
-    border-radius: 3px;
-    cursor: pointer;
-    font-size: 11px;
-    transition: background 0.2s;
-  }
-  
-  .uncomplete-btn:hover {
-    background: #4a4847;
-  }
-  
-  .completed-goal {
-    opacity: 0.7;
-    background: #f0f8f0;
-    border-color: #107c10;
-    position: relative;
-  }
-  
-  .completed-goal::after {
-    content: '✓ Completed';
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    background: #107c10;
-    color: white;
-    padding: 2px 8px;
-    border-radius: 12px;
-    font-size: 11px;
-    font-weight: 600;
-  }
-  
-  .completed-deliverable {
-    opacity: 0.7;
-    background: #f8f9fa;
-    text-decoration: line-through;
-  }
-  
-  .completed-deliverable .deliverable-name {
-    color: #605e5c;
-  }
-  
-  .completion-date {
-    font-size: 11px;
-    color: #605e5c;
-    font-style: italic;
-    margin-top: 5px;
-  }
-
-  .visibility-controls {
-    display: flex;
-    gap: 20px;
-    padding: 12px;
-    background: #f8f9fa;
-    border-radius: 6px;
-    margin-top: 15px;
-    border: 1px solid #e1dfdd;
-  }
-  
-  .visibility-option {
-    display: flex;
-    align-items: center;
-    font-size: 13px;
-    color: #323130;
-    cursor: pointer;
-    user-select: none;
-  }
-  
-  .visibility-option input[type="checkbox"] {
-    margin-right: 8px;
-    cursor: pointer;
-  }
-  
-  .visibility-option span {
-    font-weight: 500;
-  }
-  
-  /* Completion styles */
-  .complete-btn {
-    background: #107c10;
-    color: white;
-    border: none;
-    padding: 4px 10px;
-    border-radius: 3px;
-    cursor: pointer;
-    font-size: 11px;
-    transition: background 0.2s;
-  }
-  
-  .complete-btn:hover {
-    background: #0e5e0e;
-  }
-  
-  .uncomplete-btn {
-    background: #605e5c;
-    color: white;
-    border: none;
-    padding: 4px 10px;
-    border-radius: 3px;
-    cursor: pointer;
-    font-size: 11px;
-    transition: background 0.2s;
-  }
-  
-  .uncomplete-btn:hover {
-    background: #4a4847;
-  }
-  
-  .completed-goal {
-    opacity: 0.8;
-    background: #f0f8f0;
-    border-color: #107c10;
-    position: relative;
-  }
-  
-  .completed-goal::after {
-    content: '✓ Completed';
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    background: #107c10;
-    color: white;
-    padding: 2px 8px;
-    border-radius: 12px;
-    font-size: 11px;
-    font-weight: 600;
-  }
-  
-  .completed-deliverable {
-    opacity: 0.7;
-    background: #f8f9fa;
-  }
-  
-  .completed-deliverable .deliverable-name {
-    color: #605e5c;
-    text-decoration: line-through;
-  }
-  
-  .completion-date {
-    font-size: 11px;
-    color: #605e5c;
-    font-style: italic;
-    margin-top: 5px;
-  }
-  
-  /* Goal completion stats */
-  .goal-completion-stats {
-    display: inline-block;
-    margin-left: 10px;
-    font-size: 12px;
-    color: #605e5c;
-    font-weight: normal;
-  }
-  
-  /* Make completed items visually distinct but not hidden */
-  .deliverable-item.completed-deliverable:hover {
-    background: #f3f2f1;
-  }
+    
+    /* Completion styles */
+    .complete-btn {
+      background: #107c10;
+      color: white;
+      border: none;
+      padding: 4px 10px;
+      border-radius: 3px;
+      cursor: pointer;
+      font-size: 11px;
+      transition: background 0.2s;
+    }
+    
+    .complete-btn:hover {
+      background: #0e5e0e;
+    }
+    
+    .uncomplete-btn {
+      background: #605e5c;
+      color: white;
+      border: none;
+      padding: 4px 10px;
+      border-radius: 3px;
+      cursor: pointer;
+      font-size: 11px;
+      transition: background 0.2s;
+    }
+    
+    .uncomplete-btn:hover {
+      background: #4a4847;
+    }
+    
+    .completed-goal {
+      opacity: 0.8;
+      background: #f0f8f0;
+      border-color: #107c10;
+      position: relative;
+    }
+    
+    .completed-goal::after {
+      content: '✓ Completed';
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: #107c10;
+      color: white;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    
+    .completed-deliverable {
+      opacity: 0.7;
+      background: #f8f9fa;
+    }
+    
+    .completed-deliverable .deliverable-name {
+      color: #605e5c;
+      text-decoration: line-through;
+    }
+    
+    .completion-date {
+      font-size: 11px;
+      color: #605e5c;
+      font-style: italic;
+      margin-top: 5px;
+    }
+    
+    .visibility-controls {
+      display: flex;
+      gap: 20px;
+      padding: 12px;
+      background: #f8f9fa;
+      border-radius: 6px;
+      margin-top: 15px;
+      border: 1px solid #e1dfdd;
+    }
+    
+    .visibility-option {
+      display: flex;
+      align-items: center;
+      font-size: 13px;
+      color: #323130;
+      cursor: pointer;
+      user-select: none;
+    }
+    
+    .visibility-option input[type="checkbox"] {
+      margin-right: 8px;
+      cursor: pointer;
+    }
+    
+    .visibility-option span {
+      font-weight: 500;
+    }
+    
+    /* Goal completion stats */
+    .goal-completion-stats {
+      display: inline-block;
+      margin-left: 10px;
+      font-size: 12px;
+      color: #605e5c;
+      font-weight: normal;
+    }
+    
+    /* Make completed items visually distinct but not hidden */
+    .deliverable-item.completed-deliverable:hover {
+      background: #f3f2f1;
+    }
+    
     /* Form styles for modals */
     .form-row {
       margin-bottom: 15px;
@@ -754,7 +701,7 @@
     .form-row input,
     .form-row select,
     .form-row textarea {
-      box-sizing: border-box;   /* include padding/border in width */
+      box-sizing: border-box;
       width: 100%;
       max-width: 100%;
       padding: 8px 12px;
@@ -775,30 +722,55 @@
       color: #a19f9d;
       font-size: 12px;
     }
-/* Specific fix for goal modal */
-#goalModal {
-  display: none !important;
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  z-index: 9999;
-}
-
-#goalModal.active {
-  display: flex !important;
-  align-items: center;
-  justify-content: center;
-  animation: fadeIn 0.2s ease;
-}
-
-/* Ensure modal content is visible */
-#goalModal .modal-content {
-  position: relative;
-  z-index: 10000;
-}
+    
+    /* Specific fix for goal modal */
+    #goalModal {
+      display: none !important;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 9999;
+    }
+    
+    #goalModal.active {
+      display: flex !important;
+      align-items: center;
+      justify-content: center;
+      animation: fadeIn 0.2s ease;
+    }
+    
+    /* Ensure modal content is visible */
+    #goalModal .modal-content {
+      position: relative;
+      z-index: 10000;
+    }
+    
+    /* Export controls styling */
+    .export-controls {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 15px;
+      padding: 12px;
+      background: linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%);
+      border-radius: 6px;
+      align-items: center;
+    }
+    
+    .export-controls button {
+      flex: 1;
+    }
+    
+    /* Sort indicator */
+    .sort-indicator {
+      display: inline-block;
+      margin-left: 8px;
+      font-size: 11px;
+      color: #605e5c;
+      font-style: italic;
+    }
   </style>
 </head>
 <body>
@@ -904,7 +876,14 @@
       <h2>Goals & Impact Tracking <span class="feature-badge">New!</span></h2>
       <p class="section-description">
         Define your goals and the impact you want to achieve. Track deliverables that contribute to these goals and monitor your progress over time.
+        <span class="sort-indicator">Drag to reorder goals and deliverables</span>
       </p>
+      
+      <!-- Export controls for goals and deliverables -->
+      <div class="export-controls">
+        <button class="button" id="exportGoalsDeliverables">📊 Export Goals & Deliverables Data</button>
+        <button class="button success" id="addGoalBtn">+ Add New Goal</button>
+      </div>
       
       <!-- Global visibility controls -->
       <div class="visibility-controls">
@@ -918,7 +897,6 @@
         </label>
       </div>
       
-      <button class="button success" id="addGoalBtn" style="margin-top: 15px;">+ Add New Goal</button>
       <div class="success-message" id="goalsSuccess">Goals updated successfully!</div>
       
       <div id="goalsList" style="margin-top: 20px;">
@@ -945,6 +923,7 @@
       </div>
     </div>
   </div>
+  
   <!-- Tracking Tab -->
   <div class="tab-content" id="trackingTab">
     <!-- Quick Actions Configuration -->
@@ -1129,56 +1108,58 @@
       </p>
     </div>
   </div>
+  
   <!-- Support Tab -->
-<div class="tab-content" id="supportTab">
-  <!-- Hero Card -->
-  <div class="card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-align: center; padding: 40px;">
-    <h1 style="color: white; margin: 0 0 20px 0; font-size: 28px;">
-      This Tool is Free Forever
-    </h1>
-    <p style="font-size: 16px; margin-bottom: 25px; opacity: 0.95;">
-      No premium tiers. No locked features. No BS.<br>
-      If it helped you, maybe buy me a coffee. Or don't. Really.
-    </p>
-    <div>
-      <a href="https://github.com/sponsors/Maniwar" target="_blank" class="button" 
-         style="background: white; color: #764ba2; font-weight: 600; padding: 12px 30px; font-size: 16px;">
-        💖 Sponsor on GitHub
-      </a>
-      <a href="https://github.com/Maniwar/time_tracker" target="_blank" class="button" 
-         style="background: rgba(255,255,255,0.2); color: white; border: 2px solid white; margin-left: 15px; padding: 12px 30px;">
-        ⭐ Star on GitHub
-      </a>
-    </div>
-  </div>
-
-  <!-- Impact Stories -->
-  <div class="card">
-    <h2>📈 Impact I'd like to see</h2>
-    <div style="display: grid; gap: 15px; margin-top: 20px;">
-      <div style="background: #f0f8f0; padding: 15px; border-radius: 6px; border-left: 4px solid #107c10;">
-        <p style="margin: 0; font-style: italic;">
-          "Used your extension to show we spend 70% of time in meetings. We now have no-meeting Wednesdays."
-        </p>
-        <small style="color: #605e5c;">— Engineering Manager, 50-person startup</small>
-      </div>
-      
-      <div style="background: #f0f8f0; padding: 15px; border-radius: 6px; border-left: 4px solid #107c10;">
-        <p style="margin: 0; font-style: italic;">
-          "Finally got the two headcount we needed. Your multi-tasking reports made the difference."
-        </p>
-        <small style="color: #605e5c;">— Tech Lead, Fortune 500</small>
-      </div>
-      
-      <div style="background: #f0f8f0; padding: 15px; border-radius: 6px; border-left: 4px solid #107c10;">
-        <p style="margin: 0; font-style: italic;">
-          "Proved that 'quick questions' take 15 hours/week. Now we have office hours instead."
-        </p>
-        <small style="color: #605e5c;">— Senior Developer</small>
+  <div class="tab-content" id="supportTab">
+    <!-- Hero Card -->
+    <div class="card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-align: center; padding: 40px;">
+      <h1 style="color: white; margin: 0 0 20px 0; font-size: 28px;">
+        This Tool is Free Forever
+      </h1>
+      <p style="font-size: 16px; margin-bottom: 25px; opacity: 0.95;">
+        No premium tiers. No locked features. No BS.<br>
+        If it helped you, maybe buy me a coffee. Or don't. Really.
+      </p>
+      <div>
+        <a href="https://github.com/sponsors/Maniwar" target="_blank" class="button" 
+           style="background: white; color: #764ba2; font-weight: 600; padding: 12px 30px; font-size: 16px;">
+          💖 Sponsor on GitHub
+        </a>
+        <a href="https://github.com/Maniwar/time_tracker" target="_blank" class="button" 
+           style="background: rgba(255,255,255,0.2); color: white; border: 2px solid white; margin-left: 15px; padding: 12px 30px;">
+          ⭐ Star on GitHub
+        </a>
       </div>
     </div>
+    
+    <!-- Impact Stories -->
+    <div class="card">
+      <h2>📈 Impact I'd like to see</h2>
+      <div style="display: grid; gap: 15px; margin-top: 20px;">
+        <div style="background: #f0f8f0; padding: 15px; border-radius: 6px; border-left: 4px solid #107c10;">
+          <p style="margin: 0; font-style: italic;">
+            "Used your extension to show we spend 70% of time in meetings. We now have no-meeting Wednesdays."
+          </p>
+          <small style="color: #605e5c;">— Engineering Manager, 50-person startup</small>
+        </div>
+        
+        <div style="background: #f0f8f0; padding: 15px; border-radius: 6px; border-left: 4px solid #107c10;">
+          <p style="margin: 0; font-style: italic;">
+            "Finally got the two headcount we needed. Your multi-tasking reports made the difference."
+          </p>
+          <small style="color: #605e5c;">— Tech Lead, Fortune 500</small>
+        </div>
+        
+        <div style="background: #f0f8f0; padding: 15px; border-radius: 6px; border-left: 4px solid #107c10;">
+          <p style="margin: 0; font-style: italic;">
+            "Proved that 'quick questions' take 15 hours/week. Now we have office hours instead."
+          </p>
+          <small style="color: #605e5c;">— Senior Developer</small>
+        </div>
+      </div>
+    </div>
   </div>
-
+  
   <!-- Why Support -->
   <div class="card">
     <h2>☕ Why Support?</h2>
@@ -1302,8 +1283,6 @@
   </p>
 </div>
 </div>
-
-
   <!-- Goal Modal -->
   <div class="modal-overlay" id="goalModal">
     <div class="modal-content">
