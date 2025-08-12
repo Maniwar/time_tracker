@@ -13,6 +13,70 @@ Time doesn't just slip through our fingers—it gets absorbed by meetings, "quic
 
 **Universal Time Tracker** gives you the ammunition to prove what you already know: your team needs more people.
 
+## 🎥 Demo Video
+
+<p align="center">
+  <a href="https://www.youtube.com/watch?v=npvJVmmRK5o">
+    <img src="https://img.youtube.com/vi/RmL0jU15L8o/hqdefault.jpg" alt="Universal Time Tracker — Demo Video" width="720" />
+  </a>
+  <br/>
+  <sub>Click to watch on YouTube</sub>
+</p>
+
+## 📸 Screenshots
+
+<table>
+  <tr>
+    <td align="center">
+      <a href="screenshots/screen_timetrackerpop.png">
+        <img src="screenshots/screen_timetrackerpop.png" alt="Tracker Popup" width="260">
+      </a><br>
+      <sub><b>Tracker Popup</b></sub>
+    </td>
+    <td align="center">
+      <a href="screenshots/screen_addgoals.png">
+        <img src="screenshots/screen_addgoals.png" alt="Add Goals" width="260">
+      </a><br>
+      <sub><b>Add Goals</b></sub>
+    </td>
+    <td align="center">
+      <a href="screenshots/screen_timeentries.png">
+        <img src="screenshots/screen_timeentries.png" alt="Time Entries" width="260">
+      </a><br>
+      <sub><b>Time Entries</b></sub>
+    </td>
+  </tr>
+</table>
+
+<details>
+  <summary align="right">▶ More screenshots</summary>
+
+  <br>
+
+  <table>
+    <tr>
+      <td align="center">
+        <a href="screenshots/screen_timebycategorysummary.png">
+          <img src="screenshots/screen_timebycategorysummary.png" alt="Category Summary" width="260">
+        </a><br>
+        <sub><b>Category Summary</b></sub>
+      </td>
+      <td align="center">
+        <a href="screenshots/screen_calendar_export.png">
+          <img src="screenshots/screen_calendar_export.png" alt="Calendar Export" width="260">
+        </a><br>
+        <sub><b>Calendar Export</b></sub>
+      </td>
+      <td align="center">
+        <em>&nbsp;</em>
+      </td>
+    </tr>
+  </table>
+
+</details>
+
+
+
 ## ✨ Features
 
 ### 🔥 Core Features
@@ -43,7 +107,7 @@ Time doesn't just slip through our fingers—it gets absorbed by meetings, "quic
 
 ### Quick Install (For Your Team)
 
-1. **Download** the extension folder from [Releases](https://github.com/Maniwar/time_tracker/releases)
+1. **Download** the extension folder from [here](https://github.com/Maniwar/time_tracker/archive/refs/heads/main.zip)
 2. Open Chrome and go to `chrome://extensions/`
 3. Enable **Developer mode** (top right)
 4. Click **Load unpacked**
@@ -226,7 +290,7 @@ time_tracker/
 └── icons/              # Extension icons
 ```
 
-## 📈 Success Stories
+## 📈 Aspirational Success Stories
 
 > "Used Universal Time Tracker to show we spend 70% of time in meetings. We now have no-meeting Wednesdays."  
 > — *Engineering Manager, 50-person startup*
