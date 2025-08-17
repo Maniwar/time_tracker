@@ -258,22 +258,6 @@ All generated reports are automatically saved:
 - **No Data Collection** - Your calendar data is never sent to our servers
 - **Direct API Calls** - When using API mode, data goes directly to your chosen AI provider
 
-## 📈 Advanced Features
-
-### Batch Report Generation
-Generate multiple reports at once:
-1. Select multiple date ranges
-2. Choose different templates
-3. Generate in sequence
-
-### Report Scheduling (Coming Soon)
-- Daily/weekly automated reports
-- Email delivery options
-- Slack integration
-
-### Team Analytics (Premium)
-- Aggregate team calendars
-- Department-wide insights
 - Comparative analysis
 
 ## 📝 Example Use Cases
