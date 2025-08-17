@@ -7,7 +7,7 @@ class UnifiedAIReports {
         productivity: {
           system: `You are a productivity analyst who helps people understand what they accomplished. Focus on surfacing the actual tasks, projects, and work completed. Use ONLY the data provided - never invent examples or fill in blanks. If data is missing, skip that section. Always quote actual task names and descriptions from the data.
   
-  IMPORTANT: Format your response as a professional report using rich HTML/Markdown formatting:
+  IMPORTANT:  Do not make any reference to deliverables, project, or task by the ID string, always  use the human redable names.Format your response as a professional report using rich Markdown formatting:
   - Use proper heading hierarchy (H1, H2, H3)
   - Bold key metrics and important findings
   - Use tables for structured data comparisons
@@ -85,7 +85,7 @@ class UnifiedAIReports {
         weekly: {
           system: `You are a weekly review specialist who helps people see what they actually accomplished over the week. Focus on listing real tasks and projects from the data. Never invent examples or use placeholders. Always quote actual work items.
   
-  IMPORTANT: Create a polished, professional weekly report using rich formatting:
+  IMPORTANT:  Do not make any reference to deliverables, project, or task by the ID string, always  use the human redable names.Create a polished, professional weekly report using rich markdown formatting:
   - Structure content with clear visual hierarchy
   - Use tables for daily/project breakdowns
   - Apply consistent styling throughout
@@ -153,7 +153,7 @@ class UnifiedAIReports {
         daily: {
           system: `You are a daily review coach who helps people understand their actual daily accomplishments. List real tasks and work done. Never use placeholders or examples not in the data.
   
-  IMPORTANT: Format as a clean, professional daily report:
+  IMPORTANT:  Do not make any reference to deliverables, project, or task by the ID string, always  use the human redable names.Format as a clean, professional daily report using rich markdown:
   - Use time-based formatting for chronological flow
   - Apply visual cues for different task types
   - Make it easy to scan and understand at a glance
@@ -212,7 +212,7 @@ class UnifiedAIReports {
         team: {
           system: `You are a team collaboration analyst who surfaces actual collaborative work and team interactions. Use only real data about meetings, projects, and team activities. Never invent examples.
   
-  IMPORTANT: Create a professional team collaboration report:
+  IMPORTANT:  Do not make any reference to deliverables, project, or task by the ID string, always  use the human redable names.Create a professional team collaboration report using rich markdown:
   - Use tables for meeting summaries
   - Apply formatting to highlight collaborative efforts
   - Make it suitable for team reviews or manager updates
@@ -274,7 +274,7 @@ class UnifiedAIReports {
         client: {
           system: `You are a client work analyst who helps track actual projects and deliverables. Focus on real work, projects, and tasks from the data. Never use generic examples. Skip any sections where data is not available.
   
-  IMPORTANT: Create a professional project report suitable for:
+  IMPORTANT:  Do not make any reference to deliverables, project, or task by the ID string, always  use the human redable names.Create a professional project report using rich markdown suitable for:
   - Internal project reviews
   - Status updates
   - Time tracking summaries
@@ -340,7 +340,7 @@ class UnifiedAIReports {
         executive: {
           system: `You are an executive summary specialist who distills actual work into high-level insights. Focus on real projects, decisions, and strategic work from the data. Never use placeholders. Skip sections where data is not available.
   
-  IMPORTANT: Create an executive-level report with:
+  IMPORTANT:  Do not make any reference to deliverables, project, or task by the ID string, always  use the human redable names.Create an executive-level report using rich markdown with:
   - Professional formatting suitable for leadership
   - Clear visual hierarchy and emphasis
   - Data-driven insights with proper presentation
@@ -407,7 +407,7 @@ class UnifiedAIReports {
         focus: {
           system: `You are a deep work analyst who identifies focus patterns and concentration blocks. Use ONLY actual data provided. Never fabricate examples. If data for a section doesn't exist, skip it.
           
-          IMPORTANT: Create a professional focus analysis report:
+          IMPORTANT:  Do not make any reference to deliverables, project, or task by the ID string, always  use the human redable names.Create a professional focus analysis report using rich markdown:
           - Use visual formatting to highlight focus periods
           - Apply time-based analysis with proper structure
           - Make insights actionable and data-driven
@@ -466,7 +466,7 @@ class UnifiedAIReports {
         technical: {
           system: `You are a technical work analyst focusing on development, debugging, and technical tasks. Use ONLY real data from time tracking. Never invent technical work that wasn't logged. Skip sections without relevant data.
           
-          IMPORTANT: Create a professional technical work report:
+          IMPORTANT:  Do not make any reference to deliverables, project, or task by the ID string, always  use the human redable names.Create a professional technical work report using rich markdown:
           - Organize by technical categories and projects
           - Use proper formatting for code-related items
           - Make it suitable for technical reviews or standups
@@ -536,7 +536,7 @@ class UnifiedAIReports {
         patterns: {
           system: `You are a time pattern analyst who identifies work rhythms and habits. Use ONLY provided data to find actual patterns. Never invent patterns or examples. Skip any analysis where insufficient data exists.
           
-          IMPORTANT: Create a professional pattern analysis report:
+          IMPORTANT:  Do not make any reference to deliverables, project, or task by the ID string, always  use the human redable names.Create a professional pattern analysis report using rich markdown:
           - Use data visualization techniques in formatting
           - Apply statistical analysis where possible
           - Make patterns clear and actionable
@@ -600,6 +600,18 @@ class UnifiedAIReports {
           Analyze only actual patterns present in the data.`
         }
       };
+      //Templates
+      this.builtinTemplateMeta = {
+        productivity: { name: '📈 Productivity' },
+        weekly:       { name: '🗓️ Weekly Review' },
+        daily:        { name: '☀️ Daily Review' },
+        team:         { name: '👥 Team' },
+        client:       { name: '💼 Client' },
+        executive:    { name: '🏛️ Executive' },
+        focus:        { name: '🎯 Focus' },
+        technical:    { name: '💻 Technical' },
+        patterns:     { name: '📊 Patterns' }
+      };
       
       // Keep existing constructor properties
       this.apiClient = null;
@@ -619,10 +631,186 @@ class UnifiedAIReports {
         includeProductivity: true,
         includeCharts: true
       };
-      
+      this.mergedTemplates = null;
       this.currentReport = null;
       this.initialized = false;
+      this._modelLoadReqId = 0;
     }
+
+    // --- Custom templates: load + merge into this.templates ---
+// Replace your current loadCustomTemplates() with this version
+async loadCustomTemplates() {
+  // Read ONLY template-specific keys (avoid generic "templates")
+  const keys = ['customTemplates', 'aiReportCustomTemplates'];
+  const stored = await new Promise(res => chrome.storage.local.get(keys, d => res(d || {})));
+
+  // choose first non-empty value
+  let raw = null;
+  for (const k of keys) {
+    const v = stored[k];
+    if (Array.isArray(v) ? v.length : v && typeof v === 'object' && Object.keys(v).length) { raw = v; break; }
+  }
+
+  // Normalize customs to an array
+  let customs = [];
+  if (Array.isArray(raw)) {
+    customs = raw;
+  } else if (raw && typeof raw === 'object') {
+    customs = Object.entries(raw).map(([key, t]) => ({
+      _keyFromMap: key,
+      id: t.id || key,
+      name: t.name || t.title || key,
+      description: t.description || '',
+      system: t.system || '',
+      user: t.user || t.prompt || '',
+      version: t.version || 'custom',
+      updatedAt: t.updatedAt || Date.now(),
+    }));
+  }
+
+  // Build a NON-DESTRUCTIVE merged view (built-ins + customs)
+  const merged = { ...this.templates }; // keep the originals intact
+  customs.forEach(t => {
+    const key =
+      t._keyFromMap ||
+      t.id ||
+      (t.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-') ||
+      `t_${Math.random().toString(36).slice(2,10)}`;
+    merged[key] = {
+      id: t.id || key,
+      name: t.name || key,
+      description: t.description || '',
+      system: t.system || '',
+      user: t.user || '',
+      version: t.version || 'custom',
+      updatedAt: t.updatedAt || Date.now(),
+    };
+  });
+
+  this.mergedTemplates = merged;
+  return customs;
+}
+
+// Helper to title-case a key if needed
+titleCase(s='') { return s.replace(/\b[a-z]/g, c => c.toUpperCase()).replace(/[-_]/g,' '); }
+
+buildTemplateDropdown(selectEl) {
+  if (!selectEl) return;
+
+  const source = this.mergedTemplates || this.templates || {};
+  selectEl.innerHTML = '';
+
+  // Split built-ins vs customs
+  const entries = Object.entries(source).map(([key, t]) => ({ key, ...t }));
+  const builtins = entries.filter(e => (e.version === 'builtin' || !e.version));
+  const customs  = entries.filter(e => e.version && e.version !== 'builtin')
+                          .sort((a,b) => (b.updatedAt||0) - (a.updatedAt||0));
+
+  const addOpt = (parent, e, isBuiltin) => {
+    const opt = document.createElement('option');
+    // Built-ins: use friendly name + icon from meta
+    if (isBuiltin) {
+      const meta = this.builtinTemplateMeta?.[e.key];
+      const label = meta?.name || this.titleCase(e.name || e.key);
+      opt.textContent = label;
+    } else {
+      // Customs: prefer explicit name; fallback to title-cased key
+      const label = e.name || this.titleCase(e.key);
+      // Optional: if custom object includes e.icon, prepend it
+      opt.textContent = e.icon ? `${e.icon} ${label}` : label;
+    }
+    opt.value = e.key;
+    parent.appendChild(opt);
+  };
+
+  if (builtins.length) {
+    const g = document.createElement('optgroup'); g.label = 'Built-in';
+    builtins.forEach(e => addOpt(g, e, true));
+    selectEl.appendChild(g);
+  }
+
+  const g2 = document.createElement('optgroup'); g2.label = 'Custom';
+  customs.forEach(e => addOpt(g2, e, false));
+  selectEl.appendChild(g2);
+
+  // Restore selection
+  const wanted = this.settings.selectedTemplateId || this.settings.template;
+  if (wanted && Array.from(selectEl.options).some(o => o.value === wanted)) {
+    selectEl.value = wanted;
+  } else if (builtins.length) {
+    selectEl.value = builtins[0].key;
+  }
+}
+
+// Handle saving of templates
+handleSaveTemplate() {
+  // Get current prompts from the UI
+  const systemPrompt = document.getElementById('systemPrompt');
+  const userPrompt = document.getElementById('userPrompt');
+  
+  if (!systemPrompt || !userPrompt) {
+    this.showNotification('Error: Could not find prompt fields', 'error');
+    return;
+  }
+  
+  const system = systemPrompt.value.trim();
+  const user = userPrompt.value.trim();
+  
+  if (!system || !user) {
+    this.showNotification('Please enter both system and user prompts before saving', 'warning');
+    return;
+  }
+  
+  // Check if we're editing an existing template
+  const templateSelect = document.getElementById('reportTemplate');
+  let templateName = templateSelect?.value;
+  
+  // Only prompt for name if it's a new template (no template selected or default template)
+  if (!templateName || templateName === 'default' || templateName === '') {
+    templateName = prompt('Enter a name for this new template:');
+    
+    if (!templateName || !templateName.trim()) {
+      return; // User cancelled or entered empty name
+    }
+    
+    templateName = templateName.trim();
+  }
+  
+  const name = templateName;
+  
+  // Load existing templates
+  chrome.storage.local.get(['customTemplates'], (result) => {
+    const templates = result.customTemplates || {};
+    
+    // Only confirm overwrite if it's a new name that already exists
+    // (not when updating the currently selected template)
+    if (templates[name] && templateSelect?.value !== name) {
+      if (!confirm(`A template named "${name}" already exists. Do you want to replace it?`)) {
+        return;
+      }
+    }
+    
+    // Save/update the template
+    templates[name] = { system, user };
+    
+    chrome.storage.local.set({ customTemplates: templates }, () => {
+      this.showNotification(`Template "${name}" saved successfully!`, 'success');
+      
+      // Reload templates to update dropdown
+      this.loadCustomTemplates().then(() => {
+        const templateSelect = document.getElementById('reportTemplate');
+        if (templateSelect) {
+          this.buildTemplateDropdown(templateSelect);
+          // Keep the current template selected
+          templateSelect.value = name;
+          this.settings.template = name;
+          this.settings.selectedTemplateId = name;
+          this.saveSettings();
+        }
+      });
+    });
+  });
+}
     // Initialize the AI Reports system
     async init() {
       try {
@@ -649,9 +837,13 @@ class UnifiedAIReports {
           this.apiClient = null;
         }
         
-        // Load saved settings
-        await this.loadSettings();
+        await this.loadSettings();              // existing
+        await this.loadCustomTemplates();       // new (non-destructive)
+        this.setupEventListeners();             // existing
+        await this.initializeUI();              // existing (uses buildTemplateDropdown)
+        this.loadTemplate(this.settings.selectedTemplateId || this.settings.template || 'productivity'); // existing
         
+
         // Check for API keys and set initial mode
         const hasAnyKey = await this.hasAnyApiKey();
         
@@ -732,7 +924,20 @@ class UnifiedAIReports {
         
         // Set other UI elements
         const templateSelect = document.getElementById('reportTemplate');
-        if (templateSelect) templateSelect.value = this.settings.template;
+        if (templateSelect) {
+          // Build from merged templates
+          this.buildTemplateDropdown(templateSelect);
+        
+          // Persist and load when user changes selection
+          templateSelect.addEventListener('change', (e) => {
+            const key = e.target.value;
+            this.settings.selectedTemplateId = key;
+            this.settings.template = key; // keep old field in sync
+            this.saveSettings();
+            this.loadTemplate(key); // will now work for custom entries too
+          });
+        }
+        
         
         const dateRange = document.getElementById('aiReportDateRange');
         if (dateRange) {
@@ -797,7 +1002,11 @@ class UnifiedAIReports {
       if (aiReportBtn) {
         aiReportBtn.addEventListener('click', () => this.openModal());
       }
-  
+      // Add Save Template button handler
+      const saveTemplateBtn = document.getElementById('savePromptTemplate');
+      if (saveTemplateBtn) {
+        saveTemplateBtn.addEventListener('click', () => this.handleSaveTemplate());
+      }
       // Modal close button
       const closeBtn = document.getElementById('closeAiReportsModal');
       if (closeBtn) {
@@ -821,7 +1030,19 @@ class UnifiedAIReports {
       if (previewBtn) {
         previewBtn.addEventListener('click', () => this.previewData());
       }
-  
+      // Report template change NEW
+
+      chrome.storage.onChanged.addListener((changes, area) => {
+        if (area !== 'local') return;
+        if (changes.customTemplates || changes.aiReportCustomTemplates) {
+          (async () => {
+            await this.loadCustomTemplates(); // non-destructive
+            const el = document.getElementById('reportTemplate');
+            if (el) this.buildTemplateDropdown(el);
+          })();
+        }
+      });
+      
       // Template selector
       const templateSelect = document.getElementById('reportTemplate');
       if (templateSelect) {
@@ -1046,155 +1267,143 @@ class UnifiedAIReports {
         console.error('API client not available');
         return;
       }
-  
+    
+      const modelSelect = document.getElementById('llmModel');
+      if (!modelSelect) {
+        console.error('Model select element not found');
+        return;
+      }
+    
+      // Tag this request so older responses can't clobber the UI
+      const reqId = ++this._modelLoadReqId;
+    
+      // Keep a snapshot to restore if an error happens
+      const prevHTML = modelSelect.innerHTML;
+      const prevDisabled = modelSelect.disabled;
+    
+      // Show a loading hint (but we’ll fully rebuild only when we have data)
+      modelSelect.disabled = true;
+      modelSelect.innerHTML = '<option value="">Loading models...</option>';
+    
       try {
-        const modelSelect = document.getElementById('llmModel');
-        if (!modelSelect) {
-          console.error('Model select element not found');
-          return;
-        }
-  
-        // Show loading state
-        modelSelect.innerHTML = '<option value="">Loading models...</option>';
-        modelSelect.disabled = true;
-  
-        // Reload custom models
+        // Load custom models (no-ops if already loaded)
         await this.apiClient.loadCustomModels();
-  
-        // Get all models for this provider
+    
+        // Fetch models for this provider
         const models = await this.apiClient.getAllModels(provider);
-  
+    
+        // If a newer request started meanwhile, abort updating the UI
+        if (reqId !== this._modelLoadReqId) return;
+    
         if (!models || models.length === 0) {
           modelSelect.innerHTML = '<option value="">No models available</option>';
           modelSelect.disabled = false;
           return;
         }
-  
-        // Save current selection
+    
+        // Preserve previous selection when possible
         const previousValue = this.settings.model || modelSelect.value;
-  
-        // Rebuild options
-        modelSelect.innerHTML = models.map(m => `
-          <option value="${m.id}" ${m.default ? 'selected' : ''}>
-            ${m.name}${m.isCustom ? ' (Custom)' : ''}
-          </option>
-        `).join('');
-        
-        modelSelect.disabled = false;
-  
-        // Try to maintain selection or use default
-        const defaultModel = models.find(m => m.default) || models[0];
-        
-        // First try to find the previously selected model
-        let nextValue = null;
-        if (previousValue) {
-          const previousModel = models.find(m => m.id === previousValue);
-          if (previousModel) {
-            nextValue = previousModel.id;
-          }
-        }
-        
-        // If no previous selection or it's not available, use default
-        if (!nextValue && defaultModel) {
-          nextValue = defaultModel.id;
-        }
-  
-        if (nextValue) {
-          modelSelect.value = nextValue;
-          this.settings.model = nextValue;
-        }
-  
-        // Check for API key
+    
+        modelSelect.innerHTML = models.map(m => {
+          const label = `${m.name}${m.isCustom ? ' (Custom)' : ''}`;
+          return `<option value="${m.id}">${label}</option>`;
+        }).join('');
+    
+        // Choose: previously selected → default → first
+        const prev = models.find(m => m.id === previousValue);
+        const def  = models.find(m => m.default) || models[0];
+        const chosen = (prev || def).id;
+    
+        modelSelect.value = chosen;
+        this.settings.model = chosen;
+    
+        // Key reminder if needed (non-blocking)
         const hasKey = await this.apiClient.getApiKey(provider);
         if (!hasKey && this.settings.mode === 'api') {
           this.showNotification(`⚠️ Please add your ${provider} API key in settings`, 'warning');
         }
       } catch (err) {
         console.error('Error updating models:', err);
-        const modelSelect = document.getElementById('llmModel');
-        if (modelSelect) {
-          modelSelect.innerHTML = '<option value="">Error loading models</option>';
-          modelSelect.disabled = false;
+    
+        // Only restore if this is still the latest request
+        if (reqId === this._modelLoadReqId) {
+          modelSelect.innerHTML = prevHTML || '<option value="">Error loading models</option>';
+          modelSelect.disabled = prevDisabled ?? false;
         }
         this.showNotification('Error loading models. Please try again.', 'error');
+      } finally {
+        if (reqId === this._modelLoadReqId) {
+          modelSelect.disabled = false;
+        }
       }
     }
+    
   
     // Check API key status
     async checkApiKeyStatus() {
       if (!this.apiClient) return false;
-      
+    
       const providers = ['openai', 'anthropic', 'google'];
       let hasAnyKey = false;
-      
+    
       for (const provider of providers) {
         try {
           const hasKey = await this.apiClient.getApiKey(provider);
-          
           if (hasKey) hasAnyKey = true;
-          
-          // Update status indicators - try multiple ID patterns
+    
           const indicators = [
             document.getElementById(`${provider}KeyStatus`),
             document.getElementById(`${provider}KeyIndicator`)
           ];
-          
           indicators.forEach(indicator => {
-            if (indicator) {
-              indicator.textContent = hasKey ? '✔' : '✗';
-              indicator.className = hasKey ? 'key-status configured' : 'key-status missing';
-              indicator.style.color = hasKey ? 'green' : 'red';
-            }
+            if (!indicator) return;
+            indicator.textContent = hasKey ? '✔' : '✗';
+            indicator.className = hasKey ? 'key-status configured' : 'key-status missing';
+            indicator.style.color = hasKey ? 'green' : 'red';
           });
         } catch (error) {
           console.error(`Error checking ${provider} key:`, error);
         }
       }
-      
-      // Enable/disable API mode based on key availability
+    
       const apiRadio = document.querySelector('input[name="aiReportMode"][value="api"]');
       if (apiRadio) {
         apiRadio.disabled = !hasAnyKey;
         const apiLabel = apiRadio.parentElement;
         if (apiLabel) {
-          if (!hasAnyKey) {
-            apiLabel.style.opacity = '0.5';
-            apiLabel.title = 'API keys required - Configure in Settings';
-          } else {
-            apiLabel.style.opacity = '1';
-            apiLabel.title = 'Generate report using API';
-          }
+          apiLabel.style.opacity = hasAnyKey ? '1' : '0.5';
+          apiLabel.title = hasAnyKey ? 'Generate report using API' : 'API keys required - Configure in Settings';
         }
-        
+    
+        // If user had API mode selected but there are no keys, force copy mode.
         if (!hasAnyKey && this.settings.mode === 'api') {
-          // Force copy mode if no keys
           const copyRadio = document.querySelector('input[name="aiReportMode"][value="copy"]');
-          if (copyRadio) {
-            copyRadio.checked = true;
-            this.settings.mode = 'copy';
-            this.updateUIForMode('copy');
-          }
+          if (copyRadio) copyRadio.checked = true;
+          this.settings.mode = 'copy';
+          this.updateUIForMode('copy'); // UI only; does NOT call handleProviderChange
         }
       }
-      
+    
       return hasAnyKey;
     }
-  
+    
     // Load template
-    loadTemplate(templateName) {
-      const template = this.templates[templateName];
+    loadTemplate(templateIdOrKey) {
+      const source = this.mergedTemplates || this.templates || {};
+      const template = source[templateIdOrKey] || source[this.settings.template] || source.productivity;
       if (!template) return;
-  
+    
       const systemPrompt = document.getElementById('systemPrompt');
-      const userPrompt = document.getElementById('userPrompt');
-  
-      if (systemPrompt) systemPrompt.value = template.system;
-      if (userPrompt) userPrompt.value = template.user;
-  
-      this.settings.template = templateName;
+      const userPrompt   = document.getElementById('userPrompt');
+    
+      if (systemPrompt) systemPrompt.value = template.system || '';
+      if (userPrompt)   userPrompt.value   = template.user   || '';
+    
+      this.settings.selectedTemplateId = templateIdOrKey;
+      this.settings.template = templateIdOrKey;
       this.saveSettings();
     }
-  
+    
     // Handle date range change
     handleDateRangeChange(value) {
       const customRange = document.getElementById('aiCustomDateRange');
@@ -2317,9 +2526,25 @@ class UnifiedAIReports {
     const inlineCodes = [];
     html = html.replace(/`([^`]+)`/g, (match, code) => {
       inlineCodes.push(`<code>${this.escapeHtml(code)}</code>`);
-      return `__INLINE_CODE_${inlineCodes.length - 1}__`;
+      return `__INLINECODE${inlineCodes.length - 1}__`;  // <- no underscore
     });
-    
+
+    // Restore code blocks
+    codeBlocks.forEach((block, index) => {
+      const placeholder = new RegExp(`__CODE_BLOCK_${index}__`, 'g');
+      html = html.replace(placeholder, block);
+    });
+
+    // Restore inline codes
+    inlineCodes.forEach((code, index) => {
+      const placeholder = new RegExp(`__INLINECODE${index}__`, 'g');  // <- match no underscore
+      html = html.replace(placeholder, code);
+    });
+
+    // Clean up any remaining placeholders
+    html = html.replace(/__INLINECODE\d+__/g, '');
+
+        
     // Convert tables (must be before other conversions)
     html = this.convertMarkdownTables(html);
     
@@ -2337,9 +2562,15 @@ class UnifiedAIReports {
     html = html.replace(/^___$/gm, '<hr>');
     
     // Convert blockquotes
-    html = html.replace(/^> (.*?)$/gm, '<blockquote>$1</blockquote>');
+    // Normalize custom BLOCKQUOTE markers and plain markdown "> " to <blockquote>…</blockquote>
+    html = html
+      .replace(/BLOCKQUOTE(?!\d)/g, '<blockquote>')   // opening marker
+      .replace(/BLOCKQUOTE\d+/g, '</blockquote>')     // closing marker(s)
+      .replace(/^> (.*?)$/gm, '<blockquote>$1</blockquote>'); // markdown style
+
     // Merge consecutive blockquotes
-    html = html.replace(/<\/blockquote>\n<blockquote>/g, '\n');
+    html = html.replace(/<\/blockquote>\s*<blockquote>/g, '\n');
+
     
     // Convert links with title
     html = html.replace(/\[([^\]]+)\]\(([^)]+)\s+"([^"]+)"\)/g, '<a href="$2" title="$3">$1</a>');
@@ -2370,21 +2601,6 @@ class UnifiedAIReports {
     // Convert line breaks (two spaces at end of line)
     html = html.replace(/  $/gm, '<br>');
         
-    // Restore code blocks - FIXED WITH GLOBAL REPLACE
-    codeBlocks.forEach((block, index) => {
-      const placeholder = new RegExp(`__CODE_BLOCK_${index}__`, 'g');
-      html = html.replace(placeholder, block);
-    });
-
-    // Restore inline codes - FIXED WITH GLOBAL REPLACE
-    inlineCodes.forEach((code, index) => {
-      const placeholder = new RegExp(`__INLINE_CODE_${index}__`, 'g');
-      html = html.replace(placeholder, code);
-    });
-
-    // Clean up any remaining placeholders that might have been missed
-    html = html.replace(/__(?:INLINE_)?CODE_?(?:BLOCK)?_?\d+_?/g, '');
-      
     // Convert paragraphs (lines not already wrapped in HTML tags)
     const lines = html.split('\n');
     const processedLines = [];
