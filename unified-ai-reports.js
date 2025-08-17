@@ -2180,17 +2180,22 @@ class UnifiedAIReports {
     
     // Convert line breaks (two spaces at end of line)
     html = html.replace(/  $/gm, '<br>');
-    
-    // Restore code blocks
+        
+    // Restore code blocks - FIXED WITH GLOBAL REPLACE
     codeBlocks.forEach((block, index) => {
-      html = html.replace(`__CODE_BLOCK_${index}__`, block);
+      const placeholder = new RegExp(`__CODE_BLOCK_${index}__`, 'g');
+      html = html.replace(placeholder, block);
     });
-    
-    // Restore inline codes
+
+    // Restore inline codes - FIXED WITH GLOBAL REPLACE
     inlineCodes.forEach((code, index) => {
-      html = html.replace(`__INLINE_CODE_${index}__`, code);
+      const placeholder = new RegExp(`__INLINE_CODE_${index}__`, 'g');
+      html = html.replace(placeholder, code);
     });
-    
+
+    // Clean up any remaining placeholders that might have been missed
+    html = html.replace(/__(?:INLINE_)?CODE_?(?:BLOCK)?_?\d+_?/g, '');
+      
     // Convert paragraphs (lines not already wrapped in HTML tags)
     const lines = html.split('\n');
     const processedLines = [];
@@ -2402,152 +2407,211 @@ class UnifiedAIReports {
     return html;
   }
 
-  // Render charts from chart data
-  renderChartsFromData(chartData) {
-    // Check if Chart.js is available
-    const ChartJS = window.Chart || (typeof Chart !== 'undefined' ? Chart : null);
-    if (!ChartJS) {
-      console.error('Chart.js is not loaded. Please ensure chart.min.js is included.');
-      return;
-    }
+// Render charts from chart data - FIXED FOR POPUP
+renderChartsFromData(chartData) {
+  // Check if Chart.js is available
+  const ChartJS = window.Chart || (typeof Chart !== 'undefined' ? Chart : null);
+  if (!ChartJS) {
+    console.error('Chart.js is not loaded. Please ensure chart.min.js is included.');
+    return;
+  }
+  
+  // Helper function to render chart WITHOUT ANIMATIONS
+  const renderChart = (canvasId, config) => {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return;
     
-    // Helper function to render chart with retries
-    const renderChart = (canvasId, config, retries = 3) => {
-      const canvas = document.getElementById(canvasId);
-      if (!canvas) {
-        if (retries > 0) {
-          setTimeout(() => renderChart(canvasId, config, retries - 1), 100);
-        }
-        return;
+    try {
+      // Clear any existing chart
+      if (canvas.chart) {
+        canvas.chart.destroy();
+        canvas.chart = null;
       }
       
-      try {
-        // Clear any existing chart
-        if (canvas.chart) {
-          canvas.chart.destroy();
-          canvas.chart = null;
+      // Get context
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+      
+      // DISABLE ANIMATIONS for immediate rendering
+      const enhancedConfig = {
+        ...config,
+        options: {
+          ...config.options,
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: false // <-- KEY CHANGE: No animations
         }
-        
-        // Get context
-        const ctx = canvas.getContext('2d');
-        if (!ctx) {
-          console.error(`Could not get context for ${canvasId}`);
-          return;
-        }
-        
-        // Add responsive options
-        const enhancedConfig = {
-          ...config,
-          options: {
-            ...config.options,
-            responsive: true,
-            maintainAspectRatio: false
-          }
-        };
-        
-        canvas.chart = new ChartJS(ctx, enhancedConfig);
-      } catch (error) {
-        console.error(`Error rendering chart ${canvasId}:`, error);
-        if (retries > 0) {
-          setTimeout(() => renderChart(canvasId, config, retries - 1), 100);
-        }
+      };
+      
+      canvas.chart = new ChartJS(ctx, enhancedConfig);
+      canvas.chart.render(); // Force immediate render
+      
+    } catch (error) {
+      console.error(`Error rendering chart ${canvasId}:`, error);
+    }
+  };
+  
+  // Render each chart type
+  if (chartData.dailyHours) {
+    renderChart('dailyHoursChart', chartData.dailyHours);
+  }
+  
+  if (chartData.categoryPie) {
+    renderChart('categoryPieChart', chartData.categoryPie);
+  }
+  
+  if (chartData.hourlyDistribution) {
+    renderChart('hourlyDistributionChart', chartData.hourlyDistribution);
+  }
+  
+  if (chartData.focusBreakdown) {
+    renderChart('focusBreakdownChart', chartData.focusBreakdown);
+  }
+}
+  
+// Copy report for email
+// Ensure charts are fully rendered before operations - MINIMAL VERSION
+async ensureChartsRendered() {
+  // Since charts are already visible, just a small delay to ensure stability
+  await new Promise(resolve => setTimeout(resolve, 50));
+}
+
+// Helper method to convert canvas charts to images - DIRECT CAPTURE
+async convertChartsToImages(container) {
+  // Get all canvases from the ORIGINAL document, not the cloned container
+  const originalCanvases = document.querySelectorAll('#reportContentBody canvas');
+  const clonedCanvases = container.querySelectorAll('canvas');
+  
+  // Match up original canvases with cloned ones and copy the image data
+  for (let i = 0; i < originalCanvases.length && i < clonedCanvases.length; i++) {
+    try {
+      const originalCanvas = originalCanvases[i];
+      const clonedCanvas = clonedCanvases[i];
+      
+      // Skip if no dimensions
+      if (!originalCanvas.width || !originalCanvas.height) continue;
+      
+      // Get the image directly from the ORIGINAL canvas that's already rendered
+      const dataUrl = originalCanvas.toDataURL('image/png', 1.0);
+      
+      // Verify the data URL is valid
+      if (!dataUrl || dataUrl === 'data:,' || dataUrl.length < 100) {
+        console.warn('Invalid data URL from original canvas');
+        continue;
       }
-    };
-    
-    // Render each chart type
-    if (chartData.dailyHours) {
-      renderChart('dailyHoursChart', chartData.dailyHours);
-    }
-    
-    if (chartData.categoryPie) {
-      renderChart('categoryPieChart', chartData.categoryPie);
-    }
-    
-    if (chartData.hourlyDistribution) {
-      renderChart('hourlyDistributionChart', chartData.hourlyDistribution);
-    }
-    
-    if (chartData.focusBreakdown) {
-      renderChart('focusBreakdownChart', chartData.focusBreakdown);
-    }
-  }
-  
-  // Copy report for email
-  async copyReportForEmail() {
-    if (!this.currentReport) return;
-    
-    try {
-      const reportBody = document.getElementById('reportContentBody');
-      if (!reportBody) return;
       
-      // Create email-friendly HTML
-      const emailHTML = this.apiClient ? 
-        await this.apiClient.convertToEmailHTML(reportBody.innerHTML) :
-        reportBody.innerHTML;
+      // Create image element
+      const img = document.createElement('img');
+      img.src = dataUrl;
+      img.style.cssText = clonedCanvas.style.cssText || '';
+      img.style.maxWidth = '100%';
+      img.style.height = 'auto';
+      img.width = originalCanvas.width;
+      img.height = originalCanvas.height;
+      img.alt = 'Chart';
       
-      // Create a temporary element to copy from
-      const tempDiv = document.createElement('div');
-      tempDiv.innerHTML = emailHTML;
-      document.body.appendChild(tempDiv);
+      // Replace the cloned canvas with the image
+      clonedCanvas.parentNode.replaceChild(img, clonedCanvas);
       
-      // Select and copy
-      const range = document.createRange();
-      range.selectNodeContents(tempDiv);
-      const selection = window.getSelection();
-      selection.removeAllRanges();
-      selection.addRange(range);
-      
-      document.execCommand('copy');
-      document.body.removeChild(tempDiv);
-      
-      this.showNotification('✅ Report copied for email!', 'success');
     } catch (error) {
-      console.error('Error copying report:', error);
-      this.showNotification('❌ Failed to copy report', 'error');
+      console.error('Error converting canvas:', error);
     }
   }
+}
+
+// Copy report for email - FIXED FOR POPUP CHARTS
+async copyReportForEmail() {
+  if (!this.currentReport) return;
   
-  // Copy report as plain text
-  async copyReportAsText() {
-    if (!this.currentReport) return;
+  try {
+    // Ensure charts are fully rendered first
+    await this.ensureChartsRendered();
     
-    try {
-      const reportBody = document.getElementById('reportContentBody');
-      if (!reportBody) return;
-      
-      const plainText = reportBody.innerText || reportBody.textContent;
-      await navigator.clipboard.writeText(plainText);
-      
-      this.showNotification('✅ Report copied as text!', 'success');
-    } catch (error) {
-      console.error('Error copying report:', error);
-      this.showNotification('❌ Failed to copy report', 'error');
-    }
-  }
-  
-  // Copy report as HTML
-  async copyReportAsHTML() {
-    if (!this.currentReport) return;
+    const reportBody = document.getElementById('reportContentBody');
+    if (!reportBody) return;
     
-    try {
-      const reportBody = document.getElementById('reportContentBody');
-      if (!reportBody) return;
-      
-      const htmlContent = reportBody.innerHTML;
-      
-      // Try to copy as HTML
-      const blob = new Blob([htmlContent], { type: 'text/html' });
-      const clipboardItem = new ClipboardItem({ 'text/html': blob });
-      
-      await navigator.clipboard.write([clipboardItem]);
-      this.showNotification('✅ Report copied as HTML!', 'success');
-    } catch (error) {
-      // Fallback to text copy
-      console.error('HTML copy not supported, falling back to text:', error);
-      await this.copyReportAsText();
-    }
+    // Clone the report body to avoid modifying the original
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = reportBody.innerHTML;
+    
+    // Convert canvas charts to images in the clone
+    await this.convertChartsToImages(tempDiv);
+    
+    // Remove scripts and styles for email
+    tempDiv.querySelectorAll('script').forEach(el => el.remove());
+    tempDiv.querySelectorAll('style').forEach(el => el.remove());
+    
+    // Create a temporary element for copying
+    document.body.appendChild(tempDiv);
+    
+    // Select and copy
+    const range = document.createRange();
+    range.selectNodeContents(tempDiv);
+    const selection = window.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
+    
+    document.execCommand('copy');
+    selection.removeAllRanges();
+    document.body.removeChild(tempDiv);
+    
+    this.showNotification('✅ Report copied for email with charts!', 'success');
+  } catch (error) {
+    console.error('Error copying report:', error);
+    this.showNotification('❌ Failed to copy report', 'error');
   }
+}
+
+// Copy report as plain text - NO CHARTS NEEDED
+async copyReportAsText() {
+  if (!this.currentReport) return;
   
+  try {
+    const reportBody = document.getElementById('reportContentBody');
+    if (!reportBody) return;
+    
+    const plainText = reportBody.innerText || reportBody.textContent;
+    await navigator.clipboard.writeText(plainText);
+    
+    this.showNotification('✅ Report copied as text!', 'success');
+  } catch (error) {
+    console.error('Error copying report:', error);
+    this.showNotification('❌ Failed to copy report', 'error');
+  }
+}
+
+// Copy report as HTML - FIXED FOR POPUP CHARTS
+async copyReportAsHTML() {
+  if (!this.currentReport) return;
+  
+  try {
+    // Ensure charts are fully rendered first
+    await this.ensureChartsRendered();
+    
+    const reportBody = document.getElementById('reportContentBody');
+    if (!reportBody) return;
+    
+    // Clone the report body
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = reportBody.innerHTML;
+    
+    // Convert charts to images
+    await this.convertChartsToImages(tempDiv);
+    
+    const htmlContent = tempDiv.innerHTML;
+    
+    // Try to copy as HTML
+    const blob = new Blob([htmlContent], { type: 'text/html' });
+    const clipboardItem = new ClipboardItem({ 'text/html': blob });
+    
+    await navigator.clipboard.write([clipboardItem]);
+    this.showNotification('✅ Report copied as HTML with charts!', 'success');
+  } catch (error) {
+    // Fallback to text copy
+    console.error('HTML copy not supported, falling back to text:', error);
+    await this.copyReportAsText();
+  }
+}
   // Save current report
   async saveCurrentReport() {
     if (!this.currentReport) return;
@@ -2646,11 +2710,8 @@ class UnifiedAIReports {
   }
   
   // Show notification
+  // Show notification - Enhanced for all contexts
   showNotification(message, type = 'info') {
-    // Check if modal is open
-    const reportModal = document.getElementById('reportViewerModal');
-    const isModalOpen = reportModal && reportModal.style.display === 'flex';
-    
     // Create or get notification element
     let notification = document.getElementById('aiReportNotification');
     
@@ -2667,6 +2728,10 @@ class UnifiedAIReports {
       warning: 'background: linear-gradient(135deg, #ffc107, #ff9800); color: #333;',
       info: 'background: linear-gradient(135deg, #0078d4, #106ebe); color: white;'
     };
+    
+    // Check if we're in a modal
+    const reportModal = document.getElementById('reportViewerModal');
+    const isModalOpen = reportModal && (reportModal.style.display === 'flex' || reportModal.style.display === 'block');
     
     // Apply styles and message
     notification.style.cssText = `
@@ -2700,16 +2765,6 @@ class UnifiedAIReports {
         notification.style.display = 'none';
       }, 300);
     }, 3000);
-    
-    // Also check for settings page notification area (keep this for compatibility)
-    const settingsNotification = document.getElementById('aiSettingsSuccess');
-    if (settingsNotification && type === 'success') {
-      settingsNotification.textContent = message;
-      settingsNotification.style.display = 'block';
-      setTimeout(() => {
-        settingsNotification.style.display = 'none';
-      }, 3000);
-    }
     
     // Log to console for debugging
     console.log(`[${type.toUpperCase()}] ${message}`);

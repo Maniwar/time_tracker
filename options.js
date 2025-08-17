@@ -1539,13 +1539,28 @@ async function copySavedReport(report) {
   }
 }
 
+// ============================================
+// REPORT COPY FUNCTIONS - FIXED TO USE UNIFIED SYSTEM
+// ============================================
+
 // Copy report for email
 async function copyReportForEmail(report) {
+  // Use UnifiedAIReports instance if available
+  if (window.aiReports && window.aiReports.currentReport) {
+    window.aiReports.currentReport = report;
+    await window.aiReports.copyReportForEmail();
+    return;
+  }
+  
+  // Fallback implementation with proper notification
   try {
     const reportBody = document.getElementById('reportContentBody');
     if (!reportBody) return;
     
-    // Create a temporary element for copying
+    // Convert charts to images first
+    await convertChartsToImages(reportBody);
+    
+    // Create email-friendly HTML
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = reportBody.innerHTML;
     document.body.appendChild(tempDiv);
@@ -1553,8 +1568,6 @@ async function copyReportForEmail(report) {
     // Remove scripts and styles for email
     tempDiv.querySelectorAll('script').forEach(el => el.remove());
     tempDiv.querySelectorAll('style').forEach(el => el.remove());
-    // Remove chart containers for email (they won't work)
-    tempDiv.querySelectorAll('.charts-section').forEach(el => el.remove());
     
     // Select and copy
     const range = document.createRange();
@@ -1567,15 +1580,24 @@ async function copyReportForEmail(report) {
     selection.removeAllRanges();
     document.body.removeChild(tempDiv);
     
-    showSuccess('aiSettingsSuccess', '✅ Report copied for email!');
+    // Use proper notification
+    showNotificationPopup('✅ Report copied for email!', 'success');
   } catch (error) {
     console.error('Error copying report:', error);
-    alert('Failed to copy report for email.');
+    showNotificationPopup('❌ Failed to copy report for email', 'error');
   }
 }
 
 // Copy report as plain text
 async function copyReportAsText(report) {
+  // Use UnifiedAIReports instance if available
+  if (window.aiReports && window.aiReports.currentReport) {
+    window.aiReports.currentReport = report;
+    await window.aiReports.copyReportAsText();
+    return;
+  }
+  
+  // Fallback implementation
   try {
     const reportBody = document.getElementById('reportContentBody');
     if (!reportBody) return;
@@ -1583,18 +1605,29 @@ async function copyReportAsText(report) {
     const plainText = reportBody.innerText || reportBody.textContent || '';
     await navigator.clipboard.writeText(plainText);
     
-    showSuccess('aiSettingsSuccess', '✅ Report copied as text!');
+    showNotificationPopup('✅ Report copied as text!', 'success');
   } catch (error) {
     console.error('Error copying report:', error);
-    alert('Failed to copy report as text.');
+    showNotificationPopup('❌ Failed to copy report as text', 'error');
   }
 }
 
 // Copy report as HTML
 async function copyReportAsHTML(report) {
+  // Use UnifiedAIReports instance if available
+  if (window.aiReports && window.aiReports.currentReport) {
+    window.aiReports.currentReport = report;
+    await window.aiReports.copyReportAsHTML();
+    return;
+  }
+  
+  // Fallback implementation
   try {
     const reportBody = document.getElementById('reportContentBody');
     if (!reportBody) return;
+    
+    // Convert charts to images first
+    await convertChartsToImages(reportBody);
     
     const htmlContent = reportBody.innerHTML;
     
@@ -1603,11 +1636,89 @@ async function copyReportAsHTML(report) {
     const clipboardItem = new ClipboardItem({ 'text/html': blob });
     
     await navigator.clipboard.write([clipboardItem]);
-    showSuccess('aiSettingsSuccess', '✅ Report copied as HTML!');
+    showNotificationPopup('✅ Report copied as HTML!', 'success');
   } catch (error) {
     // Fallback to text copy
     console.error('HTML copy not supported, falling back to text:', error);
     await copyReportAsText(report);
+  }
+}
+
+// Helper function to show notifications properly
+function showNotificationPopup(message, type = 'info') {
+  // If UnifiedAIReports is available, use its notification system
+  if (window.aiReports && window.aiReports.showNotification) {
+    window.aiReports.showNotification(message, type);
+    return;
+  }
+  
+  // Otherwise create our own notification
+  let notification = document.getElementById('optionsReportNotification');
+  
+  if (!notification) {
+    notification = document.createElement('div');
+    notification.id = 'optionsReportNotification';
+    document.body.appendChild(notification);
+  }
+  
+  const styles = {
+    success: 'background: linear-gradient(135deg, #10893e, #14cc60); color: white;',
+    error: 'background: linear-gradient(135deg, #d83b01, #e74c0e); color: white;',
+    warning: 'background: linear-gradient(135deg, #ffc107, #ff9800); color: #333;',
+    info: 'background: linear-gradient(135deg, #0078d4, #106ebe); color: white;'
+  };
+  
+  notification.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 15px 25px;
+    border-radius: 8px;
+    z-index: 20001;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    min-width: 250px;
+    text-align: center;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    ${styles[type] || styles.info}
+  `;
+  
+  notification.textContent = message;
+  notification.style.display = 'block';
+  notification.style.opacity = '0';
+  
+  setTimeout(() => {
+    notification.style.opacity = '1';
+  }, 10);
+  
+  setTimeout(() => {
+    notification.style.opacity = '0';
+    setTimeout(() => {
+      notification.style.display = 'none';
+    }, 300);
+  }, 3000);
+}
+
+// Helper function to convert canvas charts to images
+async function convertChartsToImages(container) {
+  const canvases = container.querySelectorAll('canvas');
+  
+  for (const canvas of canvases) {
+    try {
+      // Create an image from the canvas
+      const dataUrl = canvas.toDataURL('image/png');
+      const img = document.createElement('img');
+      img.src = dataUrl;
+      img.style.cssText = canvas.style.cssText;
+      img.style.maxWidth = '100%';
+      img.style.height = 'auto';
+      
+      // Replace canvas with image
+      canvas.parentNode.replaceChild(img, canvas);
+    } catch (error) {
+      console.error('Error converting canvas to image:', error);
+    }
   }
 }
 
