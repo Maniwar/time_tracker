@@ -771,6 +771,263 @@
       color: #605e5c;
       font-style: italic;
     }
+/* ============================================
+   FIX: Custom Model List Item Alignment
+   ============================================ */
+
+/* Replace the inline styles in loadCustomModels() with this CSS */
+.custom-model-item {
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  margin-bottom: 10px;
+  background: #fff;
+}
+
+.custom-model-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.custom-model-info {
+  flex: 1;
+}
+
+.custom-model-info strong {
+  color: #323130;
+  font-size: 14px;
+}
+
+.custom-model-info small {
+  color: #605e5c;
+  font-size: 12px;
+}
+
+.custom-model-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.custom-model-actions .button {
+  padding: 4px 12px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+/* ============================================
+   FIX: Modal Overlay Display
+   ============================================ */
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 10000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+
+/* When showing modal, use flex display */
+.modal-overlay[style*="display: flex"] {
+  display: flex !important;
+}
+
+/* ============================================
+   FIX: Report History Item Alignment
+   ============================================ */
+
+.report-history-item {
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  margin-bottom: 10px;
+  background: #fff;
+  transition: box-shadow 0.2s;
+}
+
+.report-history-item:hover {
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.report-history-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.report-history-info {
+  flex: 1;
+}
+
+.report-history-info strong {
+  color: #323130;
+  font-size: 14px;
+}
+
+.report-history-info small {
+  color: #666;
+  font-size: 12px;
+}
+
+.report-history-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.report-history-actions .button {
+  padding: 4px 12px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+/* ============================================
+   FIX: Button Styles
+   ============================================ */
+
+.button {
+  padding: 8px 16px;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  display: inline-block;
+  text-align: center;
+}
+
+.button.secondary {
+  background: #f3f2f1;
+  color: #323130;
+  border-color: #d2d0ce;
+}
+
+.button.secondary:hover {
+  background: #e1dfdd;
+  border-color: #c8c6c4;
+}
+
+.button.success {
+  background: #107c10;
+  color: white;
+  border-color: #107c10;
+}
+
+.button.success:hover {
+  background: #0e5e0e;
+  border-color: #0e5e0e;
+}
+
+.button.danger {
+  background: #d83b01;
+  color: white;
+  border-color: #d83b01;
+}
+
+.button.danger:hover {
+  background: #b82e00;
+  border-color: #b82e00;
+}
+
+/* ============================================
+   FIX: Loading States
+   ============================================ */
+
+.loading-indicator {
+  text-align: center;
+  padding: 20px;
+  color: #666;
+}
+
+.loading-spinner {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #667eea;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-right: 10px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* ============================================
+   FIX: Form Row Spacing in Modals
+   ============================================ */
+
+.modal-body .form-row {
+  margin-bottom: 16px;
+}
+
+.modal-body .form-row:last-child {
+  margin-bottom: 0;
+}
+
+.modal-body .form-row label {
+  display: block;
+  margin-bottom: 5px;
+  color: #605e5c;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.modal-body .form-row input,
+.modal-body .form-row select,
+.modal-body .form-row textarea {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #d2d0ce;
+  border-radius: 4px;
+  font-size: 14px;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  box-sizing: border-box;
+}
+
+.modal-body .form-row input:focus,
+.modal-body .form-row select:focus,
+.modal-body .form-row textarea:focus {
+  outline: none;
+  border-color: #0078d4;
+  box-shadow: 0 0 0 1px #0078d4;
+}
+
+/* ============================================
+   FIX: Responsive Design for Small Screens
+   ============================================ */
+
+@media (max-width: 600px) {
+  .custom-model-content,
+  .report-history-content {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .custom-model-actions,
+  .report-history-actions {
+    margin-top: 10px;
+    width: 100%;
+  }
+  
+  .custom-model-actions .button,
+  .report-history-actions .button {
+    flex: 1;
+  }
+  
+  .modal-content {
+    width: 95%;
+    margin: 10px;
+  }
+}
   </style>
 </head>
 <body>
@@ -783,6 +1040,7 @@
     <button class="tab-button" data-tab="tracking">Tracking</button>
     <button class="tab-button" data-tab="export">Export</button>
     <button class="tab-button" data-tab="data">Data</button>
+    <button class="tab-button" data-tab="ai">🤖 AI Reports</button>
     <button class="tab-button" data-tab="support" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none;">
       💖 Support Development</button>
   </div>
@@ -1282,7 +1540,7 @@
   </p>
 </div>
 </div>
-</div>
+
 
   <!-- Goal Modal -->
   <div class="modal-overlay" id="goalModal">
@@ -1318,8 +1576,269 @@
       </div>
     </div>
   </div>
+<!-- Add this new tab content section after the other tab contents -->
+<div class="tab-content" id="aiTab">
+  <!-- Add this inside the AI tab content -->
+<div class="card" id="apiKeyManagement">
+  <h2>🔑 API Key Management</h2>
+  <p class="section-description">
+    Securely store your API keys for direct report generation. Keys are encrypted and stored locally in your browser.
+  </p>
   
-  <script src="xlsx.min.js"></script>
+  <div class="api-key-section">
+    <!-- OpenAI -->
+    <div class="api-key-row" style="margin: 20px 0; padding: 15px; border: 1px solid #dee2e6; border-radius: 8px;">
+      <h3 style="margin: 0 0 10px 0; color: #495057;">OpenAI API Key</h3>
+      <div style="display: flex; gap: 10px;">
+        <input type="password" id="openaiApiKey" placeholder="sk-..." style="flex: 1; padding: 8px;">
+        <button class="button" id="saveOpenAIKey">Save</button>
+        <button class="button secondary" id="testOpenAIKey">Test</button>
+      </div>
+      <small style="color: #6c757d;">Get your key from <a href="https://platform.openai.com/api-keys" target="_blank">platform.openai.com</a></small>
+      <div id="openaiKeyStatus" style="margin-top: 10px;"></div>
+    </div>
+
+    <!-- Anthropic -->
+    <div class="api-key-row" style="margin: 20px 0; padding: 15px; border: 1px solid #dee2e6; border-radius: 8px;">
+      <h3 style="margin: 0 0 10px 0; color: #495057;">Anthropic API Key</h3>
+      <div style="display: flex; gap: 10px;">
+        <input type="password" id="anthropicApiKey" placeholder="sk-ant-..." style="flex: 1; padding: 8px;">
+        <button class="button" id="saveAnthropicKey">Save</button>
+        <button class="button secondary" id="testAnthropicKey">Test</button>
+      </div>
+      <small style="color: #6c757d;">Get your key from <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a></small>
+      <div id="anthropicKeyStatus" style="margin-top: 10px;"></div>
+    </div>
+
+    <!-- Google -->
+    <div class="api-key-row" style="margin: 20px 0; padding: 15px; border: 1px solid #dee2e6; border-radius: 8px;">
+      <h3 style="margin: 0 0 10px 0; color: #495057;">Google Gemini API Key</h3>
+      <div style="display: flex; gap: 10px;">
+        <input type="password" id="googleApiKey" placeholder="AIza..." style="flex: 1; padding: 8px;">
+        <button class="button" id="saveGoogleKey">Save</button>
+        <button class="button secondary" id="testGoogleKey">Test</button>
+      </div>
+      <small style="color: #6c757d;">Get your key from <a href="https://makersuite.google.com/app/apikey" target="_blank">Google AI Studio</a></small>
+      <div id="googleKeyStatus" style="margin-top: 10px;"></div>
+    </div>
+  </div>
+  
+  <div class="success-message" id="apiKeySuccess" style="display: none;">API key saved successfully!</div>
+  <div class="error-message" id="apiKeyError" style="display: none; color: #dc3545;">Error testing API key</div>
+</div>
+
+<!-- Add this section to options.html in the AI tab content, after the API Key Management section -->
+
+<!-- Report History Section -->
+<div class="card">
+  <h2>📚 Report History</h2>
+  <p class="section-description">
+    View and manage your previously generated AI reports.
+  </p>
+  
+  <div id="reportHistoryList" style="max-height: 400px; overflow-y: auto;">
+    <!-- Reports will be loaded here dynamically -->
+    <p style="color: #666;">Loading reports...</p>
+  </div>
+  
+  <div style="margin-top: 20px;">
+    <button class="button secondary" id="refreshReportHistory">🔄 Refresh</button>
+    <button class="button secondary" id="clearReportHistory">🗑️ Clear All Reports</button>
+  </div>
+</div>
+
+<!-- Custom Models Section (Fix #4) -->
+<div class="card">
+  <h2>🤖 Custom AI Models</h2>
+  <p class="section-description">
+    Add custom models to use with your API keys. This allows you to use newer models as they become available.
+  </p>
+  
+  <div id="customModelsList" style="margin: 20px 0;">
+    <!-- Custom models will be listed here -->
+  </div>
+  
+  <button class="button success" id="addCustomModelBtn">+ Add Custom Model</button>
+</div>
+
+<!-- Custom Model Editor Modal -->
+<div class="modal-overlay" id="customModelModal" style="display: none;">
+  <div class="modal-content" style="max-width: 500px;">
+    <div class="modal-header">
+      <h3 class="modal-title">Add Custom Model</h3>
+      <button class="modal-close" id="closeCustomModelModal">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <label>Provider *</label>
+        <select id="customModelProvider">
+          <option value="openai">OpenAI</option>
+          <option value="anthropic">Anthropic</option>
+          <option value="google">Google</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <label>Model ID *</label>
+        <input type="text" id="customModelId" placeholder="e.g., gpt-4-vision-preview">
+        <small>The exact model identifier used in API calls</small>
+      </div>
+      <div class="form-row">
+        <label>Display Name *</label>
+        <input type="text" id="customModelName" placeholder="e.g., GPT-4 Vision">
+        <small>Friendly name shown in the interface</small>
+      </div>
+      <div class="form-row">
+        <label>Max Tokens</label>
+        <input type="number" id="customModelMaxTokens" placeholder="e.g., 128000" value="128000">
+        <small>Maximum context window size</small>
+      </div>
+      <div class="form-row">
+        <label>
+          <input type="checkbox" id="customModelDefault">
+          Set as default for this provider
+        </label>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="button secondary" id="cancelCustomModelBtn">Cancel</button>
+      <button class="button success" id="saveCustomModelBtn">Save Model</button>
+    </div>
+  </div>
+</div>
+
+  <!-- AI Report Settings -->
+  <div class="card">
+    <h2>AI Report Settings <span class="feature-badge">NEW!</span></h2>
+    <p class="section-description">
+      Configure default settings for AI-powered report generation. Currently supports copying formatted prompts for use with any LLM (ChatGPT, Claude, Gemini, etc.).
+    </p>
+    
+    <!-- Default Settings -->
+    <div class="input-group">
+      <label>Default Report Type:</label>
+      <select id="defaultReportType">
+        <option value="productivity">Productivity Analysis</option>
+        <option value="goals">Goals & Progress Report</option>
+        <option value="patterns">Time Pattern Analysis</option>
+        <option value="recommendations">Optimization Recommendations</option>
+        <option value="executive">Executive Summary</option>
+        <option value="custom">Custom Report</option>
+      </select>
+      <small>The default template to load when opening AI Reports</small>
+    </div>
+    
+    <div class="input-group">
+      <label>Default Date Range:</label>
+      <select id="aiDefaultDateRange">
+        <option value="today">Today</option>
+        <option value="yesterday">Yesterday</option>
+        <option value="week">This Week</option>
+        <option value="lastweek">Last Week</option>
+        <option value="month">This Month</option>
+      </select>
+      <small>Default time period for AI analysis</small>
+    </div>
+    
+    <div class="input-group">
+      <label>Data Inclusion Defaults:</label>
+      <div class="checkbox-group">
+        <div class="checkbox-item">
+          <input type="checkbox" id="aiDefaultMultitasking" checked>
+          <label for="aiDefaultMultitasking">Include multi-tasking data</label>
+        </div>
+        <div class="checkbox-item">
+          <input type="checkbox" id="aiDefaultDeliverables" checked>
+          <label for="aiDefaultDeliverables">Include deliverables & goals</label>
+        </div>
+        <div class="checkbox-item">
+          <input type="checkbox" id="aiDefaultMeetings" checked>
+          <label for="aiDefaultMeetings">Include meeting analysis</label>
+        </div>
+        <div class="checkbox-item">
+          <input type="checkbox" id="aiDefaultCategories" checked>
+          <label for="aiDefaultCategories">Include category breakdown</label>
+        </div>
+        <div class="checkbox-item">
+          <input type="checkbox" id="aiDefaultPatterns" checked>
+          <label for="aiDefaultPatterns">Include daily patterns</label>
+        </div>
+        <div class="checkbox-item">
+          <input type="checkbox" id="aiDefaultProductivity" checked>
+          <label for="aiDefaultProductivity">Include productivity scores</label>
+        </div>
+      </div>
+    </div>
+    
+    <button class="button" id="saveAiSettingsBtn">Save AI Settings</button>
+    <div class="success-message" id="aiSettingsSuccess">AI settings saved!</div>
+  </div>
+  
+  <!-- Custom Prompt Templates -->
+  <div class="card">
+    <h2>Custom Prompt Templates</h2>
+    <p class="section-description">
+      Manage your saved prompt templates for different types of analysis.
+    </p>
+    
+    <div id="customTemplatesList" style="margin: 20px 0;">
+      <!-- Templates will be loaded here -->
+    </div>
+    
+    <button class="button success" id="addCustomTemplateBtn">+ Add New Template</button>
+  </div>
+  
+
+</div>
+
+<!-- Template Editor Modal -->
+<div class="modal-overlay" id="templateEditorModal">
+  <div class="modal-content" style="max-width: 600px;">
+    <div class="modal-header">
+      <h3 class="modal-title" id="templateModalTitle">Add Custom Template</h3>
+      <button class="modal-close" id="closeTemplateModal">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <label>Template Name *</label>
+        <input type="text" id="templateName" placeholder="e.g., Weekly Team Report">
+      </div>
+      <div class="form-row">
+        <label>System Prompt *</label>
+        <textarea id="templateSystemPrompt" rows="4" placeholder="Define the AI's role and behavior..."></textarea>
+        <small>This sets the AI's personality and expertise for this report type</small>
+      </div>
+      <div class="form-row">
+        <label>User Prompt *</label>
+        <textarea id="templateUserPrompt" rows="6" placeholder="What specific analysis and sections should the report include..."></textarea>
+        <small>The specific instructions for what the report should contain</small>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="button secondary" id="cancelTemplateBtn">Cancel</button>
+      <button class="button success" id="saveTemplateBtn">Save Template</button>
+    </div>
+  </div>
+</div>
+<!-- Report Viewer Modal for Options Page -->
+<div class="modal-overlay" id="reportViewerModal" style="display: none;">
+  <div class="modal-content" style="max-width: 900px; width: 95%; max-height: 90vh; overflow-y: auto;">
+    <div class="modal-header">
+      <h3 class="modal-title">📊 AI-Generated Report</h3>
+      <button class="modal-close" id="closeReportViewer">&times;</button>
+    </div>
+    
+    <div class="modal-body">
+      <!-- Report Content -->
+      <div id="reportContent" style="padding: 20px; background: white; border-radius: 8px;">
+        <!-- Generated report will be inserted here -->
+      </div>
+    </div>
+  </div>
+</div>
+<script src="xlsx.min.js"></script>
+  <script src="chart.min.js"></script>
+  <script src="api-client.js"></script>
+  <script src="unified-ai-reports.js"></script>
   <script src="options.js"></script>
 </body>
 </html>

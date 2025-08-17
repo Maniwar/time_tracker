@@ -774,7 +774,17 @@ async function connectGoogle() {
     btn.textContent = originalText === 'Disconnect' ? 'Disconnect' : 'Connect';
   }
 }
-
+// Also add this listener to popup.js to handle the reload message:
+chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
+  if (request.action === 'reloadCustomModels') {
+    // Reload the models in the popup
+    if (apiClient) {
+      await apiClient.loadCustomModels();
+      await loadLLMModels();
+      await updateApiKeyStatus();
+    }
+  }
+});
 // Handle Outlook connection
 async function connectOutlook() {
   const btn = document.getElementById('outlookConnectBtn');
