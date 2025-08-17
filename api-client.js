@@ -135,107 +135,144 @@ class UnifiedAPIClient {
     });
   }
 
-  // Test API key with actual API call
-  async testApiKey(provider) {
-    const apiKey = await this.getApiKey(provider);
-    if (!apiKey) {
-      throw new Error('No API key found');
-    }
-
-    const testPrompt = "Say 'API key working!' in 5 words or less.";
-    
-    try {
-      switch(provider) {
-        case 'openai':
-          return await this.testOpenAI(apiKey, testPrompt);
-        case 'anthropic':
-          return await this.testAnthropic(apiKey, testPrompt);
-        case 'google':
-          return await this.testGoogle(apiKey, testPrompt);
-        default:
-          throw new Error(`Unknown provider: ${provider}`);
-      }
-    } catch (error) {
-      console.error(`Test failed for ${provider}:`, error);
-      throw error;
-    }
+// Test API key with actual API call
+async testApiKey(provider) {
+  const apiKey = await this.getApiKey(provider);
+  if (!apiKey) {
+    throw new Error('No API key found');
   }
 
-  // Test OpenAI API
-  async testOpenAI(apiKey, prompt) {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        model: 'gpt-3.5-turbo',
-        messages: [{ role: 'user', content: prompt }],
-        max_tokens: 20,
+  const testPrompt = "Say 'API key working!' in 5 words or less.";
+  
+  try {
+    switch(provider) {
+      case 'openai':
+        return await this.testOpenAI(apiKey, testPrompt);
+      case 'anthropic':
+        return await this.testAnthropic(apiKey, testPrompt);
+      case 'google':
+        return await this.testGoogle(apiKey, testPrompt);
+      default:
+        throw new Error(`Unknown provider: ${provider}`);
+    }
+  } catch (error) {
+    console.error(`Test failed for ${provider}:`, error);
+    throw error;
+  }
+}
+
+// Test OpenAI API
+async testOpenAI(apiKey, prompt) {
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`
+    },
+    body: JSON.stringify({
+      model: 'gpt-3.5-turbo',
+      messages: [{ role: 'user', content: prompt }],
+      max_tokens: 20,
+      temperature: 0.5
+    })
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: { message: 'Unknown error' } }));
+    throw new Error(error.error?.message || `HTTP ${response.status}`);
+  }
+
+  return true;
+}
+
+// Test Anthropic API - FIXED
+async testAnthropic(apiKey, prompt) {
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'  // ← CRITICAL HEADER ADDED
+    },
+    body: JSON.stringify({
+      model: 'claude-3-haiku-20240307',
+      messages: [{ role: 'user', content: prompt }],
+      max_tokens: 20
+    })
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: { message: 'Unknown error' } }));
+    throw new Error(error.error?.message || `HTTP ${response.status}`);
+  }
+
+  const data = await response.json();
+  
+  // Verify we got content back
+  if (!data.content || data.content.length === 0) {
+    throw new Error('No response content from Anthropic API');
+  }
+
+  return true;
+}
+
+// Test Google API - FIXED
+async testGoogle(apiKey, prompt) {
+  // Use gemini-1.5-flash which is stable and reliable
+  const model = 'gemini-1.5-flash';
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+  
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      contents: [{
+        parts: [{ text: prompt }]
+      }],
+      generationConfig: {
+        maxOutputTokens: 20,
         temperature: 0.5
-      })
-    });
+      }
+    })
+  });
 
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ error: { message: 'Unknown error' } }));
-      throw new Error(error.error?.message || `HTTP ${response.status}`);
-    }
-
-    return true;
-  }
-
-  // Test Anthropic API
-  async testAnthropic(apiKey, prompt) {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01'
-      },
-      body: JSON.stringify({
-        model: 'claude-3-haiku-20240307',
-        messages: [{ role: 'user', content: prompt }],
-        max_tokens: 20
-      })
-    });
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ error: { message: 'Unknown error' } }));
-      throw new Error(error.error?.message || `HTTP ${response.status}`);
-    }
-
-    return true;
-  }
-
-  // Test Google API
-  async testGoogle(apiKey, prompt) {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`;
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: { message: 'Unknown error' } }));
     
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        contents: [{
-          parts: [{ text: prompt }]
-        }],
-        generationConfig: {
-          maxOutputTokens: 20,
-          temperature: 0.5
-        }
-      })
-    });
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ error: { message: 'Unknown error' } }));
-      throw new Error(error.error?.message || `HTTP ${response.status}`);
+    // Provide more helpful error messages for common issues
+    if (response.status === 400) {
+      throw new Error('Invalid API key format or request. Please check your key.');
+    } else if (response.status === 403) {
+      throw new Error('API key is invalid or doesn\'t have access to Gemini API. Please check your key or enable the API in Google Cloud Console.');
+    } else if (response.status === 429) {
+      throw new Error('Rate limit exceeded. Please wait a moment and try again.');
     }
-
-    return true;
+    
+    throw new Error(error.error?.message || `HTTP ${response.status}`);
   }
+
+  const data = await response.json();
+  
+  // Validate response structure
+  if (!data.candidates || data.candidates.length === 0) {
+    throw new Error('No response from Google API - the API key may be valid but the model access might be restricted');
+  }
+  
+  // Check for safety blocks or other issues
+  const candidate = data.candidates[0];
+  if (candidate.finishReason === 'SAFETY') {
+    throw new Error('Response blocked by safety filters (test successful, key is working)');
+  }
+  
+  if (!candidate.content || !candidate.content.parts || candidate.content.parts.length === 0) {
+    throw new Error('Empty response from Google API');
+  }
+
+  return true;
+}
 
   // Main method to generate report with any LLM
   async generateReport(options) {
