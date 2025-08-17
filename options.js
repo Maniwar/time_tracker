@@ -7,7 +7,7 @@
 let currentEditingGoal = null;
 let editingModel = null;
 let pageInitialized = false;
-
+let editingTemplateName = null; // Track the original name when editing
 // ============================================
 // GOAL MANAGEMENT FUNCTIONS
 // ============================================
@@ -1281,11 +1281,17 @@ function convertMarkdownToHTML(markdown) {
   html = html.replace(/^---$/gm, '<hr>');
   html = html.replace(/^\*\*\*$/gm, '<hr>');
   html = html.replace(/^___$/gm, '<hr>');
-  
-  // Convert blockquotes
-  html = html.replace(/^> (.*?)$/gm, '<blockquote>$1</blockquote>');
-  // Merge consecutive blockquotes
-  html = html.replace(/<\/blockquote>\n<blockquote>/g, '\n');
+
+// Convert blockquotes
+// Normalize custom BLOCKQUOTE markers and plain markdown "> " to <blockquote>…</blockquote>
+html = html
+  .replace(/BLOCKQUOTE(?!\d)/g, '<blockquote>')   // opening marker
+  .replace(/BLOCKQUOTE\d+/g, '</blockquote>')     // closing marker(s)
+  .replace(/^> (.*?)$/gm, '<blockquote>$1</blockquote>'); // markdown style
+
+// Merge consecutive blockquotes
+html = html.replace(/<\/blockquote>\s*<blockquote>/g, '\n');
+
   
   // Convert links
   html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
@@ -2676,6 +2682,9 @@ function editTemplate(name) {
     const template = templates[name];
     
     if (template) {
+      // Store the original name for editing
+      editingTemplateName = name;
+      
       document.getElementById('templateModalTitle').textContent = 'Edit Template';
       document.getElementById('templateName').value = name;
       document.getElementById('templateSystemPrompt').value = template.system;
@@ -2684,7 +2693,6 @@ function editTemplate(name) {
     }
   });
 }
-
 // Delete template
 function deleteTemplate(name) {
   if (!confirm(`Delete template "${name}"?`)) return;
@@ -3235,6 +3243,9 @@ function setupEventListeners() {
   const addCustomTemplateBtn = document.getElementById('addCustomTemplateBtn');
   if (addCustomTemplateBtn) {
     addCustomTemplateBtn.addEventListener('click', () => {
+      // Reset editing state when adding new template
+      editingTemplateName = null;
+      
       document.getElementById('templateModalTitle').textContent = 'Add Custom Template';
       document.getElementById('templateName').value = '';
       document.getElementById('templateSystemPrompt').value = '';
@@ -3271,17 +3282,28 @@ function setupEventListeners() {
       
       chrome.storage.local.get(['customTemplates'], (result) => {
         const templates = result.customTemplates || {};
+        
+        // If editing and the name changed, delete the old template
+        if (editingTemplateName && editingTemplateName !== name) {
+          delete templates[editingTemplateName];
+        }
+        
+        // Save the template (either new or updated)
         templates[name] = { system, user };
         
         chrome.storage.local.set({ customTemplates: templates }, () => {
           document.getElementById('templateEditorModal').classList.remove('active');
           loadCustomTemplates();
           showSuccess('aiSettingsSuccess');
+          
+          // Reset editing state
+          editingTemplateName = null;
         });
       });
     });
   }
   
+
   // Report history
   const refreshReportBtn = document.getElementById('refreshReportHistory');
   if (refreshReportBtn) {
