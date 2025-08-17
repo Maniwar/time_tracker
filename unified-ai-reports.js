@@ -1,439 +1,628 @@
 // unified-ai-reports.js - Complete refactored AI report generation system
 
 class UnifiedAIReports {
-    constructor() {
-        // Initialize enhanced templates that surface actual work
-        this.templates = {
-          productivity: {
-            system: `You are a productivity analyst who helps people understand what they accomplished. Focus on surfacing the actual tasks, projects, and work completed. Use ONLY the data provided - never invent examples or fill in blanks. If data is missing, skip that section. Always quote actual task names and descriptions from the data.
-    
-    IMPORTANT: Format your response as a professional report using rich HTML/Markdown formatting:
-    - Use proper heading hierarchy (H1, H2, H3)
-    - Bold key metrics and important findings
-    - Use tables for structured data comparisons
-    - Include bullet points and numbered lists for clarity
-    - Add horizontal rules to separate major sections
-    - Use blockquotes for important insights
-    - Apply inline code formatting for task IDs or technical terms
-    - Ensure the report is visually scannable and professional`,
-            
-            user: `Analyze my time tracking data and tell me what I actually accomplished. Focus on the real work I did, not just statistics.
-    
-    **FORMAT AS A PROFESSIONAL REPORT** using proper markup:
-    - Use tables to organize task lists and time breakdowns
-    - Bold important metrics and accomplishments
-    - Use styled lists for better readability
-    - Include visual separators between sections
-    - Apply appropriate emphasis to key findings
-    
-    ## Required Sections:
-    
-    ### 📋 **What I Actually Did**
-    Present as a formatted table or structured list:
-    - The exact task names and descriptions from the data
-    - How much time I spent on each (format: **XX hours**)
-    - Any deliverables or outputs noted
-    - Don't summarize - show me the actual work items
-    - Use a table with columns: Task Name | Time Spent | Status | Notes
-    
-    ### 🎯 **Main Accomplishments**
-    Format as a highlighted list with emphasis:
-    - Tasks marked as completed (use ✅ checkmarks)
-    - Deliverables mentioned in the data (**bold** the deliverable names)
-    - Major time investments that produced outputs
-    - Quote the actual task/project names in \`inline code\` format
-    
-    ### ⏰ **Where My Time Went**
-    Present as a structured breakdown with visual hierarchy:
-    - Create a table showing: Category | Specific Tasks | Total Time | Percentage
-    - Include any notes or context from the task descriptions
-    - Show which projects consumed the most time with **bold** emphasis
-    - Surface any recurring tasks or patterns in *italics*
-    
-    ### 🔄 **Work Patterns I Can See**
-    Use formatting to highlight patterns:
-    - Present time blocks as a formatted timeline or table
-    - Task switching patterns with actual task names in \`code blocks\`
-    - Focused work sessions on specific projects (**bold** focus periods)
-    - Meeting patterns with actual meeting names/topics in a structured list
-    
-    ### 📝 **Context from My Notes**
-    Format as styled blockquotes or callout boxes:
-    > Problems I mentioned
-    > Decisions I documented  
-    > Progress updates I noted
-    
-    Use exact quotes with proper quotation formatting
-    
-    ### 💡 **Insights from My Actual Work**
-    Present as a professional analysis with:
-    - **Key Finding:** followed by explanation
-    - Use tables to compare planned vs actual time
-    - Highlight bottlenecks in **bold red** or with ⚠️ warnings
-    - Create sub-sections with proper heading hierarchy
-    
-    ### 🎯 **Recommendations Based on What I Did**
-    Format as an actionable list with priority markers:
-    1. **High Priority:** [specific recommendation]
-    2. **Medium Priority:** [specific recommendation]
-    3. **Consider:** [specific recommendation]
-    
-    Use tables to show time-saving opportunities
-    Always reference specific tasks, projects, and actual work items from the data.`
-          },
-    
-          weekly: {
-            system: `You are a weekly review specialist who helps people see what they actually accomplished over the week. Focus on listing real tasks and projects from the data. Never invent examples or use placeholders. Always quote actual work items.
-    
-    IMPORTANT: Create a polished, professional weekly report using rich formatting:
-    - Structure content with clear visual hierarchy
-    - Use tables for daily/project breakdowns
-    - Apply consistent styling throughout
-    - Make the report suitable for sharing with managers or teams
-    - Ensure professional presentation with proper markup`,
-            
-            user: `Create a weekly review showing what I actually did this week. Focus on real tasks and accomplishments, not just metrics.
-    
-    **DELIVER A PROFESSIONAL WEEKLY REPORT** with proper formatting:
-    - Use tables for structured data
-    - Apply visual emphasis to key achievements
-    - Create clear sections with horizontal rules
-    - Make it shareable and professional-looking
-    
-    ### 📅 **This Week's Actual Work**
-    Present in a **formatted daily table**:
-    | Day | Tasks Worked On | Time Spent | Completed |
-    |-----|----------------|------------|-----------|
-    Include actual task names with proper formatting
-    
-    ### 🏆 **What I Completed**
-    **Format as a success showcase:**
-    - ✅ **Task Name** - *Time taken: X hours*
-      - Deliverable details (if any)
-      - Completion notes in blockquotes
-    - Use green highlighting or checkmarks for completed items
-    
-    ### 🔄 **Ongoing Projects**
-    Present in a **project status table**:
-    | Project | Tasks This Week | Time Invested | Progress | Next Steps |
-    |---------|----------------|---------------|----------|------------|
-    Include progress percentages where available
-    
-    ### 📊 **Project Time Breakdown**
-    Create a **formatted breakdown table**:
-    | Project/Category | Tasks | Total Time | % of Week |
-    |-----------------|-------|------------|-----------|
-    Include visual indicators for high-time items
-    
-    ### 🗓️ **Daily Activity Summary**
-    **Day-by-day formatted cards:**
-    #### Monday
-    - **Morning:** [tasks]
-    - **Afternoon:** [tasks]
-    - **Key Achievement:** [highlight]
-    
-    [Repeat for each day with consistent formatting]
-    
-    ### 📝 **My Notes and Context**
-    Format notes in **styled callout boxes:**
-    > **Challenge:** [exact quote]
-    > **Decision:** [exact quote]
-    > **Idea:** [exact quote]
-    
-    ### 🎯 **Next Week Preparation**
-    **Formatted action list with priorities:**
-    | Priority | Task/Project | Estimated Time | Deadline |
-    |----------|--------------|----------------|----------|
-    | 🔴 High  | [task name]  | X hours        | [date]   |
-    | 🟡 Medium| [task name]  | X hours        | [date]   |
-    
-    Focus entirely on what I actually did, using real task names and descriptions from the data.`
-          },
-    
-          daily: {
-            system: `You are a daily review coach who helps people understand their actual daily accomplishments. List real tasks and work done. Never use placeholders or examples not in the data.
-    
-    IMPORTANT: Format as a clean, professional daily report:
-    - Use time-based formatting for chronological flow
-    - Apply visual cues for different task types
-    - Make it easy to scan and understand at a glance
-    - Professional enough to share with team or manager`,
-            
-            user: `Show me what I actually did today based on my time tracking data.
-    
-    **CREATE A PROFESSIONAL DAILY REPORT** with proper formatting:
-    - Use timeline formatting for chronological view
-    - Apply visual markers for task status
-    - Make it scannable and well-organized
-    
-    ### 📋 **Today's Task Timeline**
-    **Format as a time-based table:**
-    | Time | Task | Duration | Category | Notes |
-    |------|------|----------|----------|-------|
-    | 9:00 AM | [exact task] | 45 min | [category] | [notes] |
-    
-    ### ✅ **What I Completed**
-    **Formatted completion list:**
-    - ✅ **[Task Name]** *(Duration: X hours)*
-      - Deliverable: [if any]
-      - Impact: [if noted]
-    
-    ### 🔄 **What I Started/Continued**
-    **Progress table:**
-    | Task/Project | Time Today | Total Progress | Next Steps |
-    |--------------|------------|----------------|------------|
-    Format with emphasis on current status
-    
-    ### 🏷️ **Categories of Work**
-    **Visual category breakdown:**Category 1: [Name] (X hours)
-    ├── Task 1: [details]
-    ├── Task 2: [details]
-    └── Task 3: [details]Category 2: [Name] (Y hours)
-    ├── Task 1: [details]
-    └── Task 2: [details]
-    
-    ### 💭 **My Notes from Today**
-    **Formatted note cards:**
-    > 📌 **Note Type:** [Context]
-    > *"Exact quote from my notes"*
-    
-    ### 🎯 **For Tomorrow**
-    **Formatted priority list:**
-    1. 🔴 **High Priority:** [Specific task to continue]
-    2. 🟡 **Medium:** [Follow-up needed]
-    3. 🟢 **Routine:** [Recurring task]
-    
-    Show me the real work I did, not statistics about it.`
-          },
-    
-          team: {
-            system: `You are a team collaboration analyst who surfaces actual collaborative work and team interactions. Use only real data about meetings, projects, and team activities. Never invent examples.
-    
-    IMPORTANT: Create a professional team collaboration report:
-    - Use tables for meeting summaries
-    - Apply formatting to highlight collaborative efforts
-    - Make it suitable for team reviews or manager updates
-    - Ensure clear visual organization`,
-            
-            user: `Analyze my actual team-related work and collaboration from the time tracking data.
-    
-    **FORMAT AS A PROFESSIONAL TEAM REPORT** with proper markup:
-    - Use structured tables for meetings and collaborations
-    - Apply visual emphasis to key team achievements
-    - Make it shareable with team members
-    
-    ### 👥 **Team Activities I Participated In**
-    **Formatted activity table:**
-    | Activity Type | Task/Meeting Name | Duration | Team Members | Outcome |
-    |---------------|------------------|----------|--------------|---------|
-    Include all collaborative work with proper categorization
-    
-    ### 📅 **Meetings I Attended**
-    **Professional meeting summary table:**
-    | Meeting | Time | Duration | Purpose | Action Items |
-    |---------|------|----------|---------|--------------|
-    Format with clear visual hierarchy
-    
-    ### 🤝 **Collaborative Work**
-    **Structured collaboration breakdown:**
-    - **Project:** [Name]
-      - **My Contribution:** [specific tasks]
-      - **Time Invested:** **X hours**
-      - **Collaborators:** [if mentioned]
-      - **Output:** [deliverables]
-    
-    ### 📊 **Project Contributions**
-    **Team project table:**
-    | Project | My Tasks | Time | Deliverables | Status |
-    |---------|----------|------|--------------|--------|
-    Use status badges: 🟢 Complete | 🟡 In Progress | 🔴 Blocked
-    
-    ### 💬 **Communication Work**
-    **Communication summary:**
-    - **📧 Emails:** [specific tasks with time]
-    - **📝 Documentation:** [created/updated with details]
-    - **💬 Updates:** [provided with context]
-    
-    ### 📝 **Team-Related Notes**
-    **Formatted decision/action log:**
-    > **Decision:** [exact quote]
-    > **Owner:** [if mentioned]
-    > **Due:** [if noted]
-    
-    ### 🎯 **Team Efficiency Insights**
-    **Key findings with visual emphasis:**
-    - **Meeting Efficiency:** [specific data with recommendations]
-    - **Collaboration Patterns:** [actual patterns observed]
-    - **Optimization Opportunities:** [specific suggestions]
-    
-    List real team interactions and collaborative work from the data.`
-          },
-    
-          client: {
-            system: `You are a client work analyst who helps track actual client projects and deliverables. Focus on real client work, projects, and tasks from the data. Never use generic examples.
-    
-    IMPORTANT: Create a professional client report suitable for:
-    - Internal project reviews
-    - Client status updates (sanitized)
-    - Billing and time tracking
-    - Portfolio documentation
-    Use proper formatting for professional presentation`,
-            
-            user: `Show me the actual client work I did based on my time tracking data.
-    
-    **CREATE A PROFESSIONAL CLIENT WORK REPORT** with polished formatting:
-    - Use tables for project breakdowns
-    - Apply visual status indicators
-    - Make it suitable for client or management review
-    
-    ### 💼 **Client Projects Worked On**
-    **Professional project summary table:**
-    | Client/Project | Tasks Completed | Time Spent | Status | Value Delivered |
-    |----------------|-----------------|------------|--------|-----------------|
-    Group by client with sub-tasks properly indented
-    
-    ### ✅ **Deliverables Completed**
-    **Formatted deliverable showcase:**
-    - ✅ **[Deliverable Name]** - *Client: [Name]*
-      - **Time Investment:** X hours
-      - **Type:** [Feature/Document/Design]
-      - **Impact:** [if noted]
-    
-    ### 🔄 **Ongoing Client Work**
-    **Active work status table:**
-    | Client | Task/Project | Progress | Time So Far | Est. Remaining |
-    |--------|--------------|----------|-------------|----------------|
-    Use progress bars or percentages where applicable
-    
-    ### 📋 **Client Task Breakdown**
-    **Detailed time allocation:**Client A: [Name] (Total: X hours)
-    ├── Development: Y hours
-    │   ├── Feature 1: [details]
-    │   └── Feature 2: [details]
-    ├── Meetings: Z hours
-    └── Documentation: W hours
-    
-    ### 💬 **Client Communication**
-    **Communication log table:**
-    | Date/Time | Client | Type | Topic | Follow-up Required |
-    |-----------|--------|------|-------|-------------------|
-    
-    ### 📝 **Client Work Notes**
-    **Formatted requirement/feedback cards:**
-    > **Client:** [Name]
-    > **Requirement:** [exact quote]
-    > **Our Response:** [action taken]
-    
-    ### ⏱️ **Time Investment by Client**
-    **Professional billing summary table:**
-    | Client | Billable Hours | Non-Billable | Total | Rate | Amount |
-    |--------|---------------|--------------|-------|------|--------|
-    Include totals row with **bold** formatting
-    
-    ### 🎯 **Client Work Insights**
-    **Executive summary with key metrics:**
-    - **Most Active Client:** [Name] - **X hours**
-    - **Highest Value Delivery:** [Project/Task]
-    - **Efficiency Opportunities:** [specific recommendations]
-    
-    Show the actual client work completed, not just summaries.`
-          },
-    
-          executive: {
-            system: `You are an executive summary specialist who distills actual work into high-level insights. Focus on real projects, decisions, and strategic work from the data. Never use placeholders.
-    
-    IMPORTANT: Create an executive-level report with:
-    - Professional formatting suitable for C-suite
-    - Clear visual hierarchy and emphasis
-    - Data-driven insights with proper presentation
-    - Actionable recommendations with visual priority
-    - Polished, boardroom-ready appearance`,
-            
-            user: `Create an executive summary of my actual work and time allocation.
-    
-    **DELIVER AN EXECUTIVE-LEVEL REPORT** with professional formatting:
-    - Use executive summary boxes
-    - Apply visual KPIs and metrics
-    - Create boardroom-quality presentation
-    
-    ### 🎯 **Executive Summary**
-    **[Create a highlighted summary box with key metrics]**
-    > **Total Productive Hours:** X
-    > **Key Deliverables:** Y
-    > **Strategic Initiatives:** Z
-    > **ROI Highlights:** [specific wins]
-    
-    ### 📊 **Strategic Time Allocation**
-    **High-level breakdown table:**
-    | Category | Projects/Initiatives | Time Investment | % of Total | ROI/Impact |
-    |----------|---------------------|-----------------|------------|------------|
-    | Strategic | [actual projects] | X hours | XX% | [outcome] |
-    | Operational | [actual tasks] | Y hours | YY% | [outcome] |
-    
-    ### ✅ **Key Accomplishments**
-    **Impact-focused achievement list:**
-    1. **🏆 [Major Achievement]**
-       - Time Investment: X hours
-       - Business Impact: [specific outcome]
-       - Value Created: [if measurable]
-    
-    ### 🔄 **Major Ongoing Initiatives**
-    **Strategic initiative dashboard:**
-    | Initiative | Progress | Time Invested | Risk Level | Next Milestone |
-    |------------|----------|---------------|------------|----------------|
-    | [Name] | XX% | Y hours | 🟢 Low | [specific] |
-    
-    ### 💡 **Strategic Decisions & Insights**
-    **Decision log with impact:**
-    > **Decision:** [exact quote]
-    > **Impact:** [observed or expected]
-    > **Follow-up:** [required actions]
-    
-    ### 🚨 **Executive Attention Required**
-    **Priority matrix:**
-    | Priority | Item | Impact | Urgency | Recommended Action |
-    |----------|------|--------|---------|-------------------|
-    | 🔴 Critical | [specific issue] | High | Immediate | [action] |
-    | 🟡 Important | [specific item] | Medium | This Week | [action] |
-    
-    ### 📈 **Performance Metrics**
-    **KPI Dashboard:**
-    - **Efficiency Score:** [based on focus time vs. meetings]
-    - **Delivery Rate:** [completed vs. planned]
-    - **Strategic vs. Operational:** [ratio with visual]
-    
-    ### 🎯 **Strategic Recommendations**
-    **Actionable recommendations with priority:**
-    1. **Immediate Action:** [specific recommendation based on data]
-    2. **Short-term Optimization:** [specific improvement]
-    3. **Long-term Strategy:** [strategic shift needed]
-    
-    Focus on surfacing the real strategic work and decisions from the time tracking data.`
-          }
-        };
-        
-        // Keep existing constructor properties
-        this.apiClient = null;
-        this.settings = {
-          mode: 'copy',
-          provider: 'openai', 
-          model: 'gpt-4o',
-          template: 'productivity',
-          dateRange: 'week',
-          temperature: 0.7,
-          maxTokens: 2000,
-          includeMultitasking: true,
-          includeDeliverables: true,
-          includeMeetings: true,
-          includeCategories: true,
-          includeDailyPatterns: true,
-          includeProductivity: true,
-          includeCharts: true
-        };
-        
-        this.currentReport = null;
-        this.initialized = false;
-      }
+  constructor() {
+      // Initialize enhanced templates that surface actual work
+      this.templates = {
+        productivity: {
+          system: `You are a productivity analyst who helps people understand what they accomplished. Focus on surfacing the actual tasks, projects, and work completed. Use ONLY the data provided - never invent examples or fill in blanks. If data is missing, skip that section. Always quote actual task names and descriptions from the data.
+  
+  IMPORTANT: Format your response as a professional report using rich HTML/Markdown formatting:
+  - Use proper heading hierarchy (H1, H2, H3)
+  - Bold key metrics and important findings
+  - Use tables for structured data comparisons
+  - Include bullet points and numbered lists for clarity
+  - Add horizontal rules to separate major sections
+  - Use blockquotes for important insights
+  - Apply inline code formatting for task IDs or technical terms
+  - Ensure the report is visually scannable and professional`,
+          
+          user: `Analyze my time tracking data and tell me what I actually accomplished. Focus on the real work I did, not just statistics.
+  
+  **FORMAT AS A PROFESSIONAL REPORT** using proper markup:
+  - Use tables to organize task lists and time breakdowns
+  - Bold important metrics and accomplishments
+  - Use styled lists for better readability
+  - Include visual separators between sections
+  - Apply appropriate emphasis to key findings
+  
+  ## Required Sections:
+  
+  ### 📋 **What I Actually Did**
+  Present as a formatted table or structured list:
+  - The exact task names and descriptions from the data
+  - How much time I spent on each (format: **XX hours**)
+  - Any deliverables or outputs noted
+  - Don't summarize - show me the actual work items
+  - Use a table with columns: Task Name | Time Spent | Status | Notes
+  
+  ### 🎯 **Main Accomplishments**
+  Format as a highlighted list with emphasis:
+  - Tasks marked as completed (use ✅ checkmarks)
+  - Deliverables mentioned in the data (**bold** the deliverable names)
+  - Major time investments that produced outputs
+  - Quote the actual task/project names in \`inline code\` format
+  
+  ### ⏰ **Where My Time Went**
+  Present as a structured breakdown with visual hierarchy:
+  - Create a table showing: Category | Specific Tasks | Total Time | Percentage
+  - Include any notes or context from the task descriptions
+  - Show which projects consumed the most time with **bold** emphasis
+  - Surface any recurring tasks or patterns in *italics*
+  
+  ### 🔄 **Work Patterns I Can See**
+  Use formatting to highlight patterns:
+  - Present time blocks as a formatted timeline or table
+  - Task switching patterns with actual task names in \`code blocks\`
+  - Focused work sessions on specific projects (**bold** focus periods)
+  - Meeting patterns with actual meeting names/topics in a structured list
+  
+  ### 📝 **Context from My Notes**
+  Format as styled blockquotes or callout boxes:
+  > Problems I mentioned
+  > Decisions I documented  
+  > Progress updates I noted
+  
+  Use exact quotes with proper quotation formatting
+  
+  ### 💡 **Insights from My Actual Work**
+  Present as a professional analysis with:
+  - **Key Finding:** followed by explanation
+  - Use tables to compare planned vs actual time if goals exist
+  - Highlight bottlenecks in **bold** or with ⚠️ warnings
+  - Create sub-sections with proper heading hierarchy
+  
+  ### 🎯 **Recommendations Based on What I Did**
+  Format as an actionable list with priority markers:
+  1. **High Priority:** [specific recommendation]
+  2. **Medium Priority:** [specific recommendation]
+  3. **Consider:** [specific recommendation]
+  
+  Use tables to show time-saving opportunities
+  Always reference specific tasks, projects, and actual work items from the data.`
+        },
+  
+        weekly: {
+          system: `You are a weekly review specialist who helps people see what they actually accomplished over the week. Focus on listing real tasks and projects from the data. Never invent examples or use placeholders. Always quote actual work items.
+  
+  IMPORTANT: Create a polished, professional weekly report using rich formatting:
+  - Structure content with clear visual hierarchy
+  - Use tables for daily/project breakdowns
+  - Apply consistent styling throughout
+  - Make the report suitable for sharing with managers or teams
+  - Ensure professional presentation with proper markup`,
+          
+          user: `Create a weekly review showing what I actually did this week. Focus on real tasks and accomplishments, not just metrics.
+  
+  **DELIVER A PROFESSIONAL WEEKLY REPORT** with proper formatting:
+  - Use tables for structured data
+  - Apply visual emphasis to key achievements
+  - Create clear sections with horizontal rules
+  - Make it shareable and professional-looking
+  
+  ### 📅 **This Week's Actual Work**
+  Present in a **formatted daily table**:
+  | Day | Tasks Worked On | Time Spent | Completed |
+  |-----|----------------|------------|-----------|
+  Include actual task names with proper formatting
+  
+  ### 🏆 **What I Completed**
+  **Format as a success showcase:**
+  - ✅ **Task Name** - *Time taken: X hours*
+    - Deliverable details (if any)
+    - Completion notes in blockquotes
+  - Use green highlighting or checkmarks for completed items
+  
+  ### 🔄 **Ongoing Projects**
+  Present in a **project status table**:
+  | Project | Tasks This Week | Time Invested | Progress | Next Steps |
+  |---------|----------------|---------------|----------|------------|
+  Include progress percentages where available
+  
+  ### 📊 **Project Time Breakdown**
+  Create a **formatted breakdown table**:
+  | Project/Category | Tasks | Total Time | % of Week |
+  |-----------------|-------|------------|-----------|
+  Include visual indicators for high-time items
+  
+  ### 🗓️ **Daily Activity Summary**
+  **Day-by-day formatted cards:**
+  #### Monday
+  - **Morning:** [tasks]
+  - **Afternoon:** [tasks]
+  - **Key Achievement:** [highlight]
+  
+  [Repeat for each day with consistent formatting]
+  
+  ### 📝 **My Notes and Context**
+  Format notes in **styled callout boxes:**
+  > **Challenge:** [exact quote]
+  > **Decision:** [exact quote]
+  > **Idea:** [exact quote]
+  
+  ### 🎯 **Next Week Preparation**
+  **Formatted action list with priorities:**
+  | Priority | Task/Project | Estimated Time | Deadline |
+  |----------|--------------|----------------|----------|
+  | 🔴 High  | [task name]  | X hours        | [date]   |
+  | 🟡 Medium| [task name]  | X hours        | [date]   |
+  
+  Focus entirely on what I actually did, using real task names and descriptions from the data.`
+        },
+  
+        daily: {
+          system: `You are a daily review coach who helps people understand their actual daily accomplishments. List real tasks and work done. Never use placeholders or examples not in the data.
+  
+  IMPORTANT: Format as a clean, professional daily report:
+  - Use time-based formatting for chronological flow
+  - Apply visual cues for different task types
+  - Make it easy to scan and understand at a glance
+  - Professional enough to share with team or manager`,
+          
+          user: `Show me what I actually did today based on my time tracking data.
+  
+  **CREATE A PROFESSIONAL DAILY REPORT** with proper formatting:
+  - Use timeline formatting for chronological view
+  - Apply visual markers for task status
+  - Make it scannable and well-organized
+  
+  ### 📋 **Today's Task Timeline**
+  **Format as a time-based table:**
+  | Time | Task | Duration | Category | Notes |
+  |------|------|----------|----------|-------|
+  | 9:00 AM | [exact task] | 45 min | [category] | [notes] |
+  
+  ### ✅ **What I Completed**
+  **Formatted completion list:**
+  - ✅ **[Task Name]** *(Duration: X hours)*
+    - Deliverable: [if any]
+    - Goal connection: [if any]
+  
+  ### 🔄 **What I Started/Continued**
+  **Progress table:**
+  | Task/Project | Time Today | Total Progress | Next Steps |
+  |--------------|------------|----------------|------------|
+  Format with emphasis on current status
+  
+  ### 🏷️ **Categories of Work**
+  **Visual category breakdown:**
+  Category 1: [Name] (X hours)
+  ├── Task 1: [details]
+  ├── Task 2: [details]
+  └── Task 3: [details]
+  
+  Category 2: [Name] (Y hours)
+  ├── Task 1: [details]
+  └── Task 2: [details]
+  
+  ### 💭 **My Notes from Today**
+  **Formatted note cards:**
+  > 📌 **Note Type:** [Context]
+  > *"Exact quote from my notes"*
+  
+  ### 🎯 **For Tomorrow**
+  **Formatted priority list:**
+  1. 🔴 **High Priority:** [Specific task to continue]
+  2. 🟡 **Medium:** [Follow-up needed]
+  3. 🟢 **Routine:** [Recurring task]
+  
+  Show me the real work I did, not statistics about it.`
+        },
+  
+        team: {
+          system: `You are a team collaboration analyst who surfaces actual collaborative work and team interactions. Use only real data about meetings, projects, and team activities. Never invent examples.
+  
+  IMPORTANT: Create a professional team collaboration report:
+  - Use tables for meeting summaries
+  - Apply formatting to highlight collaborative efforts
+  - Make it suitable for team reviews or manager updates
+  - Ensure clear visual organization
+  - Skip sections if data is not available`,
+          
+          user: `Analyze my actual team-related work and collaboration from the time tracking data.
+  
+  **FORMAT AS A PROFESSIONAL TEAM REPORT** with proper markup:
+  - Use structured tables for meetings and collaborations
+  - Apply visual emphasis to key team achievements
+  - Make it shareable with team members
+  
+  ### 👥 **Team Activities I Participated In**
+  **Formatted activity table:**
+  | Activity Type | Task/Meeting Name | Duration | Category | Notes |
+  |---------------|------------------|----------|----------|-------|
+  Include all collaborative work with proper categorization
+  
+  ### 📅 **Meetings I Attended**
+  **Professional meeting summary table:**
+  | Meeting | Time | Duration | Purpose | Notes |
+  |---------|------|----------|---------|-------|
+  Format with clear visual hierarchy
+  
+  ### 🤝 **Collaborative Work**
+  **Structured collaboration breakdown:**
+  - **Project:** [Name]
+    - **My Contribution:** [specific tasks]
+    - **Time Invested:** **X hours**
+    - **Output:** [deliverables if any]
+  
+  ### 📊 **Project Contributions**
+  **Team project table:**
+  | Project | My Tasks | Time | Deliverables | Status |
+  |---------|----------|------|--------------|--------|
+  Use status badges: 🟢 Complete | 🟡 In Progress | 🔴 Blocked
+  
+  ### 💬 **Communication Work**
+  **Communication summary (if data exists):**
+  - **📧 Emails:** [specific tasks with time]
+  - **📝 Documentation:** [created/updated with details]
+  - **💬 Updates:** [provided with context]
+  
+  ### 📝 **Team-Related Notes**
+  **Formatted notes from the data:**
+  > **Note:** [exact quote]
+  > **Context:** [if provided]
+  
+  ### 🎯 **Team Efficiency Insights**
+  **Key findings with visual emphasis:**
+  - **Meeting Time:** [total time in meetings]
+  - **Collaboration Patterns:** [actual patterns observed]
+  - **Optimization Opportunities:** [specific suggestions]
+  
+  List real team interactions and collaborative work from the data.`
+        },
+  
+        client: {
+          system: `You are a client work analyst who helps track actual projects and deliverables. Focus on real work, projects, and tasks from the data. Never use generic examples. Skip any sections where data is not available.
+  
+  IMPORTANT: Create a professional project report suitable for:
+  - Internal project reviews
+  - Status updates
+  - Time tracking summaries
+  - Portfolio documentation
+  Use proper formatting for professional presentation`,
+          
+          user: `Show me the actual project work I did based on my time tracking data.
+  
+  **CREATE A PROFESSIONAL PROJECT REPORT** with polished formatting:
+  - Use tables for project breakdowns
+  - Apply visual status indicators
+  - Make it suitable for management review
+  
+  ### 💼 **Projects Worked On**
+  **Professional project summary table:**
+  | Project/Category | Tasks Completed | Time Spent | Status | Notes |
+  |------------------|-----------------|------------|--------|-------|
+  Group by project with sub-tasks properly indented
+  
+  ### ✅ **Deliverables Completed**
+  **Formatted deliverable showcase:**
+  - ✅ **[Deliverable Name]** 
+    - **Time Investment:** X hours
+    - **Related Goal:** [if connected]
+    - **Notes:** [if any]
+  
+  ### 🔄 **Ongoing Work**
+  **Active work status table:**
+  | Project | Task | Time So Far | Status | Next Steps |
+  |---------|------|-------------|--------|------------|
+  Use progress indicators where applicable
+  
+  ### 📋 **Task Breakdown by Project**
+  **Detailed time allocation:**
+  Project A: [Name] (Total: X hours)
+  ├── Task Type 1: Y hours
+  │   ├── Subtask 1: [details]
+  │   └── Subtask 2: [details]
+  ├── Task Type 2: Z hours
+  └── Task Type 3: W hours
+  
+  ### 📝 **Project Notes**
+  **Formatted notes and context:**
+  > **Project:** [Name]
+  > **Note:** [exact quote from data]
+  > **Action:** [if any]
+  
+  ### ⏱️ **Time Investment Summary**
+  **Professional time tracking table:**
+  | Project/Category | Tasks | Time Spent | % of Total | Priority |
+  |------------------|-------|------------|------------|----------|
+  Include totals row with **bold** formatting
+  
+  ### 🎯 **Project Insights**
+  **Executive summary with key metrics:**
+  - **Most Time-Intensive:** [Project] - **X hours**
+  - **Completed Deliverables:** [Count and list]
+  - **Efficiency Opportunities:** [specific recommendations]
+  
+  Show the actual project work completed, not just summaries.`
+        },
+  
+        executive: {
+          system: `You are an executive summary specialist who distills actual work into high-level insights. Focus on real projects, decisions, and strategic work from the data. Never use placeholders. Skip sections where data is not available.
+  
+  IMPORTANT: Create an executive-level report with:
+  - Professional formatting suitable for leadership
+  - Clear visual hierarchy and emphasis
+  - Data-driven insights with proper presentation
+  - Actionable recommendations with visual priority
+  - Polished, professional appearance`,
+          
+          user: `Create an executive summary of my actual work and time allocation.
+  
+  **DELIVER AN EXECUTIVE-LEVEL REPORT** with professional formatting:
+  - Use executive summary boxes
+  - Apply visual KPIs and metrics
+  - Create professional presentation
+  
+  ### 🎯 **Executive Summary**
+  **[Create a highlighted summary box with key metrics]**
+  > **Total Productive Hours:** X
+  > **Tasks Completed:** Y
+  > **Key Categories:** [list top 3]
+  > **Goals Progress:** [if tracked]
+  
+  ### 📊 **Strategic Time Allocation**
+  **High-level breakdown table:**
+  | Category | Projects/Tasks | Time Investment | % of Total | Notes |
+  |----------|----------------|-----------------|------------|-------|
+  | [Category] | [actual projects] | X hours | XX% | [context] |
+  
+  ### ✅ **Key Accomplishments**
+  **Impact-focused achievement list:**
+  1. **🏆 [Major Task/Project]**
+     - Time Investment: X hours
+     - Deliverables: [if any]
+     - Goal Connection: [if tracked]
+  
+  ### 🔄 **Major Ongoing Work**
+  **Strategic work dashboard:**
+  | Project/Task | Progress | Time Invested | Category | Next Steps |
+  |--------------|----------|---------------|----------|------------|
+  | [Name] | [status] | Y hours | [category] | [specific] |
+  
+  ### 💡 **Work Insights**
+  **Key observations from the data:**
+  > **Pattern:** [observed pattern]
+  > **Finding:** [data-based finding]
+  > **Opportunity:** [improvement area]
+  
+  ### 📈 **Performance Metrics**
+  **KPI Dashboard (based on available data):**
+  - **Focus Time:** [longest uninterrupted sessions]
+  - **Task Completion:** [completed vs started]
+  - **Category Distribution:** [top categories by time]
+  - **Multi-tasking:** [if tracked]
+  
+  ### 🎯 **Strategic Recommendations**
+  **Actionable recommendations with priority:**
+  1. **Immediate Action:** [specific recommendation based on data]
+  2. **Short-term Optimization:** [specific improvement]
+  3. **Long-term Consideration:** [strategic suggestion]
+  
+  Focus on surfacing the real work and patterns from the time tracking data.`
+        },
+
+        // NEW TEMPLATES ADDED BELOW
+
+        focus: {
+          system: `You are a deep work analyst who identifies focus patterns and concentration blocks. Use ONLY actual data provided. Never fabricate examples. If data for a section doesn't exist, skip it.
+          
+          IMPORTANT: Create a professional focus analysis report:
+          - Use visual formatting to highlight focus periods
+          - Apply time-based analysis with proper structure
+          - Make insights actionable and data-driven
+          - Professional presentation suitable for personal optimization`,
+          
+          user: `Analyze my focus time and deep work sessions from the time tracking data.
+          
+          **CREATE A FOCUS ANALYSIS REPORT** with professional formatting:
+          
+          ### 🎯 **Focus Sessions Analysis**
+          **Deep work session table:**
+          | Session Start | Task/Project | Duration | Interruptions | Category |
+          |---------------|--------------|----------|---------------|----------|
+          List actual uninterrupted work blocks
+          
+          ### ⏱️ **Longest Focus Blocks**
+          **Top concentration periods:**
+          1. **[Task Name]** - *Duration: X hours*
+             - Time: [start-end]
+             - Category: [category]
+             - Notes: [if any]
+          
+          ### 🔄 **Context Switching Patterns**
+          **Task switching analysis:**
+          | Time Period | Tasks Switched Between | Frequency | Impact |
+          |-------------|------------------------|-----------|--------|
+          Show actual task transitions
+          
+          ### 📊 **Multi-tasking Analysis**
+          **If multi-tasking data exists:**
+          - **Total Multi-task Time:** X hours
+          - **Single-task Time:** Y hours
+          - **Most Common Combinations:** [actual combinations]
+          
+          ### 🕐 **Peak Focus Hours**
+          **Time-of-day analysis:**
+          | Hour Range | Focus Sessions | Avg Duration | Best Tasks |
+          |------------|----------------|--------------|------------|
+          Based on actual session data
+          
+          ### 💡 **Focus Insights**
+          **Data-driven observations:**
+          - **Best Focus Day:** [day with longest sessions]
+          - **Average Session Length:** [calculated from data]
+          - **Most Productive Category:** [by focus time]
+          
+          ### 🎯 **Focus Optimization Recommendations**
+          Based on your actual patterns:
+          1. **Protect Peak Hours:** [specific times from data]
+          2. **Batch Similar Tasks:** [categories that work well together]
+          3. **Minimize Switches:** [specific problem areas]
+          
+          Use only real session data from the time tracking.`
+        },
+
+        technical: {
+          system: `You are a technical work analyst focusing on development, debugging, and technical tasks. Use ONLY real data from time tracking. Never invent technical work that wasn't logged. Skip sections without relevant data.
+          
+          IMPORTANT: Create a professional technical work report:
+          - Organize by technical categories and projects
+          - Use proper formatting for code-related items
+          - Make it suitable for technical reviews or standups
+          - Focus on actual technical work completed`,
+          
+          user: `Analyze my technical and development work from the time tracking data.
+          
+          **CREATE A TECHNICAL WORK REPORT** with professional formatting:
+          
+          ### 💻 **Development Work**
+          **Technical tasks completed:**
+          | Task | Project/Category | Time Spent | Status | Notes |
+          |------|------------------|------------|--------|-------|
+          List actual development tasks
+          
+          ### 🔧 **Technical Activities Breakdown**
+          **Categorized technical work:**
+          - **Coding/Development:** X hours
+            - \`[Specific task 1]\`
+            - \`[Specific task 2]\`
+          - **Debugging/Testing:** Y hours
+            - \`[Specific task]\`
+          - **Documentation:** Z hours
+            - \`[Specific task]\`
+          - **Code Review:** W hours
+            - \`[Specific task]\`
+          
+          ### 🐛 **Issues and Debugging**
+          **If debugging tasks exist:**
+          | Issue/Bug | Time Spent | Resolution | Category |
+          |-----------|------------|------------|----------|
+          From actual task descriptions
+          
+          ### 📚 **Technical Documentation**
+          **Documentation work (if any):**
+          - **Created:** [list from tasks]
+          - **Updated:** [list from tasks]
+          - **Time Investment:** X hours total
+          
+          ### 🔄 **Technical Projects**
+          **Project-based view:**
+          Project: [Name]
+          ├── Development: X hours
+          ├── Testing: Y hours
+          └── Documentation: Z hours
+          
+          ### 📝 **Technical Notes**
+          **From task notes (if any):**
+          > **Challenge:** [exact quote]
+          > **Solution:** [exact quote]
+          > **Learning:** [exact quote]
+          
+          ### 📊 **Technical Metrics**
+          - **Total Technical Time:** X hours
+          - **Most Time:** [category/project]
+          - **Completed Items:** [count]
+          
+          ### 🎯 **Technical Recommendations**
+          Based on your work patterns:
+          1. **Efficiency:** [specific suggestion from data]
+          2. **Focus Area:** [where most time spent]
+          3. **Optimization:** [specific improvement]
+          
+          Show only actual technical work from the data.`
+        },
+
+        patterns: {
+          system: `You are a time pattern analyst who identifies work rhythms and habits. Use ONLY provided data to find actual patterns. Never invent patterns or examples. Skip any analysis where insufficient data exists.
+          
+          IMPORTANT: Create a professional pattern analysis report:
+          - Use data visualization techniques in formatting
+          - Apply statistical analysis where possible
+          - Make patterns clear and actionable
+          - Professional presentation for optimization`,
+          
+          user: `Identify patterns in my work habits from the time tracking data.
+          
+          **CREATE A PATTERN ANALYSIS REPORT** with visual formatting:
+          
+          ### 📊 **Daily Time Patterns**
+          **Work distribution by day:**
+          | Day | Total Hours | Tasks | Top Category | Peak Hours |
+          |-----|-------------|-------|--------------|------------|
+          From actual daily data
+          
+          ### 🕐 **Hourly Distribution**
+          **When work happens:**
+          | Hour Range | Frequency | Typical Tasks | Avg Duration |
+          |------------|-----------|---------------|--------------|
+          | Morning (6-12) | X times | [categories] | Y mins |
+          | Afternoon (12-18) | X times | [categories] | Y mins |
+          | Evening (18-24) | X times | [categories] | Y mins |
+          
+          ### 🔄 **Recurring Activities**
+          **Tasks that repeat:**
+          | Task/Type | Frequency | Typical Duration | Category |
+          |-----------|-----------|------------------|----------|
+          Identify actual recurring patterns
+          
+          ### 📈 **Weekly Rhythm**
+          **Week-over-week patterns:**
+          - **Most Productive Day:** [day] with X hours
+          - **Least Active Day:** [day] with Y hours
+          - **Consistent Activities:** [tasks that appear weekly]
+          
+          ### 🎯 **Category Patterns**
+          **How categories distribute:**
+          | Category | Avg Daily Time | Peak Day | Peak Time | Typical Duration |
+          |----------|----------------|----------|-----------|------------------|
+          Based on actual category data
+          
+          ### 🔍 **Work Session Patterns**
+          **Session characteristics:**
+          - **Average Session Length:** X minutes
+          - **Sessions per Day:** Y average
+          - **Longest Sessions:** [category/type]
+          - **Shortest Sessions:** [category/type]
+          
+          ### 💡 **Pattern Insights**
+          **Observable trends from data:**
+          - **Consistency:** [most consistent activities]
+          - **Variability:** [most variable activities]
+          - **Clustering:** [tasks that occur together]
+          
+          ### 🎯 **Optimization Opportunities**
+          Based on identified patterns:
+          1. **Leverage Peak Times:** [specific times from data]
+          2. **Batch Similar Work:** [categories that cluster]
+          3. **Routine Optimization:** [improve recurring tasks]
+          
+          Analyze only actual patterns present in the data.`
+        }
+      };
+      
+      // Keep existing constructor properties
+      this.apiClient = null;
+      this.settings = {
+        mode: 'copy',
+        provider: 'openai', 
+        model: 'gpt-4o',
+        template: 'productivity',
+        dateRange: 'week',
+        temperature: 0.7,
+        maxTokens: 16000,
+        includeMultitasking: true,
+        includeDeliverables: true,
+        includeMeetings: true,
+        includeCategories: true,
+        includeDailyPatterns: true,
+        includeProductivity: true,
+        includeCharts: true
+      };
+      
+      this.currentReport = null;
+      this.initialized = false;
+    }
     // Initialize the AI Reports system
     async init() {
       try {
