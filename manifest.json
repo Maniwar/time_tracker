@@ -1,17 +1,25 @@
 {
   "manifest_version": 3,
-  "name": "Universal Time Tracker - Google & Outlook",
-  "version": "2.2.0",
-  "description": "Track time with Google Calendar and Outlook meetings, multi-tasking support, auto-tracking, and Excel export.",
+  "name": "Universal Time Tracker with AI Reports",
+  "version": "2.3.0",
+  "description": "Advanced time tracking with calendar sync, multi-tasking support, AI-powered reports, and comprehensive analytics.",
+  
   "permissions": [
     "storage",
     "identity",
-    "alarms"
+    "alarms",
+    "unlimitedStorage"
   ],
+  
   "host_permissions": [
     "https://www.googleapis.com/*",
-    "https://graph.microsoft.com/*"
+    "https://graph.microsoft.com/*",
+    "https://api.openai.com/*",
+    "https://api.anthropic.com/*",
+    "https://generativelanguage.googleapis.com/*",
+    "https://login.microsoftonline.com/*"
   ],
+  
   "oauth2": {
     "client_id": "785918599575-g6q6rtfgadrgr48vmt93olqb034m6c46.apps.googleusercontent.com",
     "scopes": [
@@ -19,21 +27,51 @@
       "https://www.googleapis.com/auth/userinfo.email"
     ]
   },
+  
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "background.js",
+    "type": "module"
   },
+  
   "action": {
     "default_popup": "popup.html",
     "default_icon": {
       "16": "icon16.png",
       "48": "icon48.png",
       "128": "icon128.png"
-    }
+    },
+    "default_title": "Universal Time Tracker"
   },
+  
   "options_page": "options.html",
+  
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  },
+  
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "chart.min.js",
+        "xlsx.min.js",
+        "unified-ai-reports.js",
+        "api-client.js"
+      ],
+      "matches": ["<all_urls>"]
+    }
+  ],
+  
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'; connect-src 'self' https://api.openai.com https://api.anthropic.com https://generativelanguage.googleapis.com https://www.googleapis.com https://graph.microsoft.com https://login.microsoftonline.com;"
+  },
+  
   "icons": {
     "16": "icon16.png",
     "48": "icon48.png",
     "128": "icon128.png"
-  }
+  },
+  
+  "author": "Maniwar",
+  "homepage_url": "https://github.com/Maniwar/time_tracker"
 }

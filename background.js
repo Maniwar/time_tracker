@@ -103,7 +103,25 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true;
   }
 });
-
+// Listen for custom models updates
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request.action === 'customModelsUpdated') {
+    // Notify all tabs and popups about the update
+    chrome.runtime.sendMessage({ action: 'reloadCustomModels' });
+    
+    // Also notify all tabs
+    chrome.tabs.query({}, (tabs) => {
+      tabs.forEach(tab => {
+        chrome.tabs.sendMessage(tab.id, { action: 'reloadCustomModels' }).catch(() => {
+          // Ignore errors for tabs that don't have content scripts
+        });
+      });
+    });
+  }
+  
+  
+  return true; // Keep the message channel open for async responses
+});
 // Handle OAuth authentication with PKCE
 async function handleAuthentication() {
   try {
