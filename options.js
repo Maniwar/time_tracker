@@ -201,7 +201,21 @@ function exportGoalsAndDeliverables() {
     
     Object.values(timeEntries).forEach(dayEntries => {
       dayEntries.forEach(entry => {
-        if (entry.deliverableId) {
+        // Process allocations for meetings with multiple deliverables
+        if (entry.deliverableAllocations) {
+          Object.entries(entry.deliverableAllocations).forEach(([delivId, percentage]) => {
+            const hours = (entry.duration * percentage / 100) / 3600000;
+            deliverableTimeSpent[delivId] = 
+              (deliverableTimeSpent[delivId] || 0) + hours;
+            
+            const deliverable = deliverables.find(d => d.id === delivId);
+            if (deliverable && deliverable.goalId) {
+              goalTimeSpent[deliverable.goalId] = 
+                (goalTimeSpent[deliverable.goalId] || 0) + hours;
+            }
+          });
+        } else if (entry.deliverableId) {
+          // Process regular entries without allocation
           const hours = entry.duration / 3600000;
           deliverableTimeSpent[entry.deliverableId] = 
             (deliverableTimeSpent[entry.deliverableId] || 0) + hours;
@@ -214,7 +228,6 @@ function exportGoalsAndDeliverables() {
         }
       });
     });
-    
     const goalsData = goals.map((goal, index) => {
       const goalDeliverables = deliverables.filter(d => d.goalId === goal.id);
       const activeDeliverables = goalDeliverables.filter(d => !d.completed);
@@ -245,7 +258,14 @@ function exportGoalsAndDeliverables() {
       
       let entryCount = 0;
       Object.values(timeEntries).forEach(dayEntries => {
-        entryCount += dayEntries.filter(e => e.deliverableId === deliverable.id).length;
+        dayEntries.forEach(entry => {
+          // Count allocated entries
+          if (entry.deliverableAllocations && entry.deliverableAllocations[deliverable.id]) {
+            entryCount++;
+          } else if (entry.deliverableId === deliverable.id) {
+            entryCount++;
+          }
+        });
       });
       
       return {
@@ -2291,7 +2311,21 @@ function loadGoals() {
     
     Object.values(timeEntries).forEach(dayEntries => {
       dayEntries.forEach(entry => {
-        if (entry.deliverableId) {
+        // Process allocations for meetings with multiple deliverables
+        if (entry.deliverableAllocations) {
+          Object.entries(entry.deliverableAllocations).forEach(([delivId, percentage]) => {
+            const allocatedDuration = entry.duration * percentage / 100;
+            deliverableTimeSpent[delivId] = 
+              (deliverableTimeSpent[delivId] || 0) + allocatedDuration;
+            
+            const deliverable = deliverables.find(d => d.id === delivId);
+            if (deliverable && deliverable.goalId) {
+              goalTimeSpent[deliverable.goalId] = 
+                (goalTimeSpent[deliverable.goalId] || 0) + allocatedDuration;
+            }
+          });
+        } else if (entry.deliverableId) {
+          // Process regular entries without allocation
           deliverableTimeSpent[entry.deliverableId] = 
             (deliverableTimeSpent[entry.deliverableId] || 0) + entry.duration;
           
@@ -2305,7 +2339,18 @@ function loadGoals() {
     });
     
     todayEntries.forEach(entry => {
-      if (entry.deliverableId) {
+      // Process allocations for meetings with multiple deliverables
+      if (entry.deliverableAllocations) {
+        Object.entries(entry.deliverableAllocations).forEach(([delivId, percentage]) => {
+          const allocatedDuration = entry.duration * percentage / 100;
+          const deliverable = deliverables.find(d => d.id === delivId);
+          if (deliverable && deliverable.goalId) {
+            todayGoalTime[deliverable.goalId] = 
+              (todayGoalTime[deliverable.goalId] || 0) + allocatedDuration;
+          }
+        });
+      } else if (entry.deliverableId) {
+        // Process regular entries without allocation
         const deliverable = deliverables.find(d => d.id === entry.deliverableId);
         if (deliverable && deliverable.goalId) {
           todayGoalTime[deliverable.goalId] = 
