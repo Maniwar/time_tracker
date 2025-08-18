@@ -75,8 +75,6 @@ Time doesn't just slip through our fingers—it gets absorbed by meetings, "quic
 
 </details>
 
-
-
 ## ✨ Features
 
 ### 🔥 Core Features
@@ -86,6 +84,16 @@ Time doesn't just slip through our fingers—it gets absorbed by meetings, "quic
 - **Quick Actions** - One-click tracking for your most common tasks
 - **Manual Entry** - Forgot to track? Add time after the fact
 - **Goals & Deliverables** - Connect time to actual outcomes
+- **Impact Tracking** - Define what you want to achieve and track progress
+
+### 🤖 AI-Powered Features (NEW!)
+- **AI Report Generation** - Generate professional reports using OpenAI, Anthropic Claude, or Google Gemini
+- **Custom AI Models** - Add new models as they become available
+- **Custom Report Templates** - Create and save your own analysis templates
+- **Smart Prompts** - Pre-built templates for productivity, executive, and team reports
+- **Copy Mode** - Generate formatted prompts to use with any LLM
+- **API Mode** - Direct integration with AI providers
+- **Report History** - Save and manage your generated reports
 
 ### 📈 Analytics & Reporting
 - **Excel Export** - Comprehensive reports with multiple analysis sheets
@@ -94,6 +102,8 @@ Time doesn't just slip through our fingers—it gets absorbed by meetings, "quic
 - **Productivity Scoring** - Understand focus time vs. fragmented time
 - **Time Saved Tracking** - Know when meetings end early
 - **Category Breakdowns** - Visual charts of where time really goes
+- **Deliverable Analysis** - Track hours spent on specific outcomes
+- **Goal Progress Tracking** - Monitor achievement against targets
 
 ### 🎯 Unique Features
 - **Dual Timer Display** - See both meeting and task time simultaneously
@@ -102,6 +112,8 @@ Time doesn't just slip through our fingers—it gets absorbed by meetings, "quic
 - **Goal Progress** - Daily targets with visual progress bars
 - **Auto-sync** - Pull meetings from multiple calendars
 - **Privacy First** - All data stays local in your browser
+- **Custom Categories** - Define your own task types
+- **Productivity Insights** - Daily patterns and focus metrics
 
 ## 🚀 Installation
 
@@ -122,214 +134,368 @@ cd time_tracker
 # No build needed - it's vanilla JS!
 ```
 
-## 🔧 Setup
+## 🔧 Complete Setup Guide
 
-### 1. Connect Your Calendar (Optional but Recommended)
+### 📅 1. Calendar Integration
 
-#### Google Calendar (Easy - One Click)
-1. Click extension icon
-2. Click **Connect** next to Google Calendar
-3. Sign in and approve permissions
-4. Done! Meetings auto-populate
+#### Google Calendar Setup (Easy - One Click)
+1. Click the extension icon in your toolbar
+2. In the Calendar Setup section, click **Connect** next to Google Calendar
+3. Sign in with your Google account
+4. Approve the requested permissions (read-only calendar access)
+5. Done! Your meetings will auto-populate
 
-#### Outlook Calendar (Requires Azure Setup)
-1. [Register an app in Azure](https://portal.azure.com/#blade/Microsoft_AAD_RegisteredApps/ApplicationsListBlade)
-2. Add redirect URI: `https://[extension-id].chromiumapp.org/`
-3. Copy Application (client) ID
-4. Right-click extension → Options → Paste Client ID
-5. Return to popup → Connect Outlook
+#### Outlook Calendar Setup (Requires Azure Configuration)
 
-### 2. Configure Settings
-- **Quick Actions**: Choose your 6 most-used task types
-- **Categories**: Add custom categories for your workflow
-- **Auto-Tracking**: Enable to never miss a meeting
-- **Goals**: Set daily targets and track progress
+##### Step 1: Create Azure App Registration
+1. Go to [Azure Portal](https://portal.azure.com)
+2. Navigate to **Azure Active Directory** → **App registrations**
+3. Click **New registration**
+4. Configure your app:
+   - **Name**: Universal Time Tracker (or any name you prefer)
+   - **Supported account types**: Select based on your needs:
+     - Personal Microsoft accounts only (for personal use)
+     - Accounts in any organizational directory (for work accounts)
+     - Both (recommended for maximum flexibility)
+   - **Redirect URI**: 
+     - Select "Single-page application (SPA)" from dropdown
+     - Get your extension ID from `chrome://extensions/`
+     - Enter: `https://[YOUR-EXTENSION-ID].chromiumapp.org/`
+     - Example: `https://abcdefghijklmnopqrstuvwxyz.chromiumapp.org/`
 
-## 💡 How to Use
+##### Step 2: Configure App Permissions
+1. In your app registration, go to **API permissions**
+2. Click **Add a permission**
+3. Select **Microsoft Graph**
+4. Choose **Delegated permissions**
+5. Add these permissions:
+   - `User.Read` (to get user info)
+   - `Calendars.Read` (to read calendar events)
+   - `offline_access` (for token refresh)
+6. Click **Add permissions**
+7. (Optional) Click **Grant admin consent** if you're an admin
 
-### Basic Time Tracking
+##### Step 3: Configure Extension
+1. Copy your **Application (client) ID** from Azure Overview page
+2. Open the extension options:
+   - Right-click extension icon → **Options**
+   - Or go to `chrome://extensions/` → Universal Time Tracker → Details → Extension options
+3. Go to **Overview** tab → **Calendar Accounts** section
+4. Paste your Client ID in the Outlook section
+5. Click **Save Client ID**
+6. Return to extension popup → Click **Connect** next to Outlook
 
-#### Quick Start (Recommended)
+### 🤖 2. AI Report Features Setup
+
+The extension supports three AI providers for report generation. You can use any or all of them.
+
+#### OpenAI Setup
+1. Go to [OpenAI Platform](https://platform.openai.com)
+2. Sign in or create an account
+3. Navigate to [API Keys](https://platform.openai.com/api-keys)
+4. Click **Create new secret key**
+5. Copy the key (starts with `sk-...`)
+6. In extension options → **AI Reports** tab → **API Key Management**
+7. Paste key in **OpenAI API Key** field
+8. Click **Save** then **Test** to verify
+
+**Available Models:**
+- GPT-4 Turbo
+- GPT-4
+- GPT-3.5 Turbo
+- Custom models (add your own)
+
+#### Anthropic Claude Setup
+1. Go to [Anthropic Console](https://console.anthropic.com)
+2. Sign in or create an account
+3. Navigate to API Keys section
+4. Click **Create Key**
+5. Copy the key (starts with `sk-ant-...`)
+6. In extension options → **AI Reports** tab
+7. Paste key in **Anthropic API Key** field
+8. Click **Save** then **Test** to verify
+
+**Available Models:**
+- Claude 3 Opus
+- Claude 3 Sonnet
+- Claude 3 Haiku
+- Claude 2.1
+- Custom models (add your own)
+
+#### Google Gemini Setup
+1. Go to [Google AI Studio](https://makersuite.google.com/app/apikey)
+2. Sign in with your Google account
+3. Click **Create API Key**
+4. Choose a project or create new
+5. Copy the key (starts with `AIza...`)
+6. In extension options → **AI Reports** tab
+7. Paste key in **Google Gemini API Key** field
+8. Click **Save** then **Test** to verify
+
+**Available Models:**
+- Gemini Pro
+- Gemini Pro Vision
+- Custom models (add your own)
+
+### 🎨 3. Customization
+
+#### Adding Custom AI Models
+As new models are released, you can add them without waiting for updates:
+
+1. Go to Options → **AI Reports** tab
+2. Scroll to **Custom AI Models** section
+3. Click **+ Add Custom Model**
+4. Fill in the details:
+   - **Provider**: Select OpenAI, Anthropic, or Google
+   - **Model ID**: The exact API identifier (e.g., `gpt-4-vision-preview`)
+   - **Display Name**: Friendly name shown in UI (e.g., `GPT-4 Vision`)
+   - **Max Tokens**: Context window size (default: 128000)
+   - **Set as default**: Check to make this the default for the provider
+5. Click **Save Model**
+
+#### Creating Custom Report Templates
+Build your own analysis templates:
+
+1. Go to Options → **AI Reports** tab
+2. Find **Custom Prompt Templates** section
+3. Click **+ Add Custom Template**
+4. Enter template details:
+   - **Template Name**: Descriptive name (e.g., "Weekly Team Review")
+   - **System Prompt**: Define the AI's role and expertise
+   - **User Prompt**: Specify the analysis you want
+
+**System Prompt Example:**
 ```
-1. Click extension icon
-2. Click a Quick Action button (e.g., "📧 Email")
-3. Add optional description
-4. Timer starts
-5. Click again to stop
+You are a senior engineering manager analyzing team productivity data. 
+Focus on identifying bottlenecks, meeting efficiency, and resource allocation. 
+Provide actionable recommendations for improving team velocity.
 ```
 
-#### Meeting with Multi-tasking
+**User Prompt Example:**
 ```
-1. Start a meeting (turns orange)
-2. Start another task while meeting runs
-3. Both timers run: "👥 00:15:00 | 💻 00:05:00"
-4. Stop tasks independently
-```
-
-#### Auto-Tracking Meetings
-```
-1. Enable in Settings → Auto-Tracking
-2. Set grace period (default: 2 min before start)
-3. Meetings start/stop automatically
-4. Click "End Early" if meeting finishes sooner
+Analyze the time tracking data for our engineering team. Focus on:
+1. Meeting load and its impact on deep work time
+2. Multi-tasking patterns during meetings
+3. Time allocation across different project priorities
+4. Recommendations for optimizing our schedule
+Keep the analysis concise and action-oriented.
 ```
 
-### Manual Entry (Forgot to Track?)
+5. Click **Save Template**
+6. Your template will appear in the report generator dropdown
 
-1. Click **"+ Add Time Entry"**
-2. Select category and duration
-3. Choose when it happened:
-   - Just finished
-   - X minutes/hours ago
-   - Specific time
-4. Check "I was multi-tasking" if applicable
-5. Save
+#### Modifying Built-in Templates
+1. In the popup, click **Generate AI Report**
+2. Select a built-in template from the dropdown
+3. Modify the System and User prompts as needed
+4. Click the save icon to save as a new custom template
 
-### Viewing Your Data
+#### Managing Categories
+1. Go to Options → **Tracking** tab
+2. In **Categories** section:
+   - View all existing categories
+   - Add new categories with the input field
+   - Delete categories with the × button
+3. Categories appear in all dropdowns throughout the extension
 
-- **Today/Week/Month** - Filter by date range
-- **Category Totals** - See time distribution
-- **Goals Progress** - Track against daily targets
-- **Export to Excel** - Get detailed analysis
+#### Quick Actions Configuration
+Set your 6 most-used task types for one-click tracking:
 
-## 📊 Understanding Your Reports
+1. Go to Options → **Tracking** tab
+2. In **Quick Actions** section
+3. Select up to 6 categories from your list
+4. These appear as buttons in the main popup
+5. Click **Save Quick Actions**
 
-### Excel Export Includes:
+### ⚙️ 4. Settings Configuration
 
-1. **Time Entries** - Raw data with all details
-2. **Deliverable Analysis** - Progress on specific outcomes
-3. **Goal Analysis** - Achievement against targets
-4. **Multi-tasking Analysis** - Daily breakdown of parallel work
-5. **Productivity Summary** - Scores and insights
+#### Auto-Tracking Settings
+1. Go to Options → **Tracking** tab
+2. Configure auto-tracking:
+   - **Enable Auto-tracking**: Toggle on/off
+   - **Grace Period**: Minutes before meeting to start tracking (default: 2)
+   - **End Grace**: Minutes after scheduled end to stop (default: 5)
+   - **Providers**: Choose which calendars to auto-track
 
-### Key Metrics Explained:
+#### Export Settings
+1. Go to Options → **Export** tab
+2. Configure export preferences:
+   - **Include Summary Sheet**: Overview statistics
+   - **Include Charts**: Visual representations
+   - **Include Multi-tasking Analysis**: Detailed productivity metrics
+   - **Include Deliverables**: Goal and deliverable tracking
+   - **Date Format**: Choose your preferred format
 
+#### Goals & Deliverables Setup
+1. Go to Options → **Goals & Deliverables** tab
+2. **Add a Goal**:
+   - Click **+ Add Goal**
+   - Enter goal name and impact description
+   - Set daily hour target
+   - Click **Save**
+3. **Add Deliverables**:
+   - Under each goal, click **+ Add Deliverable**
+   - Enter deliverable name
+   - Link to parent goal (optional)
+   - Track time against specific deliverables
+
+### 📊 5. Using AI Reports
+
+#### Copy Mode (No API Key Required)
+1. Click extension icon → **Generate AI Report**
+2. Select **Copy Mode** (default if no API keys configured)
+3. Choose report template
+4. Select date range and options
+5. Click **Generate Report**
+6. Copy the formatted prompt
+7. Paste into ChatGPT, Claude, Gemini, or any LLM
+
+#### API Mode (Direct Generation)
+1. Ensure API keys are configured (see setup above)
+2. Click extension icon → **Generate AI Report**
+3. Select **API Mode**
+4. Choose provider and model
+5. Select template or customize prompts
+6. Configure parameters:
+   - **Temperature**: 0 (focused) to 1 (creative)
+   - **Max Tokens**: Response length limit
+7. Click **Generate Report**
+8. Report generates directly in the extension
+9. Copy or save the results
+
+#### Managing Report History
+1. Go to Options → **AI Reports** tab
+2. Scroll to **Report History** section
+3. View all previously generated reports
+4. Click on any report to view full content
+5. Use **Clear All Reports** to delete history
+
+## 💡 Advanced Usage
+
+### Data Management
+
+#### Backup Your Data
+1. Go to Options → **Data** tab
+2. Click **Export Data Backup**
+3. Save the JSON file to a safe location
+4. Contains all time entries, goals, deliverables, and settings
+
+#### Restore from Backup
+1. Go to Options → **Data** tab
+2. Click **Import Data**
+3. Select your backup JSON file
+4. Choose merge or replace option
+5. Confirm the import
+
+#### Clear Data
+1. Go to Options → **Data** tab
+2. Use selective clearing:
+   - **Clear Time Entries**: Remove all tracked time
+   - **Clear Goals**: Remove goals and deliverables
+   - **Clear Settings**: Reset to defaults
+   - **Factory Reset**: Complete data wipe
+
+### Multi-tasking Tracking
+
+#### During Meetings
+```
+1. Meeting starts (auto or manual)
+2. Timer shows: "👥 Meeting: Team Standup"
+3. Start another task: Click "📧 Email"
+4. Display shows: "👥 00:15:00 | 📧 00:05:00"
+5. Both timers run simultaneously
+6. Stop each independently
+```
+
+#### Manual Multi-tasking Entry
+1. Click **+ Add Time Entry**
+2. Enter primary task details
+3. Check **"I was multi-tasking"**
+4. Select what you were doing simultaneously
+5. Time is properly attributed to both activities
+
+### Productivity Analysis
+
+#### Understanding Metrics
 - **Multi-tasking %**: Percentage of time doing multiple things
-- **Meeting Efficiency**: How much of meeting time involves other work
-- **Productivity Score**: 100 = fully focused, <100 = multi-tasked
-- **Time Saved**: Minutes saved by ending meetings early
+  - < 20%: Highly focused
+  - 20-40%: Balanced
+  - > 40%: High context switching
 
-## 🎯 Use Cases
+- **Meeting Efficiency**: Multi-tasking during meetings
+  - 0-20%: Engaged meetings
+  - 20-50%: Some disengagement
+  - > 50%: Meeting overload likely
 
-### For Individual Contributors
-- Prove you're in too many meetings
-- Show time lost to context switching
-- Track progress on deliverables
-- Identify your peak productivity hours
-
-### For Managers
-- **Justify headcount** with real data
-- Identify meeting overload patterns
-- Track team capacity accurately
-- Show impact of interruptions
-
-### For Teams
-- Discover which meetings everyone multitasks through
-- Find optimal no-meeting blocks
-- Balance workload distribution
-- Track project time accurately
+- **Productivity Score**: 
+  - 100: Fully focused work
+  - 80-99: Mostly focused with some overlap
+  - < 80: High fragmentation
 
 ## 🔒 Privacy & Security
 
-- ✅ **All data stored locally** - Never leaves your browser
-- ✅ **Read-only calendar access** - Can't modify your events
-- ✅ **No telemetry** - We don't track you tracking time
-- ✅ **Open source** - Audit the code yourself
-- ✅ **No account required** - Start immediately
-- ✅ **Export anytime** - Your data is yours
+### Data Storage
+- **100% Local**: All data stored in browser's local storage
+- **No Cloud Sync**: Unless you explicitly export/import
+- **No Telemetry**: Zero tracking or analytics
+- **No Account**: Start immediately, no registration
 
-## 💰 Pricing
+### API Key Security
+- **Encrypted Storage**: API keys are encrypted locally
+- **Never Transmitted**: Keys never sent to our servers (we have none)
+- **Scoped Access**: Only permissions you explicitly grant
+- **Revokable**: Remove keys anytime from options
 
-**Free. Forever. No BS.**
+### Calendar Permissions
+- **Read-Only**: Cannot modify your calendar
+- **Limited Scope**: Only calendar data, no emails or files
+- **OAuth 2.0**: Industry-standard secure authentication
+- **PKCE Protection**: Additional security for Outlook integration
 
-- No premium tiers
-- No locked features
-- No user limits
-- No trial period
-- Just free
-
-If it helps you get headcount or saves your sanity, consider [sponsoring](https://github.com/sponsors/Maniwar). Or don't. Really.
-
-## 🤝 Contributing
-
-We love contributions! 
-
-- 🐛 [Report bugs](https://github.com/Maniwar/time_tracker/issues)
-- 💡 [Request features](https://github.com/Maniwar/time_tracker/issues)
-- 🔧 [Submit PRs](https://github.com/Maniwar/time_tracker/pulls)
-- ⭐ [Star the repo](https://github.com/Maniwar/time_tracker)
-- 💬 [Share success stories](https://github.com/Maniwar/time_tracker/discussions)
-
-### Development Setup
-
-```bash
-# Clone the repo
-git clone https://github.com/Maniwar/time_tracker.git
-
-# Load in Chrome
-1. Navigate to chrome://extensions/
-2. Enable Developer Mode
-3. Click "Load unpacked"
-4. Select the cloned folder
-
-# Make changes and reload extension
-```
-
-### Project Structure
-
-```
-time_tracker/
-├── manifest.json        # Extension configuration
-├── popup.html          # Main UI
-├── popup.js            # Core logic
-├── background.js       # Service worker for Outlook
-├── google-calendar.js  # Google Calendar integration
-├── options.html        # Settings page
-├── options.js          # Settings logic
-├── xlsx.min.js         # Excel export library
-└── icons/              # Extension icons
-```
-
-## 📈 Aspirational Success Stories
-
-> "Used Universal Time Tracker to show we spend 70% of time in meetings. We now have no-meeting Wednesdays."  
-> — *Engineering Manager, 50-person startup*
-
-> "Finally got the two headcount we needed. Your multi-tasking reports made the difference."  
-> — *Tech Lead, Fortune 500*
-
-> "Proved that 'quick questions' take 15 hours/week. Now we have office hours instead."  
-> — *Senior Developer*
-
-**Got a success story?** [Share it here!](https://github.com/Maniwar/time_tracker/discussions)
-
-## 🛠️ Troubleshooting
+## 🤝 Troubleshooting
 
 ### Extension Not Working?
-1. Go to `chrome://extensions/`
-2. Find Universal Time Tracker
-3. Click refresh icon
-4. Check browser console (F12) for errors
+1. Check Chrome version (must be 88+)
+2. Go to `chrome://extensions/`
+3. Find Universal Time Tracker
+4. Toggle off and on
+5. Click refresh icon
+6. Check console (F12) for errors
 
 ### Calendar Not Syncing?
-- **Google**: Re-connect through popup
-- **Outlook**: Verify Client ID in settings
-- Check you're logged into your calendar account
 
-### Data Questions?
-- All data in: `chrome.storage.local`
-- Export regularly for backup
-- Use Settings → Data → Create Backup
+**Google Calendar Issues:**
+- Ensure you're logged into Google
+- Revoke and re-grant permissions
+- Check calendar is not empty
+- Try disconnecting and reconnecting
 
-## 🚀 Roadmap
+**Outlook Calendar Issues:**
+- Verify Client ID is correct
+- Check redirect URI matches exactly
+- Ensure app permissions in Azure
+- Token may be expired - reconnect
+- Check Azure app is not disabled
 
-- [ ] Jira/Linear integration
-- [ ] Slack notifications
-- [ ] Team dashboards
-- [ ] AI-powered insights
-- [ ] Mobile companion app
-- [ ] Pomodoro timer mode
-- [ ] Browser tab time tracking
+### AI Reports Not Working?
+
+**API Key Issues:**
+- Test key with the Test button
+- Check key hasn't expired
+- Verify billing is active on provider account
+- Ensure correct key format (provider-specific prefix)
+
+**Generation Errors:**
+- Reduce max tokens if hitting limits
+- Check data exists for selected date range
+- Try a different model
+- Verify internet connection
+
+### Data Issues?
+- Export backup before troubleshooting
+- Check storage: `chrome.storage.local.getBytesInUse()`
+- Clear corrupted data selectively
+- Import from recent backup
 
 ## 📜 License
 
@@ -349,6 +515,18 @@ This tool is free and always will be. If it helped you:
 [![Star on GitHub](https://img.shields.io/github/stars/Maniwar/time_tracker.svg?style=social)](https://github.com/Maniwar/time_tracker)
 
 Or just [share your success story](https://www.linkedin.com/sharing/share-offsite/?url=https://github.com/Maniwar/time_tracker) - that's payment enough.
+
+## 💰 Pricing
+
+**Free. Forever. No BS.**
+
+- No premium tiers
+- No locked features  
+- No user limits
+- No trial period
+- Just free
+
+If it helps you get headcount or saves your sanity, consider [sponsoring](https://github.com/sponsors/Maniwar). Or don't. Really.
 
 ---
 
