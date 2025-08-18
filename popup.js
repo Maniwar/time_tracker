@@ -4293,8 +4293,7 @@ async function exportToExcel() {
             deliverableName = deliverable.name;
             deliverableStatus = deliverable.completed ? 'Completed' : 'Active';
             deliverableCompletedDate = deliverable.completedAt ? new Date(deliverable.completedAt).toLocaleDateString() : '';
-            
-            // Track deliverable totals
+                    
             if (!deliverableTotals[deliverable.id]) {
               deliverableTotals[deliverable.id] = {
                 name: deliverable.name,
@@ -4304,12 +4303,40 @@ async function exportToExcel() {
                 entries: 0,
                 firstEntry: entryDate,
                 lastEntry: entryDate,
-                hoursInPeriod: 0
+                hoursInPeriod: 0,
+                tasks: new Set(), // Track unique task descriptions
+                categories: {} // ADD THIS: Track time by category
               };
             }
             deliverableTotals[deliverable.id].totalHours += hours;
             deliverableTotals[deliverable.id].hoursInPeriod += hours;
             deliverableTotals[deliverable.id].entries++;
+    
+            // Collect task description
+            if (entry.description) {
+              if (entry.isAllocated && entry.allocationPercentage) {
+                deliverableTotals[deliverable.id].tasks.add(
+                  `${entry.description} [${entry.allocationPercentage}% allocated]`
+                );
+              } else {
+                deliverableTotals[deliverable.id].tasks.add(entry.description);
+              }
+            }
+            
+            // ADD THIS: Track category breakdown
+            const category = entry.category || 'Uncategorized';
+            if (!deliverableTotals[deliverable.id].categories[category]) {
+              deliverableTotals[deliverable.id].categories[category] = {
+                hours: 0,
+                entries: 0,
+                descriptions: new Set()
+              };
+            }
+            deliverableTotals[deliverable.id].categories[category].hours += hours;
+            deliverableTotals[deliverable.id].categories[category].entries++;
+            if (entry.description) {
+              deliverableTotals[deliverable.id].categories[category].descriptions.add(entry.description);
+            }
             
             // Update first and last entry dates
             if (entryDate < deliverableTotals[deliverable.id].firstEntry) {
@@ -4318,7 +4345,6 @@ async function exportToExcel() {
             if (entryDate > deliverableTotals[deliverable.id].lastEntry) {
               deliverableTotals[deliverable.id].lastEntry = entryDate;
             }
-            
             // Find associated goal
             if (deliverable.goalId) {
               const goal = goals.find(g => g.id === deliverable.goalId);
@@ -4459,17 +4485,42 @@ async function exportToExcel() {
     Object.values(deliverableTotals).forEach(deliverable => {
       const workDays = Math.ceil((deliverable.lastEntry - deliverable.firstEntry) / (1000 * 60 * 60 * 24)) + 1;
       
+      // Convert hours to hours and minutes
+      const totalMinutes = Math.round(deliverable.hoursInPeriod * 60);
+      const displayHours = Math.floor(deliverable.hoursInPeriod);
+      const displayMinutes = totalMinutes % 60;
+      const timeDisplay = `${displayHours}h ${displayMinutes}m`;
+      
+      // Format task list
+      const taskList = deliverable.tasks ? Array.from(deliverable.tasks).sort().join('; ') : '';
+      
+      // Build category breakdown string
+      let categoryBreakdown = '';
+      if (deliverable.categories) {
+        const sortedCategories = Object.entries(deliverable.categories)
+          .sort((a, b) => b[1].hours - a[1].hours) // Sort by hours descending
+          .map(([cat, data]) => {
+            const catHours = Math.floor(data.hours);
+            const catMinutes = Math.round((data.hours % 1) * 60);
+            return `${cat}: ${catHours}h ${catMinutes}m (${data.entries} entries)`;
+          });
+        categoryBreakdown = sortedCategories.join('; ');
+      }
+
       deliverableAnalysis.push({
         'Deliverable': deliverable.name,
         'Status': deliverable.status,
         'Completed Date': deliverable.completedAt ? new Date(deliverable.completedAt).toLocaleDateString() : '',
+        'Total Time': timeDisplay,
         'Hours in Period': deliverable.hoursInPeriod.toFixed(2),
         'Sessions in Period': deliverable.entries,
+        'Category Breakdown': categoryBreakdown || 'No categories',
         'First Work in Period': deliverable.firstEntry.toLocaleDateString(),
         'Last Work in Period': deliverable.lastEntry.toLocaleDateString(),
         'Work Days in Period': workDays,
         'Average per Session': (deliverable.hoursInPeriod / deliverable.entries).toFixed(2) + ' hours',
-        'Average per Day': (deliverable.hoursInPeriod / workDays).toFixed(2) + ' hours'
+        'Average per Day': (deliverable.hoursInPeriod / workDays).toFixed(2) + ' hours',
+        'Tasks/Activities': taskList || 'No descriptions'
       });
     });
     
