@@ -256,17 +256,40 @@ function exportGoalsAndDeliverables() {
       const goal = goals.find(g => g.id === deliverable.goalId);
       const totalHours = deliverableTimeSpent[deliverable.id] || 0;
       
+      // Convert hours to hours and minutes display
+      const totalMinutes = Math.round(totalHours * 60);
+      const displayHours = Math.floor(totalHours);
+      const displayMinutes = totalMinutes % 60;
+      const timeDisplay = `${displayHours}h ${displayMinutes}m`;
+      
       let entryCount = 0;
+      const taskDescriptions = new Set(); // Collect unique task descriptions
+      
       Object.values(timeEntries).forEach(dayEntries => {
         dayEntries.forEach(entry => {
-          // Count allocated entries
+          let includeEntry = false;
+          
+          // Check if this entry belongs to this deliverable
           if (entry.deliverableAllocations && entry.deliverableAllocations[deliverable.id]) {
-            entryCount++;
+            includeEntry = true;
+            // Add allocated description
+            taskDescriptions.add(entry.description ? 
+              `${entry.description} [${entry.deliverableAllocations[deliverable.id]}% allocated]` : 
+              `Untitled [${entry.deliverableAllocations[deliverable.id]}% allocated]`);
           } else if (entry.deliverableId === deliverable.id) {
+            includeEntry = true;
+            // Add regular description
+            taskDescriptions.add(entry.description || 'Untitled');
+          }
+          
+          if (includeEntry) {
             entryCount++;
           }
         });
       });
+      
+      // Convert task set to sorted array for display
+      const taskList = Array.from(taskDescriptions).sort().join('; ');
       
       return {
         'Sort Order': index + 1,
@@ -275,9 +298,12 @@ function exportGoalsAndDeliverables() {
         'Status': deliverable.completed ? 'Completed' : 'Active',
         'Created Date': new Date(deliverable.createdAt).toLocaleDateString(),
         'Completed Date': deliverable.completedAt ? new Date(deliverable.completedAt).toLocaleDateString() : '',
-        'Total Hours Tracked': totalHours.toFixed(2),
-        'Number of Time Entries': entryCount,
-        'Average Session (hours)': entryCount > 0 ? (totalHours / entryCount).toFixed(2) : '0'
+        'Total Time': timeDisplay,
+        'Total Hours': totalHours.toFixed(2),
+        'Number of Entries': entryCount,
+        'Average Session': entryCount > 0 ? 
+          `${Math.floor(totalHours / entryCount)}h ${Math.round(((totalHours / entryCount) % 1) * 60)}m` : '0h 0m',
+        'Tasks/Activities': taskList || 'No descriptions'
       };
     });
     

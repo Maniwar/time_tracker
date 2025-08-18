@@ -1451,9 +1451,18 @@ handleSaveTemplate() {
     // Fallback method to gather data from storage
     async gatherDataFromStorage() {
       return new Promise((resolve) => {
-        chrome.storage.local.get(['timeEntries', 'categories', 'goals'], (result) => {
-          const dateRange = this.getDateRange();
+        chrome.storage.local.get(['timeEntries', 'categories', 'goals', 'deliverables'], (result) => {
+          // Debug logging
+          console.log('Storage fetch result:', {
+            hasTimeEntries: !!result.timeEntries,
+            hasCategories: !!result.categories,
+            hasGoals: !!result.goals,
+            hasDeliverables: !!result.deliverables,
+            deliverablesCount: result.deliverables ? result.deliverables.length : 0,
+            deliverablesSample: result.deliverables ? result.deliverables.slice(0, 2) : null
+          });
           
+          const dateRange = this.getDateRange();
           // timeEntries is an object with dates as keys
           const timeEntriesObj = result.timeEntries || {};
           let entries = [];
@@ -1495,7 +1504,8 @@ handleSaveTemplate() {
             'Break', 'Training', 'Planning', 'Other'
           ];
           
-                    const goals = result.goals || {};
+          const goals = result.goals || [];
+          const deliverables = result.deliverables || [];
                     
           // Process entries to handle allocations before building data
           const processedEntries = [];
@@ -1553,14 +1563,26 @@ handleSaveTemplate() {
             data.goals = goals;
           }
           
+          // Include deliverables list even if no time tracked
+          if (result.deliverables) {
+            data.deliverables = result.deliverables;
+          }
+          
           // Debug logging
           console.log('Data gathering complete:', {
             totalEntriesInStorage: Object.keys(timeEntriesObj).length,
             extractedEntries: entries.length,
             filteredEntries: filteredEntries.length,
-            dateRange: data.dateRange
+            dateRange: data.dateRange,
+            deliverables: result.deliverables ? result.deliverables.length : 0,
+            deliverableBreakdown: data.deliverableBreakdown ? Object.keys(data.deliverableBreakdown).length : 0
           });
-          
+                    
+          // Additional debug for deliverables
+          console.log('Deliverable data:', {
+            deliverables: result.deliverables,
+            breakdown: data.deliverableBreakdown
+          });
           resolve(data);
         });
       });
@@ -1727,12 +1749,15 @@ handleSaveTemplate() {
             goalId: d.goalId,
             status: d.completed ? 'Completed' : 'Active',
             totalHours: 0,
+            totalMinutes: 0,  // Add total minutes
             allocatedHours: 0,  // Time from allocated meetings
             directHours: 0,     // Time directly assigned
             entries: 0,
             allocatedEntries: 0,
             tasks: new Set(),
-            meetings: []
+            meetings: [],
+            categories: {},  // Track time by category
+            entryDetails: []  // Store individual entry details
           };
         });
         
@@ -1753,7 +1778,34 @@ handleSaveTemplate() {
           }
           
           deliverable.totalHours += duration;
+          deliverable.totalMinutes += (duration * 60); // Track minutes
           deliverable.entries++;
+          
+          // Track category breakdown
+          const category = entry.category || 'Uncategorized';
+          if (!deliverable.categories[category]) {
+            deliverable.categories[category] = {
+              hours: 0,
+              minutes: 0,
+              entries: 0,
+              tasks: new Set()
+            };
+          }
+          deliverable.categories[category].hours += duration;
+          deliverable.categories[category].minutes += (duration * 60);
+          deliverable.categories[category].entries++;
+          deliverable.categories[category].tasks.add(entry.description || 'Untitled');
+          
+          // Store entry details
+          deliverable.entryDetails.push({
+            date: new Date(entry.startTime).toLocaleDateString(),
+            category: category,
+            description: entry.description || 'Untitled',
+            duration: duration,
+            minutes: Math.round(duration * 60),
+            isAllocated: entry.isAllocated || false,
+            allocationPercentage: entry.allocationPercentage || null
+          });
           
           // Track if this is allocated time
           if (entry.isAllocated) {
@@ -1776,21 +1828,30 @@ handleSaveTemplate() {
           deliverable.tasks.add(entry.description || 'Untitled');
         });
         
-        // Convert sets to arrays and round numbers
-        Object.keys(breakdown).forEach(key => {
-          const d = breakdown[key];
-          d.totalHours = Math.round(d.totalHours * 100) / 100;
-          d.allocatedHours = Math.round(d.allocatedHours * 100) / 100;
-          d.directHours = Math.round(d.directHours * 100) / 100;
-          d.uniqueTasks = d.tasks.size;
-          d.taskList = Array.from(d.tasks);
-          delete d.tasks;
-          
-          // Remove empty deliverables
-          if (d.entries === 0) {
-            delete breakdown[key];
-          }
-        });
+          // Convert sets to arrays and round numbers
+          Object.keys(breakdown).forEach(key => {
+            const d = breakdown[key];
+            d.totalHours = Math.round(d.totalHours * 100) / 100;
+            d.totalMinutes = Math.round(d.totalMinutes);
+            d.allocatedHours = Math.round(d.allocatedHours * 100) / 100;
+            d.directHours = Math.round(d.directHours * 100) / 100;
+            d.uniqueTasks = d.tasks.size;
+            d.taskList = Array.from(d.tasks);
+            delete d.tasks;
+            
+            // Process category data
+            Object.keys(d.categories).forEach(cat => {
+              d.categories[cat].hours = Math.round(d.categories[cat].hours * 100) / 100;
+              d.categories[cat].minutes = Math.round(d.categories[cat].minutes);
+              d.categories[cat].taskList = Array.from(d.categories[cat].tasks);
+              delete d.categories[cat].tasks;
+            });
+            
+            // Remove empty deliverables
+            if (d.entries === 0) {
+              delete breakdown[key];
+            }
+          });
         
         return breakdown;
       }
