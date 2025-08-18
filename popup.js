@@ -181,16 +181,27 @@ function loadGoalsProgress() {
       };
     });
     
-    // Sum up time for each goal based on active deliverables
-    todayEntries.forEach(entry => {
-      if (entry.deliverableId) {
-        Object.values(goalProgress).forEach(progress => {
-          if (progress.deliverableIds.includes(entry.deliverableId)) {
-            progress.timeSpent += entry.duration;
-          }
-        });
+// Sum up time for each goal based on active deliverables
+todayEntries.forEach(entry => {
+  // Handle meetings with allocations across multiple deliverables
+  if (entry.deliverableAllocations) {
+    Object.entries(entry.deliverableAllocations).forEach(([delivId, percentage]) => {
+      Object.values(goalProgress).forEach(progress => {
+        if (progress.deliverableIds.includes(delivId)) {
+          // Add the allocated portion of the meeting duration
+          progress.timeSpent += (entry.duration * percentage / 100);
+        }
+      });
+    });
+  } else if (entry.deliverableId) {
+    // Handle regular entries with a single deliverable
+    Object.values(goalProgress).forEach(progress => {
+      if (progress.deliverableIds.includes(entry.deliverableId)) {
+        progress.timeSpent += entry.duration;
       }
     });
+  }
+});
     
     // Filter to show only goals with time today or daily targets
     const activeGoalsWithProgress = Object.values(goalProgress).filter(progress => 
@@ -3695,7 +3706,7 @@ document.getElementById('saveEditBtn').addEventListener('click', async () => {
         category: document.getElementById('editCategory').value,
         description: document.getElementById('editDescription').value,
         wasMultitasking: document.getElementById('editMultitasking').checked,
-        multitaskingWith: document.getElementById('editMultitasking').checked ? 
+        multitaskingWith: document.getElementById('editMultitasking').checked ?
           document.getElementById('editMultitaskingWith').value : null,
         deliverableId: deliverableId,
         // CRITICAL: Set all time-related fields correctly
@@ -3707,9 +3718,17 @@ document.getElementById('saveEditBtn').addEventListener('click', async () => {
         scheduled: false,
         fromCalendar: false,
         // Preserve or create ID
-        id: entry.id || `edited_${Date.now()}_${Math.random()}`
+        id: entry.id || `edited_${Date.now()}_${Math.random()}`,
+        // PRESERVE ALLOCATION DATA - Critical fix
+        deliverableAllocations: entry.deliverableAllocations || null,
+        allocationType: entry.allocationType || null,
+        additionalDeliverableIds: additionalDeliverableIds.length > 0 ? 
+          [deliverableId, ...additionalDeliverableIds] : entry.additionalDeliverableIds || [],
+        isAllocated: entry.isAllocated || false,
+        allocationPercentage: entry.allocationPercentage || null,
+        originalDuration: entry.originalDuration || null
       };
-      
+
       // Additional validation before saving
       if (!updatedEntry.startTime || !updatedEntry.endTime || !updatedEntry.date) {
         alert('Error: Missing required time fields. Please check your input.');
