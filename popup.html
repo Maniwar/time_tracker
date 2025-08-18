@@ -1665,6 +1665,27 @@
 #reportViewerModal .modal-content::-webkit-scrollbar-thumb:hover {
   background: #555;
 }
+
+/* task time*/
+.task-time {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  font-size: 12px;
+  color: #605e5c;
+  margin-top: 4px;
+}
+
+.task-time span:first-child {
+  font-weight: 600;
+  color: #323130;
+}
+
+.task-time span:last-child {
+  margin-left: auto;
+  font-weight: 600;
+}
+
     </style>
 </head>
 <body>
@@ -1744,6 +1765,12 @@
                   <option value="_new">+ Create new deliverable...</option>
                 </select>
               </div>
+              <!-- NEW: Additional deliverables for meetings only -->
+              <div id="additionalDeliverablesSection" style="display:none; margin-top: 8px;">
+                <label style="font-size: 11px; color: #605e5c;">Additional deliverables (meetings only):</label>
+                <div id="additionalDeliverablesContainer"></div>
+                <button type="button" id="addDeliverableBtn" style="margin-top: 4px; font-size: 12px; padding: 4px 8px; background: #f3f2f1; border: 1px solid #d2d0ce; border-radius: 4px; cursor: pointer;">+ Add deliverable</button>
+              </div>
               <div class="new-deliverable-input" id="quickNewDeliverable">
                 <input type="text" id="quickNewDeliverableName" placeholder="New deliverable name">
               </div>
@@ -1782,6 +1809,12 @@
                 <option value="">No deliverable</option>
                 <option value="_new">+ Create new deliverable...</option>
               </select>
+            </div>
+            <!-- Additional deliverables for meetings -->
+            <div id="manualAdditionalDeliverablesSection" style="display:none; margin-top: 8px;">
+              <label style="font-size: 11px; color: #605e5c;">Additional deliverables (meetings only):</label>
+              <div id="manualAdditionalDeliverablesContainer"></div>
+              <button type="button" id="manualAddDeliverableBtn" style="margin-top: 4px; font-size: 12px; padding: 4px 8px; background: #f3f2f1; border: 1px solid #d2d0ce; border-radius: 4px; cursor: pointer;">+ Add deliverable</button>
             </div>
             <div class="new-deliverable-input" id="newDeliverableInput">
               <input type="text" id="newDeliverableName" placeholder="New deliverable name">

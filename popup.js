@@ -71,6 +71,7 @@ async function initializeApp() {
   loadDataForDateRange();
   loadCategoryTotals();
   checkForRunningTimers();
+  initializeAdditionalDeliverables();
   setInterval(updateTimers, 1000);
   setInterval(loadCategoryTotals, 30000);
   setInterval(loadGoalsProgress, 60000); // Update goals every minute
@@ -1076,9 +1077,8 @@ function checkForRunningTimers() {
     
     // Check for meeting timer
     if (result.runningMeetingTimer) {
-      const { description, startTimeStamp, scheduledEndTime, autoTracked, meetingId } = result.runningMeetingTimer;
+      const { description, startTimeStamp, scheduledEndTime, autoTracked, meetingId, deliverableId, additionalDeliverableIds } = result.runningMeetingTimer;
       const elapsed = Date.now() - startTimeStamp;
-      
       if (elapsed < 24 * 60 * 60 * 1000) {
         isInMeeting = true;
         meetingDescription = description;
@@ -1122,7 +1122,25 @@ function checkForRunningTimers() {
               }
             }, 100);
           } else {
-            meetingStatus.innerHTML = '<span>👥 Currently in a meeting - You can start other tasks while meeting continues</span>';
+            // Get deliverable names for display
+            chrome.storage.local.get(['deliverables'], (delivResult) => {
+              const deliverables = delivResult.deliverables || [];
+              let deliverableText = '';
+              
+              if (deliverableId || additionalDeliverableIds) {
+                const allDelivIds = [deliverableId, ...(additionalDeliverableIds || [])].filter(id => id);
+                const delivNames = allDelivIds.map(id => {
+                  const del = deliverables.find(d => d.id === id);
+                  return del ? del.name : null;
+                }).filter(name => name);
+                
+                if (delivNames.length > 0) {
+                  deliverableText = ` (${delivNames.join(', ')})`;
+                }
+              }
+              
+              meetingStatus.innerHTML = `<span>👥 Currently in a meeting${deliverableText} - You can start other tasks while meeting continues</span>`;
+            });
           }
           meetingStatus.classList.add('active');
         }
@@ -1144,19 +1162,39 @@ function updateCurrentTrackingDisplay() {
   if (currentTimer || meetingTimer) {
     if (currentTimer) {
       taskNameSpan.textContent = currentTask + (currentTaskDescription ? ': ' + currentTaskDescription : '');
+    } else if (meetingTimer) {
+      taskNameSpan.textContent = 'Meeting' + (meetingDescription ? ': ' + meetingDescription.replace('[AUTO] ', '') : '');
     } else {
       taskNameSpan.textContent = '-';
     }
     
-    if (currentDeliverable) {
-      chrome.storage.local.get(['deliverables'], (result) => {
-        const deliverables = result.deliverables || [];
+    // Handle deliverables for both tasks and meetings
+    chrome.storage.local.get(['deliverables', 'runningMeetingTimer'], (result) => {
+      const deliverables = result.deliverables || [];
+      
+      if (meetingTimer && result.runningMeetingTimer) {
+        // For meetings, show all deliverables
+        const meetingData = result.runningMeetingTimer;
+        const allDelivIds = [meetingData.deliverableId, ...(meetingData.additionalDeliverableIds || [])].filter(id => id);
+        
+        if (allDelivIds.length > 0) {
+          const delivNames = allDelivIds.map(id => {
+            const del = deliverables.find(d => d.id === id);
+            return del ? del.name : null;
+          }).filter(name => name);
+          
+          deliverableNameSpan.textContent = delivNames.length > 0 ? delivNames.join(', ') : 'None';
+        } else {
+          deliverableNameSpan.textContent = 'None';
+        }
+      } else if (currentDeliverable) {
+        // For regular tasks, show single deliverable
         const deliverable = deliverables.find(d => d.id === currentDeliverable);
         deliverableNameSpan.textContent = deliverable ? deliverable.name : 'Unknown';
-      });
-    } else {
-      deliverableNameSpan.textContent = 'None';
-    }
+      } else {
+        deliverableNameSpan.textContent = 'None';
+      }
+    });
     
     trackingDiv.classList.add('active');
   } else {
@@ -1285,14 +1323,24 @@ function setupEventListeners() {
     e.preventDefault();
     chrome.runtime.openOptionsPage();
   });
-  
+
   // Manual entry form event listeners
   document.getElementById('manualCategory').addEventListener('change', function() {
-    if (this.value === 'Other') {
+    const category = this.value;
+    if (category === 'Other') {
       document.getElementById('manualDescription').placeholder = 'What type of task? (required)';
       document.getElementById('manualDescription').focus();
     } else {
       document.getElementById('manualDescription').placeholder = 'What did you work on? (optional)';
+    }
+    
+    // Show/hide additional deliverables for meetings
+    const additionalSection = document.getElementById('manualAdditionalDeliverablesSection');
+    if (category === 'Meeting') {
+      additionalSection.style.display = 'block';
+      initializeManualAdditionalDeliverables();
+    } else {
+      additionalSection.style.display = 'none';
     }
   });
   
@@ -1388,6 +1436,17 @@ function setupEventListeners() {
     } else {
       newDeliverableDiv.classList.remove('active');
       document.getElementById('quickNewDeliverableName').value = '';
+      
+      // Check for duplicates in additional deliverables
+      if (this.value && this.value !== '') {
+        const additionalSelects = document.querySelectorAll('.additional-deliverable-select');
+        additionalSelects.forEach(select => {
+          if (select.value === this.value) {
+            alert('This deliverable is already selected in additional deliverables. The duplicate will be cleared.');
+            select.value = '';
+          }
+        });
+      }
     }
   });
   
@@ -1447,6 +1506,21 @@ function showQuickActionDialog(taskType) {
   // Store pending action
   pendingQuickAction = { taskType };
   
+  // NEW: Show/hide additional deliverables section for meetings
+  const additionalSection = document.getElementById('additionalDeliverablesSection');
+  const additionalContainer = document.getElementById('additionalDeliverablesContainer');
+
+  if (taskType === 'Meeting' || pendingQuickAction.isMeeting) {
+    additionalSection.style.display = 'block';
+    // Clear any existing additional deliverable rows
+    if (additionalContainer) {
+      additionalContainer.innerHTML = '';
+    }
+    // Reinitialize the add button handler
+    initializeAdditionalDeliverables();
+  } else {
+    additionalSection.style.display = 'none';
+  }
   // Reset form
   descriptionInput.value = '';
   deliverableSelect.value = '';
@@ -1475,6 +1549,91 @@ function showQuickActionDialog(taskType) {
   if (taskType !== 'Break') {
     setTimeout(() => descriptionInput.focus(), 100);
   }
+}
+
+// NEW: Initialize additional deliverables UI
+function initializeAdditionalDeliverables() {
+  const container = document.getElementById('additionalDeliverablesContainer');
+  const addBtn = document.getElementById('addDeliverableBtn');
+  
+  if (!container || !addBtn) return;
+  
+  // Clear existing
+  container.innerHTML = '';
+  
+  // Add button listener
+  addBtn.onclick = () => {
+    addDeliverableRow(container);
+  };
+}
+
+// NEW: Add a deliverable row
+function addDeliverableRow(container) {
+  const row = document.createElement('div');
+  row.className = 'additional-deliverable-row';
+  row.style.cssText = 'display: flex; gap: 4px; margin-top: 4px; align-items: center;';
+  
+  const select = document.createElement('select');
+  select.className = 'additional-deliverable-select';
+  select.style.cssText = 'width: calc(100% - 35px); padding: 4px; font-size: 12px; border: 1px solid #d2d0ce; border-radius: 3px;';
+  
+  // Copy options from main deliverable select
+  const mainSelect = document.getElementById('quickDeliverable');
+  select.innerHTML = mainSelect.innerHTML;
+  
+  // Add change listener to check for duplicates
+  select.addEventListener('change', function() {
+    if (this.value && this.value !== '_new') {
+      // Get all currently selected deliverables
+      const allSelected = [];
+      const mainValue = document.getElementById('quickDeliverable').value;
+      if (mainValue && mainValue !== '_new') {
+        allSelected.push(mainValue);
+      }
+      
+      // Check all additional selects
+      document.querySelectorAll('.additional-deliverable-select').forEach(otherSelect => {
+        if (otherSelect !== this && otherSelect.value && otherSelect.value !== '_new') {
+          allSelected.push(otherSelect.value);
+        }
+      });
+      
+      // If this value is already selected elsewhere
+      if (allSelected.includes(this.value)) {
+        alert('This deliverable is already selected. Please choose a different one.');
+        this.value = ''; // Reset to empty
+      }
+    }
+  });
+  
+  const removeBtn = document.createElement('button');
+  removeBtn.type = 'button';
+  removeBtn.textContent = '🗑️';
+  removeBtn.style.cssText = 'min-width: 24px; height: 24px; padding: 0 2px; background: transparent; border: none; cursor: pointer; font-size: 14px; margin-left: 4px; display: flex; align-items: center; justify-content: center;';
+  removeBtn.onclick = () => row.remove();
+  
+  row.appendChild(select);
+  row.appendChild(removeBtn);
+  container.appendChild(row);
+}
+// NEW: Get all selected deliverables
+function getSelectedDeliverables() {
+  const deliverables = [];
+  const mainDeliverable = document.getElementById('quickDeliverable').value;
+  
+  if (mainDeliverable && mainDeliverable !== '_new') {
+    deliverables.push(mainDeliverable);
+  }
+  
+  // Get additional deliverables
+  document.querySelectorAll('.additional-deliverable-select').forEach(select => {
+    const value = select.value;
+    if (value && value !== '_new' && !deliverables.includes(value)) {
+      deliverables.push(value);
+    }
+  });
+  
+  return deliverables;
 }
 
 // Handle quick start
@@ -1510,8 +1669,13 @@ async function handleQuickStart() {
   
   // Check if this is a meeting or regular task
   if (isMeeting) {
-    // Start meeting timer
-    startMeetingTimer(description || 'Meeting', deliverableId);
+    // NEW: Get all selected deliverables for meetings
+    const allDeliverableIds = getSelectedDeliverables();
+    const primaryDeliverable = allDeliverableIds[0] || null;
+    const additionalDeliverables = allDeliverableIds.slice(1);
+    
+    // Start meeting timer with multiple deliverables
+    startMeetingTimerWithDeliverables(description || 'Meeting', primaryDeliverable, additionalDeliverables);
   } else {
     // Start regular task timer
     startTaskTimer(taskType, description, deliverableId);
@@ -1589,22 +1753,23 @@ function handleMeetingToggle() {
   });
 }
 
-// Start meeting timer
-function startMeetingTimer(description, deliverableId = null) {
+// NEW: Start meeting timer with multiple deliverables
+function startMeetingTimerWithDeliverables(description, primaryDeliverableId = null, additionalDeliverableIds = []) {
   isInMeeting = true;
   meetingDescription = description;
   meetingStartTime = Date.now();
   meetingTimer = true;
-  scheduledMeetingEndTime = null; // No scheduled end for manual meetings
-  currentMeetingId = null; // No ID for manual meetings
+  scheduledMeetingEndTime = null;
+  currentMeetingId = null;
   
-  // Save meeting timer state
+  // Save meeting timer state with multiple deliverables
   chrome.storage.local.set({
     runningMeetingTimer: {
       description: description,
       startTimeStamp: meetingStartTime,
-      autoTracked: false, // Manual start
-      deliverableId: deliverableId
+      autoTracked: false,
+      deliverableId: primaryDeliverableId,
+      additionalDeliverableIds: additionalDeliverableIds || []
     }
   });
   
@@ -1613,18 +1778,33 @@ function startMeetingTimer(description, deliverableId = null) {
   if (meetingBtn) {
     meetingBtn.style.background = '#d83b01';
     meetingBtn.style.color = 'white';
-    meetingBtn.innerHTML = '👥 Meeting (Active)';
+    meetingBtn.innerHTML = '💥 Meeting (Active)';
   }
   
-  // Show meeting status
+// Show meeting status with deliverables
+chrome.storage.local.get(['deliverables'], (result) => {
+  const deliverables = result.deliverables || [];
+  let deliverableText = '';
+  
+  const allDelivIds = [primaryDeliverableId, ...(additionalDeliverableIds || [])].filter(id => id);
+  if (allDelivIds.length > 0) {
+    const delivNames = allDelivIds.map(id => {
+      const del = deliverables.find(d => d.id === id);
+      return del ? del.name : null;
+    }).filter(name => name);
+    
+    if (delivNames.length > 0) {
+      deliverableText = ` (${delivNames.join(', ')})`;
+    }
+  }
+  
   document.getElementById('meetingStatus').innerHTML = 
-    '<span>👥 Currently in a meeting - You can start other tasks while meeting continues</span>';
+    `<span>💥 Currently in a meeting${deliverableText} - You can start other tasks while meeting continues</span>`;
   document.getElementById('meetingStatus').classList.add('active');
+});
   updateMultitaskIndicator();
   
   showNotification('Meeting started' + (description ? `: ${description}` : ''));
-  
-  // Update goals progress after starting
   loadGoalsProgress();
 }
 
@@ -1633,6 +1813,174 @@ function stopMeetingTimer(endedEarly = false) {
   if (!meetingTimer) return;
   
   const duration = Date.now() - meetingStartTime;
+  
+  // NEW: Check if we need to show allocation dialog
+  chrome.storage.local.get(['runningMeetingTimer'], (result) => {
+    const meetingData = result.runningMeetingTimer;
+    const hasMultipleDeliverables = meetingData && 
+      meetingData.additionalDeliverableIds && 
+      meetingData.additionalDeliverableIds.length > 0;
+    
+    if (hasMultipleDeliverables) {
+      // Show allocation dialog
+      showAllocationDialog(meetingData, duration, endedEarly);
+    } else {
+      // Continue with normal save
+      completeMeetingSave(meetingData, duration, endedEarly);
+    }
+  });
+}
+
+// NEW: Show allocation dialog
+function showAllocationDialog(meetingData, duration, endedEarly) {
+  const allDeliverables = [meetingData.deliverableId, ...meetingData.additionalDeliverableIds].filter(id => id);
+  
+  // Create dialog HTML
+  const overlay = document.createElement('div');
+  overlay.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  `;
+  
+  const dialog = document.createElement('div');
+  dialog.style.cssText = `
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    max-width: 400px;
+    width: 90%;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  `;
+  
+  // Get deliverable names
+  chrome.storage.local.get(['deliverables'], (result) => {
+    const deliverables = result.deliverables || [];
+    const deliverableMap = {};
+    deliverables.forEach(d => deliverableMap[d.id] = d.name);
+    
+    let allocations = {};
+    const equalSplit = Math.round(100 / allDeliverables.length);
+    allDeliverables.forEach((id, index) => {
+      allocations[id] = index === allDeliverables.length - 1 ? 
+        100 - (equalSplit * (allDeliverables.length - 1)) : equalSplit;
+    });
+    
+    dialog.innerHTML = `
+      <h3 style="margin: 0 0 15px 0; color: #323130;">Allocate Meeting Time</h3>
+      <p style="margin: 0 0 15px 0; color: #605e5c; font-size: 13px;">
+        How was the ${Math.round(duration / 60000)} minutes spent across deliverables?
+      </p>
+      
+      <div class="quick-allocation-buttons" style="display: flex; gap: 8px; margin-bottom: 15px;">
+        <button id="equalSplitBtn" style="flex: 1; padding: 8px; background: #0078d4; color: white; border: none; border-radius: 4px; cursor: pointer;">
+          ⚖️ Equal Split
+        </button>
+        <button id="primaryFocusBtn" style="flex: 1; padding: 8px; background: #f3f2f1; border: 1px solid #d2d0ce; border-radius: 4px; cursor: pointer;">
+          🎯 Primary Focus
+        </button>
+      </div>
+      
+      <div id="allocationSliders">
+        ${allDeliverables.map(id => `
+          <div style="margin: 10px 0;">
+            <label style="display: block; margin-bottom: 4px; font-size: 13px; color: #323130;">
+              ${deliverableMap[id] || 'Unknown'}: 
+              <span id="percent_${id}">${allocations[id]}%</span>
+            </label>
+            <input type="range" id="slider_${id}" min="0" max="100" value="${allocations[id]}" 
+              style="width: 100%;">
+            <div style="font-size: 11px; color: #605e5c;">
+              <span id="time_${id}">${Math.round(duration * allocations[id] / 100 / 60000)} minutes</span>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+      
+      <div style="margin: 15px 0; padding: 10px; background: #f3f2f1; border-radius: 4px;">
+        <strong>Total: <span id="totalPercent">100</span>%</strong>
+      </div>
+      
+      <div style="display: flex; gap: 8px;">
+        <button id="saveAllocationBtn" style="flex: 1; padding: 10px; background: #107c10; color: white; border: none; border-radius: 4px; cursor: pointer;">
+          Save Allocation
+        </button>
+        <button id="skipAllocationBtn" style="flex: 1; padding: 10px; background: #f3f2f1; border: 1px solid #d2d0ce; border-radius: 4px; cursor: pointer;">
+          Skip (Use Primary Only)
+        </button>
+      </div>
+    `;
+    
+    overlay.appendChild(dialog);
+    document.body.appendChild(overlay);
+    
+    // Add event listeners
+    function updateTotal() {
+      let total = 0;
+      allDeliverables.forEach(id => {
+        const value = parseInt(document.getElementById(`slider_${id}`).value);
+        allocations[id] = value;
+        total += value;
+        document.getElementById(`percent_${id}`).textContent = `${value}%`;
+        document.getElementById(`time_${id}`).textContent = `${Math.round(duration * value / 100 / 60000)} minutes`;
+      });
+      document.getElementById('totalPercent').textContent = total;
+      document.getElementById('saveAllocationBtn').disabled = total !== 100;
+      document.getElementById('saveAllocationBtn').style.background = total === 100 ? '#107c10' : '#a19f9d';
+    }
+    
+    // Slider listeners
+    allDeliverables.forEach(id => {
+      document.getElementById(`slider_${id}`).addEventListener('input', updateTotal);
+    });
+    
+    // Quick allocation buttons
+    document.getElementById('equalSplitBtn').addEventListener('click', () => {
+      allDeliverables.forEach((id, index) => {
+        const value = index === allDeliverables.length - 1 ? 
+          100 - (equalSplit * (allDeliverables.length - 1)) : equalSplit;
+        document.getElementById(`slider_${id}`).value = value;
+      });
+      updateTotal();
+    });
+    
+    document.getElementById('primaryFocusBtn').addEventListener('click', () => {
+      document.getElementById(`slider_${allDeliverables[0]}`).value = 70;
+      const remaining = Math.round(30 / (allDeliverables.length - 1));
+      allDeliverables.slice(1).forEach((id, index) => {
+        const value = index === allDeliverables.length - 2 ? 
+          30 - (remaining * (allDeliverables.length - 2)) : remaining;
+        document.getElementById(`slider_${id}`).value = value;
+      });
+      updateTotal();
+    });
+    
+    // Save allocation
+    document.getElementById('saveAllocationBtn').addEventListener('click', () => {
+      meetingData.deliverableAllocations = allocations;
+      meetingData.allocationType = 'custom';
+      document.body.removeChild(overlay);
+      completeMeetingSave(meetingData, duration, endedEarly);
+    });
+    
+    // Skip allocation
+    document.getElementById('skipAllocationBtn').addEventListener('click', () => {
+      meetingData.allocationType = 'skipped';
+      document.body.removeChild(overlay);
+      completeMeetingSave(meetingData, duration, endedEarly);
+    });
+  });
+}
+
+// NEW: Complete meeting save after allocation
+function completeMeetingSave(meetingData, duration, endedEarly) {
   
   // Check if this was an auto-tracked meeting
   chrome.storage.local.get(['runningMeetingTimer', 'endedMeetings'], (result) => {
@@ -1662,7 +2010,7 @@ function stopMeetingTimer(endedEarly = false) {
     
     // Generate unique ID for this meeting entry
     const entryId = `meeting_${meetingStartTime}_${Date.now()}`;
-    
+        
     // Save meeting entry with multi-tasking flag
     const entry = {
       id: entryId,
@@ -1676,10 +2024,13 @@ function stopMeetingTimer(endedEarly = false) {
       wasMultitasking: currentTimer ? true : false,
       multitaskingWith: currentTask ? `${currentTask}${currentTaskDescription ? ': ' + currentTaskDescription : ''}` : null,
       autoTracked: wasAutoTracked,
-      endedEarly: endedEarly && scheduledMeetingEndTime ? 
+      endedEarly: endedEarly && scheduledMeetingEndTime ?
         (Date.now() < scheduledMeetingEndTime.getTime()) : false,
-      deliverableId: deliverableId
-    };
+        deliverableId: deliverableId,
+        additionalDeliverableIds: meetingData.additionalDeliverableIds || [],
+        deliverableAllocations: meetingData.deliverableAllocations || null,
+        allocationType: meetingData.allocationType || null
+      };
     
     // If ended early, note the difference
     if (entry.endedEarly && scheduledMeetingEndTime) {
@@ -2191,10 +2542,11 @@ function loadDataForDateRange() {
     Object.keys(timeEntries).forEach(date => {
       const entryDate = new Date(date);
       if (entryDate >= startDate && entryDate <= endDate) {
-        const dayEntries = timeEntries[date];
+        const dayEntries = timeEntries[date] || [];
         dayEntries.forEach(entry => {
           // Only include actual tracked time, not scheduled meetings
-          if (!entry.scheduled && !entry.fromCalendar) {
+          // Check for boolean false or undefined/null
+          if (entry.scheduled !== true && entry.fromCalendar !== true) {
             const hours = entry.duration / 3600000;
             totalHours += hours;
             if (entry.wasMultitasking) {
@@ -2215,8 +2567,14 @@ function loadDataForDateRange() {
       tasksList.innerHTML = '<p style="text-align: center; color: #605e5c; padding: 20px;">No time entries for selected period</p>';
     } else {
       // Sort by date and time (newest first)
-      filteredEntries.sort((a, b) => new Date(b.endTime || b.startTime) - new Date(a.endTime || a.startTime));
-      
+      filteredEntries.sort((a, b) => {
+        // Use endTime if available, otherwise startTime
+        const timeA = new Date(a.endTime || a.startTime).getTime();
+        const timeB = new Date(b.endTime || b.startTime).getTime();
+        
+        // Sort newest first (b - a)
+        return timeB - timeA;
+      });
       // Calculate pagination
       const totalPages = Math.ceil(filteredEntries.length / entriesPerPage);
       
@@ -2253,19 +2611,48 @@ function loadDataForDateRange() {
         const hours = Math.floor(duration / 60);
         const minutes = Math.round(duration % 60);
         
-        // Find deliverable name if exists
-        let deliverableName = '';
-        if (entry.deliverableId) {
-          const deliverable = deliverables.find(d => d.id === entry.deliverableId);
-          deliverableName = deliverable ? deliverable.name : 'Unknown';
+      // Find deliverable name if exists
+      // Build deliverable badges on separate lines
+      let deliverableBadges = '';
+      if (entry.deliverableAllocations) {
+        // Multiple deliverables with allocations - create a tag for each on new line
+        Object.entries(entry.deliverableAllocations).forEach(([id, pct]) => {
+          const del = deliverables.find(d => d.id === id);
+          if (del) {
+            deliverableBadges += `<div style="display: block; margin-top: 4px;"><span class="deliverable-tag">📌 ${del.name}: ${pct}%</span></div>`;
+          }
+        });
+      } else if (entry.deliverableId) {
+        // Single deliverable without allocation
+        const deliverable = deliverables.find(d => d.id === entry.deliverableId);
+        if (deliverable) {
+          deliverableBadges += `<div style="display: block; margin-top: 4px;"><span class="deliverable-tag">📌 ${deliverable.name}</span></div>`;
         }
+      }
+
+      let badges = '';
+      if (entry.wasMultitasking) badges += '<span class="multitask-tag">Multi-tasked</span>';
+      if (entry.autoTracked) badges += '<span class="multitask-tag" style="background: #d1ecf1; color: #0c5460;">Auto-tracked</span>';
+      if (entry.endedEarly) badges += '<span class="multitask-tag" style="background: #d4edda; color: #155724;">Ended early</span>';
+      if (entry.provider) badges += `<span class="multitask-tag" style="background: ${entry.provider === 'google' ? '#4285F4' : '#0078D4'}; color: white;">${entry.provider}</span>`;
+      badges += deliverableBadges; // Add all deliverable badges (now with line breaks)
         
-        let badges = '';
-        if (entry.wasMultitasking) badges += '<span class="multitask-tag">Multi-tasked</span>';
-        if (entry.autoTracked) badges += '<span class="multitask-tag" style="background: #d1ecf1; color: #0c5460;">Auto-tracked</span>';
-        if (entry.endedEarly) badges += '<span class="multitask-tag" style="background: #d4edda; color: #155724;">Ended early</span>';
-        if (entry.provider) badges += `<span class="multitask-tag" style="background: ${entry.provider === 'google' ? '#4285F4' : '#0078D4'}; color: white;">${entry.provider}</span>`;
-        if (deliverableName) badges += `<span class="deliverable-tag">📌 ${deliverableName}</span>`;
+        // Format the date for display
+        const entryDate = new Date(entry.startTime);
+        const displayDate = entryDate.toLocaleDateString([], { 
+          month: 'short', 
+          day: 'numeric',
+          year: entryDate.getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined
+        });
+        
+        const startTimeStr = new Date(entry.startTime).toLocaleTimeString([], { 
+          hour: '2-digit', 
+          minute: '2-digit' 
+        });
+        const endTimeStr = new Date(entry.endTime).toLocaleTimeString([], { 
+          hour: '2-digit', 
+          minute: '2-digit' 
+        });
         
         return `
           <div class="task-item">
@@ -2275,11 +2662,11 @@ function loadDataForDateRange() {
                 ${entry.description || entry.subject || 'No description'}
                 ${badges}
               </div>
-              <div class="task-time">
-                <span>${new Date(entry.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                <span>${hours}h ${minutes}m</span>
+              <div class="task-time" style="display: flex; gap: 10px; align-items: center; font-size: 12px; color: #605e5c; margin-top: 4px;">
+                <span style="font-weight: 600; color: #323130;">${displayDate}</span>
+                <span>${startTimeStr} - ${endTimeStr}</span>
+                <span style="color: #0078d4; margin-left: auto; font-weight: 600;">${hours}h ${minutes}m</span>
               </div>
-              ${deliverableName ? `<div class="task-deliverable">Deliverable: ${deliverableName}</div>` : ''}
             </div>
             <div class="task-actions">
               <button class="edit-btn" data-index="${actualIndex}">Edit</button>
@@ -2288,7 +2675,7 @@ function loadDataForDateRange() {
           </div>
         `;
       }).join('');
-      
+
       // Add pagination controls
       if (totalPages > 1) {
         html += `
@@ -2442,6 +2829,160 @@ function hideManualEntry() {
   document.getElementById('manualEntryForm').style.display = 'none';
 }
 
+// Initialize additional deliverables for manual entry
+function initializeManualAdditionalDeliverables() {
+  const container = document.getElementById('manualAdditionalDeliverablesContainer');
+  const addBtn = document.getElementById('manualAddDeliverableBtn');
+  
+  if (!container || !addBtn) return;
+  
+  container.innerHTML = '';
+  
+  addBtn.onclick = () => {
+    addManualDeliverableRow(container);
+  };
+}
+
+// Add deliverable row for manual entry
+function addManualDeliverableRow(container) {
+  const row = document.createElement('div');
+  row.className = 'manual-additional-deliverable-row';
+  row.style.cssText = 'display: flex; gap: 4px; margin-top: 4px; align-items: center;';
+  
+  const select = document.createElement('select');
+  select.className = 'manual-additional-deliverable-select';
+  select.style.cssText = 'width: calc(100% - 35px); padding: 4px; font-size: 12px; border: 1px solid #d2d0ce; border-radius: 3px;';
+  
+  const mainSelect = document.getElementById('manualDeliverable');
+  select.innerHTML = mainSelect.innerHTML;
+  
+  select.addEventListener('change', function() {
+    if (this.value && this.value !== '_new') {
+      // Store the current value
+      const currentValue = this.value;
+      
+      // Temporarily clear this select to check others
+      this.value = '';
+      const allSelected = getManualSelectedDeliverables();
+      
+      // Check if the value exists elsewhere
+      if (allSelected.includes(currentValue)) {
+        alert('This deliverable is already selected. Please choose a different one.');
+        this.value = '';
+      } else {
+        // Restore the value if it's not a duplicate
+        this.value = currentValue;
+      }
+    }
+  });
+  
+  const removeBtn = document.createElement('button');
+  removeBtn.type = 'button';
+  removeBtn.textContent = '🗑️';
+  removeBtn.style.cssText = 'min-width: 24px; height: 24px; padding: 0 2px; background: transparent; border: none; cursor: pointer; font-size: 14px; margin-left: 4px; display: flex; align-items: center; justify-content: center;';
+  removeBtn.onclick = () => row.remove();
+  
+  row.appendChild(select);
+  row.appendChild(removeBtn);
+  container.appendChild(row);
+}
+
+// Get all selected deliverables from manual entry
+function getManualSelectedDeliverables() {
+  const deliverables = [];
+  const mainDeliverable = document.getElementById('manualDeliverable').value;
+  
+  if (mainDeliverable && mainDeliverable !== '_new') {
+    deliverables.push(mainDeliverable);
+  }
+  
+  document.querySelectorAll('.manual-additional-deliverable-select').forEach(select => {
+    const value = select.value;
+    if (value && value !== '_new' && !deliverables.includes(value)) {
+      deliverables.push(value);
+    }
+  });
+  
+  return deliverables;
+}
+
+// Initialize additional deliverables for manual entry
+function initializeManualAdditionalDeliverables() {
+  const container = document.getElementById('manualAdditionalDeliverablesContainer');
+  const addBtn = document.getElementById('manualAddDeliverableBtn');
+  
+  if (!container || !addBtn) return;
+  
+  container.innerHTML = '';
+  
+  addBtn.onclick = () => {
+    addManualDeliverableRow(container);
+  };
+}
+
+// Add deliverable row for manual entry
+function addManualDeliverableRow(container) {
+  const row = document.createElement('div');
+  row.className = 'manual-additional-deliverable-row';
+  row.style.cssText = 'display: flex; gap: 4px; margin-top: 4px; align-items: center;';
+  
+  const select = document.createElement('select');
+  select.className = 'manual-additional-deliverable-select';
+  select.style.cssText = 'flex: 1; padding: 4px; font-size: 12px; border: 1px solid #d2d0ce; border-radius: 3px;';
+  
+  const mainSelect = document.getElementById('manualDeliverable');
+  select.innerHTML = mainSelect.innerHTML;
+  
+  select.addEventListener('change', function() {
+    if (this.value && this.value !== '_new') {
+      // Store the current value
+      const currentValue = this.value;
+      
+      // Temporarily clear this select to check others
+      this.value = '';
+      const allSelected = getManualSelectedDeliverables();
+      
+      // Check if the value exists elsewhere
+      if (allSelected.includes(currentValue)) {
+        alert('This deliverable is already selected. Please choose a different one.');
+        this.value = '';
+      } else {
+        // Restore the value if it's not a duplicate
+        this.value = currentValue;
+      }
+    }
+  });
+  
+  const removeBtn = document.createElement('button');
+  removeBtn.type = 'button';
+  removeBtn.textContent = '🗑️';
+  removeBtn.style.cssText = 'min-width: 24px; height: 24px; padding: 0 2px; background: transparent; border: none; cursor: pointer; font-size: 14px; margin-left: 4px; display: flex; align-items: center; justify-content: center;';
+  removeBtn.onclick = () => row.remove();
+  
+  row.appendChild(select);
+  row.appendChild(removeBtn);
+  container.appendChild(row);
+}
+
+// Get all selected deliverables from manual entry
+function getManualSelectedDeliverables() {
+  const deliverables = [];
+  const mainDeliverable = document.getElementById('manualDeliverable').value;
+  
+  if (mainDeliverable && mainDeliverable !== '_new') {
+    deliverables.push(mainDeliverable);
+  }
+  
+  document.querySelectorAll('.manual-additional-deliverable-select').forEach(select => {
+    const value = select.value;
+    if (value && value !== '_new' && !deliverables.includes(value)) {
+      deliverables.push(value);
+    }
+  });
+  
+  return deliverables;
+}
+
 // Save manual entry with improved logic
 async function saveManualEntry() {
   const category = document.getElementById('manualCategory').value;
@@ -2569,21 +3110,30 @@ async function saveManualEntry() {
       }
     }
     
-    const entry = {
-      id: entryId,
-      type: entryType,
-      category: category,
-      description: description,
-      startTime: startTime.toISOString(),
-      endTime: endTime.toISOString(),
-      duration: duration,
-      date: startTime.toDateString(),
-      wasMultitasking: wasMultitasking,
-      multitaskingWith: multitaskingDescription,
-      manualEntry: true, // Flag to identify manual entries
-      deliverableId: deliverableId
-    };
-    
+// Check for multiple deliverables if this is a meeting
+const isManualMeeting = category === 'Meeting' || entryType === 'meeting';
+const additionalDeliverableIds = isManualMeeting ? 
+  getManualSelectedDeliverables().filter(id => id !== deliverableId) : [];
+
+const entry = {
+  id: entryId,
+  type: entryType,
+  category: category,
+  description: description,
+  startTime: startTime.toISOString(),
+  endTime: endTime.toISOString(),
+  duration: duration,
+  date: startTime.toDateString(),
+  wasMultitasking: wasMultitasking,
+  multitaskingWith: multitaskingDescription,
+  manualEntry: true, // Flag to identify manual entries
+  deliverableId: deliverableId
+};
+
+// If meeting with multiple deliverables, show allocation dialog
+if (isManualMeeting && additionalDeliverableIds.length > 0) {
+  const allDeliverableIds = [deliverableId, ...additionalDeliverableIds].filter(id => id);
+  showManualAllocationDialog(entry, allDeliverableIds, () => {
     saveTimeEntry(entry);
     hideManualEntry();
     loadDataForDateRange();
@@ -2598,6 +3148,27 @@ async function saveManualEntry() {
       btn.style.background = '';
     }, 2000);
   });
+} else {
+  saveTimeEntry(entry);
+  hideManualEntry();
+  loadDataForDateRange();
+  
+  // Show success feedback
+  const btn = document.getElementById('saveManualBtn');
+  const originalText = btn.textContent;
+  btn.textContent = '✓ Saved!';
+  btn.style.background = '#107c10';
+  setTimeout(() => {
+    btn.textContent = originalText;
+    btn.style.background = '';
+  }, 2000);
+}
+  });
+}
+// Show allocation dialog for manual entries
+function showManualAllocationDialog(entry, allDeliverableIds, onComplete) {
+  // Reuse the same allocation dialog structure
+  showEditAllocationDialog(entry, allDeliverableIds, onComplete);
 }
 
 // Helper function to check for overlapping entries
@@ -2768,31 +3339,37 @@ function showEditDialog(entry, entryDate, categories, deliverables) {
       </div>
       
       <div class="edit-form-group">
-        <label>Deliverable:</label>
-        <select id="editDeliverable">
-          ${deliverablesOptions}
-        </select>
-        <div class="new-deliverable-input" id="editNewDeliverableInput" style="display: none; margin-top: 8px;">
-          <input type="text" id="editNewDeliverableName" placeholder="New deliverable name" style="width: 100%; padding: 6px 8px; border: 1px solid #d2d0ce; border-radius: 4px; font-size: 13px;">
-          <small style="color: #605e5c; font-size: 11px;">Press Enter to create</small>
-        </div>
+      <label>Deliverable:</label>
+      <select id="editDeliverable">
+        ${deliverablesOptions}
+      </select>
+      <div class="new-deliverable-input" id="editNewDeliverableInput" style="display: none; margin-top: 8px;">
+        <input type="text" id="editNewDeliverableName" placeholder="New deliverable name" style="width: 100%; padding: 6px 8px; border: 1px solid #d2d0ce; border-radius: 4px; font-size: 13px;">
+        <small style="color: #605e5c; font-size: 11px;">Press Enter to create</small>
       </div>
+      <!-- Additional deliverables for meetings -->
+      <div id="editAdditionalDeliverablesSection" style="display:${entry.type === 'meeting' || entry.category === 'Meeting' ? 'block' : 'none'}; margin-top: 8px;">
+        <label style="font-size: 11px; color: #605e5c;">Additional deliverables:</label>
+        <div id="editAdditionalDeliverablesContainer"></div>
+        <button type="button" id="editAddDeliverableBtn" style="margin-top: 4px; font-size: 12px; padding: 4px 8px; background: #f3f2f1; border: 1px solid #d2d0ce; border-radius: 4px; cursor: pointer;">+ Add deliverable</button>
+      </div>
+    </div>
       
-      <div class="edit-form-group">
-        <label>Date:</label>
-        <input type="date" id="editDate" value="${startDateTime.toISOString().split('T')[0]}">
-      </div>
-      
-      <div class="time-input-grid">
-        <div class="edit-form-group">
-          <label>Start Time:</label>
-          <input type="time" id="editStartTime" value="${startDateTime.toTimeString().slice(0, 5)}">
-        </div>
-        <div class="edit-form-group">
-          <label>End Time:</label>
-          <input type="time" id="editEndTime" value="${endDateTime.toTimeString().slice(0, 5)}">
-        </div>
-      </div>
+    <div class="edit-form-group">
+    <label>Date:</label>
+    <input type="date" id="editDate" value="${startDateTime.getFullYear()}-${String(startDateTime.getMonth() + 1).padStart(2, '0')}-${String(startDateTime.getDate()).padStart(2, '0')}">
+  </div>
+  
+  <div class="time-input-grid">
+    <div class="edit-form-group">
+      <label>Start Time:</label>
+      <input type="time" id="editStartTime" value="${String(startDateTime.getHours()).padStart(2, '0')}:${String(startDateTime.getMinutes()).padStart(2, '0')}">
+    </div>
+    <div class="edit-form-group">
+      <label>End Time:</label>
+      <input type="time" id="editEndTime" value="${String(endDateTime.getHours()).padStart(2, '0')}:${String(endDateTime.getMinutes()).padStart(2, '0')}">
+    </div>
+  </div>
       
       <div class="edit-form-group">
         <label>Duration (minutes): <span id="durationDisplay">${duration}</span></label>
@@ -2827,6 +3404,33 @@ function showEditDialog(entry, entryDate, categories, deliverables) {
     overlay.appendChild(dialog);
     document.body.appendChild(overlay);
     
+    // Add event listener for deliverable dropdown
+    // Initialize additional deliverables if this is a meeting
+    if (entry.type === 'meeting' || entry.category === 'Meeting') {
+      initializeEditAdditionalDeliverables(deliverables);
+      
+      // Pre-populate if entry has allocations
+      if (entry.deliverableAllocations) {
+        const container = document.getElementById('editAdditionalDeliverablesContainer');
+        Object.keys(entry.deliverableAllocations).forEach(delivId => {
+          if (delivId !== entry.deliverableId) {
+            addEditDeliverableRow(container, deliverables, delivId);
+          }
+        });
+      }
+    }
+
+    // Category change listener to show/hide additional deliverables
+    document.getElementById('editCategory').addEventListener('change', function() {
+      const additionalSection = document.getElementById('editAdditionalDeliverablesSection');
+      if (this.value === 'Meeting') {
+        additionalSection.style.display = 'block';
+        initializeEditAdditionalDeliverables(deliverables);
+      } else {
+        additionalSection.style.display = 'none';
+      }
+    });
+
     // Add event listener for deliverable dropdown
     document.getElementById('editDeliverable').addEventListener('change', function() {
       const newDeliverableInput = document.getElementById('editNewDeliverableInput');
@@ -3031,8 +3635,32 @@ function showEditDialog(entry, entryDate, categories, deliverables) {
       updateMultitaskingDropdown();
     }
     
-    // Save button
-    document.getElementById('saveEditBtn').addEventListener('click', async () => {
+// Save button
+document.getElementById('saveEditBtn').addEventListener('click', async () => {
+  // Validate date and time fields first
+  const newDate = document.getElementById('editDate').value;
+  const startTime = document.getElementById('editStartTime').value;
+  const endTime = document.getElementById('editEndTime').value;
+  
+  if (!newDate || !startTime || !endTime) {
+    alert('Please fill in all date and time fields');
+    return;
+  }
+  
+  // Validate that the date is valid
+  const testDate = new Date(newDate);
+  if (isNaN(testDate.getTime())) {
+    alert('Invalid date format. Please select a valid date.');
+    return;
+  }
+  
+  // Validate time format
+  const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
+  if (!timeRegex.test(startTime) || !timeRegex.test(endTime)) {
+    alert('Invalid time format. Please use HH:MM format.');
+    return;
+  }
+      
       let deliverableId = document.getElementById('editDeliverable').value;
       
       // Handle new deliverable creation if needed
@@ -3045,29 +3673,15 @@ function showEditDialog(entry, entryDate, categories, deliverables) {
         }
       }
       
-      const updatedEntry = {
-        ...entry,
-        category: document.getElementById('editCategory').value,
-        description: document.getElementById('editDescription').value,
-        wasMultitasking: document.getElementById('editMultitasking').checked,
-        multitaskingWith: document.getElementById('editMultitasking').checked ? 
-          document.getElementById('editMultitaskingWith').value : null,
-        deliverableId: deliverableId
-      };
+      // Check for multiple deliverables if meeting
+      const isEditMeeting = document.getElementById('editCategory').value === 'Meeting';
+      let additionalDeliverableIds = [];
       
-      // ADDED: Ensure type matches category
-      if (updatedEntry.category === 'Meeting') {
-        updatedEntry.type = 'meeting';
-      } else if (updatedEntry.category !== 'Meeting' && updatedEntry.type === 'meeting') {
-        // Changed from meeting to another category
-        updatedEntry.type = 'task';
+      if (isEditMeeting) {
+        additionalDeliverableIds = getEditSelectedDeliverables().filter(id => id !== deliverableId);
       }
       
       // Calculate new times
-      const newDate = document.getElementById('editDate').value;
-      const startTime = document.getElementById('editStartTime').value;
-      const endTime = document.getElementById('editEndTime').value;
-      
       let newStartDateTime = new Date(`${newDate}T${startTime}`);
       let newEndDateTime = new Date(`${newDate}T${endTime}`);
       
@@ -3076,19 +3690,290 @@ function showEditDialog(entry, entryDate, categories, deliverables) {
         newEndDateTime.setDate(newEndDateTime.getDate() + 1);
       }
       
-      updatedEntry.startTime = newStartDateTime.toISOString();
-      updatedEntry.endTime = newEndDateTime.toISOString();
-      updatedEntry.duration = newEndDateTime - newStartDateTime;
-      updatedEntry.date = newStartDateTime.toDateString();
+      const updatedEntry = {
+        ...entry,
+        category: document.getElementById('editCategory').value,
+        description: document.getElementById('editDescription').value,
+        wasMultitasking: document.getElementById('editMultitasking').checked,
+        multitaskingWith: document.getElementById('editMultitasking').checked ? 
+          document.getElementById('editMultitaskingWith').value : null,
+        deliverableId: deliverableId,
+        // CRITICAL: Set all time-related fields correctly
+        startTime: newStartDateTime.toISOString(),
+        endTime: newEndDateTime.toISOString(),
+        duration: Math.max(0, newEndDateTime.getTime() - newStartDateTime.getTime()), // Ensure positive number
+        date: newStartDateTime.toDateString(), // This is critical for storage!
+        // Ensure entry won't be filtered out
+        scheduled: false,
+        fromCalendar: false,
+        // Preserve or create ID
+        id: entry.id || `edited_${Date.now()}_${Math.random()}`
+      };
+      
+      // Additional validation before saving
+      if (!updatedEntry.startTime || !updatedEntry.endTime || !updatedEntry.date) {
+        alert('Error: Missing required time fields. Please check your input.');
+        console.error('Missing fields in updated entry:', updatedEntry);
+        return;
+      }
+      
+      // Ensure type matches category
+      if (updatedEntry.category === 'Meeting') {
+        updatedEntry.type = 'meeting';
+      } else if (updatedEntry.category !== 'Meeting' && updatedEntry.type === 'meeting') {
+        // Changed from meeting to another category
+        updatedEntry.type = 'task';
+      }
+      
+      console.log('Saving updated entry:', {
+        original: entry,
+        updated: updatedEntry,
+        originalDate: entryDate,
+        newDate: updatedEntry.date
+      });
       
       // Save the updated entry
-      saveUpdatedEntry(entry, updatedEntry, entryDate);
-      document.body.removeChild(overlay);
+      // Check if we need allocation dialog for meetings with multiple deliverables
+      if (isEditMeeting && additionalDeliverableIds.length > 0) {
+        const allDeliverableIds = [deliverableId, ...additionalDeliverableIds].filter(id => id);
+        
+        // Show allocation dialog for the edit
+        showEditAllocationDialog(updatedEntry, allDeliverableIds, () => {
+          saveUpdatedEntry(entry, updatedEntry, entryDate);
+          document.body.removeChild(overlay);
+        });
+      } else {
+        // Save without allocation
+        saveUpdatedEntry(entry, updatedEntry, entryDate);
+        document.body.removeChild(overlay);
+      }
     });
     
-    // Cancel button
-    document.getElementById('cancelEditBtn').addEventListener('click', () => {
+// Cancel button
+document.getElementById('cancelEditBtn').addEventListener('click', () => {
+  document.body.removeChild(overlay);
+});
+});  // Close the chrome.storage.local.get callback
+}  // Close the showEditDialog function
+
+// Initialize additional deliverables for edit dialog
+function initializeEditAdditionalDeliverables(deliverables) {
+  const container = document.getElementById('editAdditionalDeliverablesContainer');
+  const addBtn = document.getElementById('editAddDeliverableBtn');
+  
+  if (!container || !addBtn) return;
+  
+  container.innerHTML = '';
+  
+  addBtn.onclick = () => {
+    addEditDeliverableRow(container, deliverables);
+  };
+}
+
+// Add deliverable row for edit dialog
+function addEditDeliverableRow(container, deliverables, selectedValue = '') {
+  const row = document.createElement('div');
+  row.className = 'edit-additional-deliverable-row';
+  row.style.cssText = 'display: flex; gap: 4px; margin-top: 4px; align-items: center;';
+  
+  const select = document.createElement('select');
+  select.className = 'edit-additional-deliverable-select';
+  select.style.cssText = 'width: calc(100% - 35px); padding: 4px; font-size: 12px; border: 1px solid #d2d0ce; border-radius: 3px;';
+  
+  // Build options similar to main select
+  const mainSelect = document.getElementById('editDeliverable');
+  select.innerHTML = mainSelect.innerHTML;
+  
+  if (selectedValue) {
+    select.value = selectedValue;
+  }
+  
+  select.addEventListener('change', function() {
+    if (this.value && this.value !== '_new') {
+      // Store the current value
+      const currentValue = this.value;
+      
+      // Temporarily clear this select to check others
+      this.value = '';
+      const allSelected = getEditSelectedDeliverables();
+      
+      // Check if the value exists elsewhere
+      if (allSelected.includes(currentValue)) {
+        alert('This deliverable is already selected. Please choose a different one.');
+        this.value = '';
+      } else {
+        // Restore the value if it's not a duplicate
+        this.value = currentValue;
+      }
+    }
+  });
+  const removeBtn = document.createElement('button');
+  removeBtn.type = 'button';
+  removeBtn.textContent = '🗑️';
+  removeBtn.style.cssText = 'min-width: 24px; height: 24px; padding: 0 2px; background: transparent; border: none; cursor: pointer; font-size: 14px; margin-left: 4px; display: flex; align-items: center; justify-content: center;';
+  removeBtn.onclick = () => row.remove();
+  
+  row.appendChild(select);
+  row.appendChild(removeBtn);
+  container.appendChild(row);
+}
+
+// Get all selected deliverables from edit dialog
+function getEditSelectedDeliverables() {
+  const deliverables = [];
+  const mainDeliverable = document.getElementById('editDeliverable').value;
+  
+  if (mainDeliverable && mainDeliverable !== '_new') {
+    deliverables.push(mainDeliverable);
+  }
+  
+  document.querySelectorAll('.edit-additional-deliverable-select').forEach(select => {
+    const value = select.value;
+    if (value && value !== '_new' && !deliverables.includes(value)) {
+      deliverables.push(value);
+    }
+  });
+  
+  return deliverables;
+}
+
+// Show allocation dialog for edited entries
+function showEditAllocationDialog(entry, allDeliverableIds, onComplete) {
+  const duration = entry.duration;
+  
+  const overlay = document.createElement('div');
+  overlay.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 10001;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  `;
+  
+  const dialog = document.createElement('div');
+  dialog.style.cssText = `
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    max-width: 400px;
+    width: 90%;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  `;
+  
+  chrome.storage.local.get(['deliverables'], (result) => {
+    const deliverables = result.deliverables || [];
+    const deliverableMap = {};
+    deliverables.forEach(d => deliverableMap[d.id] = d.name);
+    
+    let allocations = {};
+    const equalSplit = Math.round(100 / allDeliverableIds.length);
+    allDeliverableIds.forEach((id, index) => {
+      allocations[id] = index === allDeliverableIds.length - 1 ? 
+        100 - (equalSplit * (allDeliverableIds.length - 1)) : equalSplit;
+    });
+    
+    dialog.innerHTML = `
+      <h3 style="margin: 0 0 15px 0; color: #323130;">Allocate Time</h3>
+      <p style="margin: 0 0 15px 0; color: #605e5c; font-size: 13px;">
+        How was the ${Math.round(duration / 60000)} minutes spent across deliverables?
+      </p>
+      
+      <div class="quick-allocation-buttons" style="display: flex; gap: 8px; margin-bottom: 15px;">
+        <button id="editEqualSplitBtn" style="flex: 1; padding: 8px; background: #0078d4; color: white; border: none; border-radius: 4px; cursor: pointer;">
+          ⚖️ Equal Split
+        </button>
+        <button id="editPrimaryFocusBtn" style="flex: 1; padding: 8px; background: #f3f2f1; border: 1px solid #d2d0ce; border-radius: 4px; cursor: pointer;">
+          🎯 Primary Focus
+        </button>
+      </div>
+      
+      <div id="editAllocationSliders">
+        ${allDeliverableIds.map(id => `
+          <div style="margin: 10px 0;">
+            <label style="display: block; margin-bottom: 4px; font-size: 13px; color: #323130;">
+              ${deliverableMap[id] || 'Unknown'}: 
+              <span id="edit_percent_${id}">${allocations[id]}%</span>
+            </label>
+            <input type="range" id="edit_slider_${id}" min="0" max="100" value="${allocations[id]}" 
+              style="width: 100%;">
+            <div style="font-size: 11px; color: #605e5c;">
+              <span id="edit_time_${id}">${Math.round(duration * allocations[id] / 100 / 60000)} minutes</span>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+      
+      <div style="margin: 15px 0; padding: 10px; background: #f3f2f1; border-radius: 4px;">
+        <strong>Total: <span id="editTotalPercent">100</span>%</strong>
+      </div>
+      
+      <div style="display: flex; gap: 8px;">
+        <button id="editSaveAllocationBtn" style="flex: 1; padding: 10px; background: #107c10; color: white; border: none; border-radius: 4px; cursor: pointer;">
+          Save Allocation
+        </button>
+        <button id="editSkipAllocationBtn" style="flex: 1; padding: 10px; background: #f3f2f1; border: 1px solid #d2d0ce; border-radius: 4px; cursor: pointer;">
+          Skip (Use Primary Only)
+        </button>
+      </div>
+    `;
+    
+    overlay.appendChild(dialog);
+    document.body.appendChild(overlay);
+    
+    function updateTotal() {
+      let total = 0;
+      allDeliverableIds.forEach(id => {
+        const value = parseInt(document.getElementById(`edit_slider_${id}`).value);
+        allocations[id] = value;
+        total += value;
+        document.getElementById(`edit_percent_${id}`).textContent = `${value}%`;
+        document.getElementById(`edit_time_${id}`).textContent = `${Math.round(duration * value / 100 / 60000)} minutes`;
+      });
+      document.getElementById('editTotalPercent').textContent = total;
+      document.getElementById('editSaveAllocationBtn').disabled = total !== 100;
+      document.getElementById('editSaveAllocationBtn').style.background = total === 100 ? '#107c10' : '#a19f9d';
+    }
+    
+    allDeliverableIds.forEach(id => {
+      document.getElementById(`edit_slider_${id}`).addEventListener('input', updateTotal);
+    });
+    
+    document.getElementById('editEqualSplitBtn').addEventListener('click', () => {
+      allDeliverableIds.forEach((id, index) => {
+        const value = index === allDeliverableIds.length - 1 ? 
+          100 - (equalSplit * (allDeliverableIds.length - 1)) : equalSplit;
+        document.getElementById(`edit_slider_${id}`).value = value;
+      });
+      updateTotal();
+    });
+    
+    document.getElementById('editPrimaryFocusBtn').addEventListener('click', () => {
+      document.getElementById(`edit_slider_${allDeliverableIds[0]}`).value = 70;
+      const remaining = Math.round(30 / (allDeliverableIds.length - 1));
+      allDeliverableIds.slice(1).forEach((id, index) => {
+        const value = index === allDeliverableIds.length - 2 ? 
+          30 - (remaining * (allDeliverableIds.length - 2)) : remaining;
+        document.getElementById(`edit_slider_${id}`).value = value;
+      });
+      updateTotal();
+    });
+    
+    document.getElementById('editSaveAllocationBtn').addEventListener('click', () => {
+      entry.deliverableAllocations = allocations;
+      entry.allocationType = 'custom';
       document.body.removeChild(overlay);
+      onComplete();
+    });
+    
+    document.getElementById('editSkipAllocationBtn').addEventListener('click', () => {
+      entry.allocationType = 'skipped';
+      document.body.removeChild(overlay);
+      onComplete();
     });
   });
 }
@@ -3098,36 +3983,134 @@ function saveUpdatedEntry(oldEntry, newEntry, originalDate) {
   chrome.storage.local.get(['timeEntries'], (result) => {
     const timeEntries = result.timeEntries || {};
     
-    // Remove old entry
-    if (timeEntries[originalDate]) {
-      const index = timeEntries[originalDate].findIndex(e => 
-        e.id === oldEntry.id || 
-        (e.startTime === oldEntry.startTime && e.endTime === oldEntry.endTime)
-      );
+    console.log('Updating entry - Before:', {
+      oldEntry,
+      originalDate,
+      availableDates: Object.keys(timeEntries)
+    });
+    
+    // Step 1: Find and remove the old entry
+    let entryRemoved = false;
+    let actualDateFound = null;
+    
+    // First try the original date
+    if (timeEntries[originalDate] && Array.isArray(timeEntries[originalDate])) {
+      const index = timeEntries[originalDate].findIndex(e => {
+        if (oldEntry.id && e.id) return e.id === oldEntry.id;
+        return e.startTime === oldEntry.startTime && e.endTime === oldEntry.endTime;
+      });
       
       if (index !== -1) {
         timeEntries[originalDate].splice(index, 1);
+        entryRemoved = true;
+        actualDateFound = originalDate;
         
-        // Remove date key if no entries left
+        // Clean up empty date
         if (timeEntries[originalDate].length === 0) {
           delete timeEntries[originalDate];
+        }
+        console.log(`Removed entry from original date: ${originalDate}`);
+      }
+    }
+    
+    // If not found, search all dates
+    if (!entryRemoved) {
+      console.log('Searching all dates for entry...');
+      for (const dateKey of Object.keys(timeEntries)) {
+        if (entryRemoved) break;
+        
+        if (Array.isArray(timeEntries[dateKey])) {
+          const index = timeEntries[dateKey].findIndex(e => {
+            if (oldEntry.id && e.id) return e.id === oldEntry.id;
+            return e.startTime === oldEntry.startTime && e.endTime === oldEntry.endTime;
+          });
+          
+          if (index !== -1) {
+            timeEntries[dateKey].splice(index, 1);
+            entryRemoved = true;
+            actualDateFound = dateKey;
+            
+            // Clean up empty date
+            if (timeEntries[dateKey].length === 0) {
+              delete timeEntries[dateKey];
+            }
+            console.log(`Found and removed entry from: ${dateKey}`);
+            break;
+          }
         }
       }
     }
     
-    // Add new entry to potentially new date
-    const newDate = newEntry.date;
-    if (!timeEntries[newDate]) {
-      timeEntries[newDate] = [];
+    if (!entryRemoved) {
+      console.warn('Could not find entry to remove, adding new entry anyway', {
+        searchedFor: {
+          id: oldEntry.id,
+          startTime: oldEntry.startTime,
+          endTime: oldEntry.endTime,
+          originalDate: originalDate
+        },
+        availableDates: Object.keys(timeEntries),
+        entryCounts: Object.fromEntries(
+          Object.entries(timeEntries).map(([date, entries]) => [date, entries.length])
+        )
+      });
     }
-    timeEntries[newDate].push(newEntry);
+    // Step 2: Prepare the new entry
+    const newStartDate = new Date(newEntry.startTime);
+    const newDateKey = newStartDate.toDateString();
     
-    // Save and refresh
+    const cleanEntry = {
+      ...newEntry,
+      id: newEntry.id || oldEntry.id || `edited_${Date.now()}_${Math.random()}`,
+      date: newDateKey, // Ensure date is set correctly
+      scheduled: false,
+      fromCalendar: false
+    };
+        
+    // Validate the entry has all required fields
+    if (!cleanEntry.startTime || !cleanEntry.endTime || cleanEntry.duration === undefined || cleanEntry.duration === null) {
+      console.error('Invalid entry data:', {
+        startTime: cleanEntry.startTime,
+        endTime: cleanEntry.endTime,
+        duration: cleanEntry.duration,
+        date: cleanEntry.date,
+        id: cleanEntry.id
+      });
+      showNotification(`Error: Invalid entry data - Missing ${!cleanEntry.startTime ? 'start time' : !cleanEntry.endTime ? 'end time' : 'duration'}`, 'error');
+      return;
+    }
+
+    // Additional validation for duration
+    if (cleanEntry.duration < 0 || isNaN(cleanEntry.duration)) {
+      console.error('Invalid duration:', cleanEntry.duration);
+      showNotification('Error: Invalid duration value', 'error');
+      return;
+    }
+    // Step 3: Add to the new date
+    if (!timeEntries[newDateKey]) {
+      timeEntries[newDateKey] = [];
+    }
+    
+    timeEntries[newDateKey].push(cleanEntry);
+    
+    console.log('Updating entry - After:', {
+      newEntry: cleanEntry,
+      newDate: newDateKey,
+      removed: entryRemoved,
+      fromDate: actualDateFound
+    });
+    
+    // Step 4: Save and refresh
     chrome.storage.local.set({ timeEntries }, () => {
-      loadDataForDateRange();
-      loadCategoryTotals();
-      loadGoalsProgress();
-      showNotification('Entry updated successfully');
+      if (chrome.runtime.lastError) {
+        console.error('Error saving:', chrome.runtime.lastError);
+        showNotification('Error saving changes', 'error');
+      } else {
+        loadDataForDateRange();
+        loadCategoryTotals();
+        loadGoalsProgress();
+        showNotification('Entry updated successfully', 'success');
+      }
     });
   });
 }
@@ -3176,6 +4159,51 @@ async function exportToExcel() {
   chrome.storage.local.get(['timeEntries', 'multitaskingSettings', 'exportSettings', 'deliverables', 'goals'], async (result) => {
     const { startDate, endDate } = getDateRange();
     const timeEntries = result.timeEntries || {};
+    // NEW: Process allocations first
+    const processedTimeEntries = {};
+    const allocationDetails = [];
+    
+    // Process each date's entries to handle allocations
+    Object.keys(timeEntries).forEach(date => {
+      processedTimeEntries[date] = [];
+      const dayEntries = timeEntries[date];
+      
+      dayEntries.forEach(entry => {
+        if (entry.deliverableAllocations) {
+          // This meeting was allocated across multiple deliverables
+          Object.entries(entry.deliverableAllocations).forEach(([delivId, percentage]) => {
+            const allocatedEntry = {
+              ...entry,
+              deliverableId: delivId,
+              duration: entry.duration * percentage / 100,
+              description: entry.description + ` [${percentage}% allocated]`,
+              isAllocated: true,
+              originalDuration: entry.duration
+            };
+            processedTimeEntries[date].push(allocatedEntry);
+          });
+          
+          // Track allocation details for reporting
+          allocationDetails.push({
+            Date: date,
+            Meeting: entry.description,
+            'Total Duration (min)': Math.round(entry.duration / 60000),
+            'Allocation Method': entry.allocationType || 'manual',
+            'Deliverables': Object.entries(entry.deliverableAllocations)
+              .map(([id, pct]) => {
+                const del = result.deliverables.find(d => d.id === id);
+                return `${del ? del.name : 'Unknown'}: ${pct}%`;
+              }).join(', ')
+          });
+        } else {
+          // Normal entry, no allocation
+          processedTimeEntries[date].push(entry);
+        }
+      });
+    });
+    
+    // Use processedTimeEntries instead of timeEntries from here on
+    const timeEntriesToUse = processedTimeEntries;
     const settings = result.multitaskingSettings || { productivityWeight: 50 };
     const exportSettings = result.exportSettings || {
       includeMultitaskAnalysis: true,
@@ -3186,11 +4214,11 @@ async function exportToExcel() {
     
     // Filter entries based on date range
     const filteredEntries = {};
-    Object.keys(timeEntries).forEach(date => {
+    Object.keys(timeEntriesToUse).forEach(date => {
       const entryDate = new Date(date);
       if (entryDate >= startDate && entryDate <= endDate) {
         // Filter out scheduled entries that weren't tracked
-        filteredEntries[date] = timeEntries[date].filter(entry => 
+        filteredEntries[date] = timeEntriesToUse[date].filter(entry =>
           !entry.scheduled && !entry.fromCalendar
         );
       }
@@ -3504,7 +4532,12 @@ async function exportToExcel() {
       const completionsSheet = XLSX.utils.json_to_sheet(periodCompletions);
       XLSX.utils.book_append_sheet(wb, completionsSheet, 'Period Completions');
     }
-    
+
+    // NEW: Add allocation details sheet if there are any allocations
+    if (allocationDetails.length > 0) {
+      const allocationSheet = XLSX.utils.json_to_sheet(allocationDetails);
+      XLSX.utils.book_append_sheet(wb, allocationSheet, 'Meeting Allocations');
+    }
     // Add multi-tasking pairs sheet if there are pairs
     if (multiTaskingPairs.length > 0) {
       const pairsSheet = XLSX.utils.json_to_sheet(multiTaskingPairs);
