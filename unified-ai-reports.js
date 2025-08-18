@@ -1424,7 +1424,7 @@ handleSaveTemplate() {
         await this.copyPromptAndData();
       }
     }
-  
+      
     // Gather data for report - with improved error handling
     async gatherData() {
       // Directly fall back to storage - message passing seems unreliable
@@ -1432,6 +1432,18 @@ handleSaveTemplate() {
       
       // Add flag for charts
       data.includeCharts = this.settings.includeCharts;
+      
+      // Add allocation summary if there are any allocated entries
+      if (data.entries) {
+        const allocatedEntries = data.entries.filter(e => e.isAllocated);
+        if (allocatedEntries.length > 0) {
+          data.allocationSummary = {
+            totalAllocatedEntries: allocatedEntries.length,
+            totalAllocatedHours: allocatedEntries.reduce((sum, e) => sum + (e.duration / 3600000), 0).toFixed(2),
+            meetingsWithAllocations: [...new Set(allocatedEntries.map(e => (e.description || '').replace(/ \[\d+% allocated\]/, '')))].length
+          };
+        }
+      }
       
       return data;
     }
@@ -1483,20 +1495,46 @@ handleSaveTemplate() {
             'Break', 'Training', 'Planning', 'Other'
           ];
           
-          const goals = result.goals || {};
-          
-          // Build the data object
+                    const goals = result.goals || {};
+                    
+          // Process entries to handle allocations before building data
+          const processedEntries = [];
+          filteredEntries.forEach(entry => {
+            if (entry.deliverableAllocations) {
+              // Split allocated meetings into virtual entries for analysis
+              Object.entries(entry.deliverableAllocations).forEach(([delivId, percentage]) => {
+                processedEntries.push({
+                  ...entry,
+                  deliverableId: delivId,
+                  duration: entry.duration * percentage / 100,
+                  description: entry.description + ` [${percentage}% allocated]`,
+                  isAllocated: true,
+                  allocationPercentage: percentage,
+                  originalDuration: entry.duration
+                });
+              });
+            } else {
+              processedEntries.push(entry);
+            }
+          });
+
+          // Build the data object with processed entries
           const data = {
             dateRange: {
               start: dateRange.start.toISOString(),
               end: dateRange.end.toISOString()
             },
-            summary: this.calculateSummary(filteredEntries),
-            entries: filteredEntries
+            summary: this.calculateSummary(processedEntries),
+            entries: processedEntries
           };
-          
+
           if (this.settings.includeCategories) {
-            data.categoryBreakdown = this.calculateCategoryBreakdown(filteredEntries, categories);
+            data.categoryBreakdown = this.calculateCategoryBreakdown(processedEntries, categories);
+          }
+
+          // Add deliverable breakdown
+          if (result.deliverables) {
+            data.deliverableBreakdown = this.calculateDeliverableBreakdown(processedEntries, result.deliverables);
           }
           
           if (this.settings.includeDailyPatterns) {
@@ -1671,8 +1709,94 @@ handleSaveTemplate() {
       };
     }
   
-    // Calculate category breakdown
-    calculateCategoryBreakdown(entries, categories) {
+      // Calculate deliverable breakdown with allocation support
+      calculateDeliverableBreakdown(entries, deliverables) {
+        if (!Array.isArray(entries) || !Array.isArray(deliverables)) {
+          console.warn('calculateDeliverableBreakdown: invalid input', { entries, deliverables });
+          return {};
+        }
+        
+        const breakdown = {};
+        const deliverableMap = {};
+        
+        // Create map for quick lookup
+        deliverables.forEach(d => {
+          deliverableMap[d.id] = d;
+          breakdown[d.id] = {
+            name: d.name,
+            goalId: d.goalId,
+            status: d.completed ? 'Completed' : 'Active',
+            totalHours: 0,
+            allocatedHours: 0,  // Time from allocated meetings
+            directHours: 0,     // Time directly assigned
+            entries: 0,
+            allocatedEntries: 0,
+            tasks: new Set(),
+            meetings: []
+          };
+        });
+        
+        entries.forEach(entry => {
+          if (!entry.deliverableId) return;
+          
+          const deliverable = breakdown[entry.deliverableId];
+          if (!deliverable) return;
+          
+          // Calculate duration
+          let duration = 0;
+          if (entry.duration && typeof entry.duration === 'number') {
+            duration = entry.duration / 3600000; // Convert ms to hours
+          } else if (entry.endTime && entry.startTime) {
+            const start = new Date(entry.startTime).getTime();
+            const end = new Date(entry.endTime).getTime();
+            duration = (end - start) / 3600000;
+          }
+          
+          deliverable.totalHours += duration;
+          deliverable.entries++;
+          
+          // Track if this is allocated time
+          if (entry.isAllocated) {
+            deliverable.allocatedHours += duration;
+            deliverable.allocatedEntries++;
+            
+            // Track meeting info
+            if (entry.type === 'meeting' || entry.category === 'Meeting') {
+              deliverable.meetings.push({
+                description: entry.description,
+                duration: duration,
+                percentage: entry.allocationPercentage || 100
+              });
+            }
+          } else {
+            deliverable.directHours += duration;
+          }
+          
+          // Add task description
+          deliverable.tasks.add(entry.description || 'Untitled');
+        });
+        
+        // Convert sets to arrays and round numbers
+        Object.keys(breakdown).forEach(key => {
+          const d = breakdown[key];
+          d.totalHours = Math.round(d.totalHours * 100) / 100;
+          d.allocatedHours = Math.round(d.allocatedHours * 100) / 100;
+          d.directHours = Math.round(d.directHours * 100) / 100;
+          d.uniqueTasks = d.tasks.size;
+          d.taskList = Array.from(d.tasks);
+          delete d.tasks;
+          
+          // Remove empty deliverables
+          if (d.entries === 0) {
+            delete breakdown[key];
+          }
+        });
+        
+        return breakdown;
+      }
+
+      // Calculate category breakdown
+      calculateCategoryBreakdown(entries, categories) {
       // Ensure entries is an array
       if (!Array.isArray(entries)) {
         console.warn('calculateCategoryBreakdown: entries is not an array', entries);
