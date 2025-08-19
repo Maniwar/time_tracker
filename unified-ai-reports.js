@@ -1448,19 +1448,27 @@ handleSaveTemplate() {
       return data;
     }
 
-    // Fallback method to gather data from storage
-    async gatherDataFromStorage() {
-      return new Promise((resolve) => {
-        chrome.storage.local.get(['timeEntries', 'categories', 'goals', 'deliverables'], (result) => {
-          // Debug logging
-          console.log('Storage fetch result:', {
-            hasTimeEntries: !!result.timeEntries,
-            hasCategories: !!result.categories,
-            hasGoals: !!result.goals,
-            hasDeliverables: !!result.deliverables,
-            deliverablesCount: result.deliverables ? result.deliverables.length : 0,
-            deliverablesSample: result.deliverables ? result.deliverables.slice(0, 2) : null
-          });
+// Fallback method to gather data from storage
+async gatherDataFromStorage() {
+  return new Promise((resolve) => {
+    chrome.storage.local.get(['timeEntries', 'categories', 'goals', 'deliverables'], (result) => {
+      // Debug logging
+      console.log('Storage fetch result:', {
+        hasTimeEntries: !!result.timeEntries,
+        hasCategories: !!result.categories,
+        hasGoals: !!result.goals,
+        hasDeliverables: !!result.deliverables,
+        deliverablesCount: result.deliverables ? result.deliverables.length : 0,
+        deliverablesSample: result.deliverables ? result.deliverables.slice(0, 2) : null,
+        checkboxSettings: {
+          includeMultitasking: this.settings.includeMultitasking,
+          includeDeliverables: this.settings.includeDeliverables,
+          includeMeetings: this.settings.includeMeetings,
+          includeCategories: this.settings.includeCategories,
+          includeDailyPatterns: this.settings.includeDailyPatterns,
+          includeProductivity: this.settings.includeProductivity
+        }
+      });
           
           const dateRange = this.getDateRange();
           // timeEntries is an object with dates as keys
@@ -1491,25 +1499,39 @@ handleSaveTemplate() {
             }
           });
           
-          // Now filter by date range
-          const filteredEntries = entries.filter(entry => {
-            if (!entry.startTime) return false;
-            const entryDate = new Date(entry.startTime);
-            return entryDate >= dateRange.start && entryDate <= dateRange.end;
-          });
+        // Now filter by date range
+        const filteredEntries = entries.filter(entry => {
+          if (!entry.startTime) return false;
+          const entryDate = new Date(entry.startTime);
+          return entryDate >= dateRange.start && entryDate <= dateRange.end;
+        });
+
+        // Apply checkbox filters AFTER date range filtering
+        const checkboxFilteredEntries = filteredEntries.filter(entry => {
+          // Skip multitasking entries if not included
+          if (!this.settings.includeMultitasking && entry.wasMultitasking) {
+            return false;
+          }
           
-          // Process categories
-          const categories = Array.isArray(result.categories) ? result.categories : [
-            'Email', 'Meeting', 'Project Work', 'Admin', 
-            'Break', 'Training', 'Planning', 'Other'
-          ];
+          // Skip meetings if not included  
+          if (!this.settings.includeMeetings && (entry.type === 'meeting' || entry.category === 'Meeting')) {
+            return false;
+          }
           
-          const goals = result.goals || [];
-          const deliverables = result.deliverables || [];
-                    
-          // Process entries to handle allocations before building data
-          const processedEntries = [];
-          filteredEntries.forEach(entry => {
+          return true;
+        });
+
+        // Process categories
+        const categories = Array.isArray(result.categories) ? result.categories : [
+          'Email', 'Meeting', 'Project Work', 'Admin', 
+          'Break', 'Training', 'Planning', 'Other'
+        ];
+
+        const goals = result.goals || [];
+        const deliverables = result.deliverables || [];
+            // Process entries to handle allocations before building data
+            const processedEntries = [];
+            checkboxFilteredEntries.forEach(entry => {
             if (entry.deliverableAllocations) {
               // Split allocated meetings into virtual entries for analysis
               Object.entries(entry.deliverableAllocations).forEach(([delivId, percentage]) => {
@@ -1528,55 +1550,58 @@ handleSaveTemplate() {
             }
           });
 
-          // Build the data object with processed entries
-          const data = {
-            dateRange: {
-              start: dateRange.start.toISOString(),
-              end: dateRange.end.toISOString()
-            },
-            summary: this.calculateSummary(processedEntries),
-            entries: processedEntries
-          };
+        // Build the data object with processed entries
+        const data = {
+          dateRange: {
+            start: dateRange.start.toISOString(),
+            end: dateRange.end.toISOString()
+          },
+          summary: this.calculateSummary(processedEntries),
+          entries: processedEntries
+        };
 
-          if (this.settings.includeCategories) {
-            data.categoryBreakdown = this.calculateCategoryBreakdown(processedEntries, categories);
-          }
+        // Only include categories if checkbox is checked
+        if (this.settings.includeCategories) {
+          data.categoryBreakdown = this.calculateCategoryBreakdown(processedEntries, categories);
+        }
 
-          // Add deliverable breakdown
-          if (result.deliverables) {
-            data.deliverableBreakdown = this.calculateDeliverableBreakdown(processedEntries, result.deliverables);
-          }
+        // Only include deliverable breakdown if checkbox is checked
+        if (this.settings.includeDeliverables && result.deliverables) {
+          data.deliverableBreakdown = this.calculateDeliverableBreakdown(processedEntries, result.deliverables);
+        }
           
-          if (this.settings.includeDailyPatterns) {
-            data.dailyPatterns = this.calculateDailyPatterns(filteredEntries);
-          }
-          
-          if (this.settings.includeProductivity) {
-            data.productivityMetrics = this.calculateProductivityMetrics(filteredEntries);
-          }
-          
-          if (this.settings.includeMeetings) {
-            data.meetings = this.extractMeetings(filteredEntries);
-          }
-          
-          if (goals) {
-            data.goals = goals;
-          }
-          
-          // Include deliverables list even if no time tracked
-          if (result.deliverables) {
-            data.deliverables = result.deliverables;
-          }
-          
-          // Debug logging
-          console.log('Data gathering complete:', {
-            totalEntriesInStorage: Object.keys(timeEntriesObj).length,
-            extractedEntries: entries.length,
-            filteredEntries: filteredEntries.length,
-            dateRange: data.dateRange,
-            deliverables: result.deliverables ? result.deliverables.length : 0,
-            deliverableBreakdown: data.deliverableBreakdown ? Object.keys(data.deliverableBreakdown).length : 0
-          });
+        if (this.settings.includeDailyPatterns) {
+          data.dailyPatterns = this.calculateDailyPatterns(processedEntries);
+        }
+        
+        if (this.settings.includeProductivity) {
+          data.productivityMetrics = this.calculateProductivityMetrics(processedEntries);
+        }
+        
+        if (this.settings.includeMeetings) {
+          data.meetings = this.extractMeetings(processedEntries);
+        }
+        
+        // Only include goals if deliverables checkbox is checked
+        if (this.settings.includeDeliverables && goals) {
+          data.goals = goals;
+        }
+        
+        // Only include deliverables list if checkbox is checked
+        if (this.settings.includeDeliverables && result.deliverables) {
+          data.deliverables = result.deliverables;
+        }
+      // Debug logging
+      console.log('Data gathering complete:', {
+        totalEntriesInStorage: Object.keys(timeEntriesObj).length,
+        extractedEntries: entries.length,
+        filteredByDate: filteredEntries.length,
+        filteredByCheckboxes: checkboxFilteredEntries.length,
+        processedEntries: processedEntries.length,
+        dateRange: data.dateRange,
+        deliverables: result.deliverables ? result.deliverables.length : 0,
+        deliverableBreakdown: data.deliverableBreakdown ? Object.keys(data.deliverableBreakdown).length : 0
+      });
                     
           // Additional debug for deliverables
           console.log('Deliverable data:', {
@@ -2166,13 +2191,18 @@ handleSaveTemplate() {
       }
       return 0;
     }
-  
+      
     // Generate chart data from gathered data
     generateChartData(data) {
       const chartData = {};
       
-      // Daily hours chart
-      if (data.dailyPatterns && Object.keys(data.dailyPatterns).length > 0) {
+      // Only generate charts if includeCharts is enabled
+      if (!this.settings.includeCharts) {
+        return chartData;
+      }
+      
+      // Daily hours chart - only if daily patterns are included
+      if (this.settings.includeDailyPatterns && data.dailyPatterns && Object.keys(data.dailyPatterns).length > 0) {
         const dates = Object.keys(data.dailyPatterns).sort();
         chartData.dailyHours = {
           type: 'bar',
@@ -2209,8 +2239,8 @@ handleSaveTemplate() {
         };
       }
       
-      // Category breakdown pie chart
-      if (data.categoryBreakdown && Object.keys(data.categoryBreakdown).length > 0) {
+// Category breakdown pie chart - only if categories are included
+if (this.settings.includeCategories && data.categoryBreakdown && Object.keys(data.categoryBreakdown).length > 0) {
         const categories = Object.keys(data.categoryBreakdown);
         const categoryData = categories.map(cat => 
           this.sanitizeChartValue(data.categoryBreakdown[cat].totalHours || 0)
@@ -2266,10 +2296,9 @@ handleSaveTemplate() {
             }
           };
         }
-      }
-      
-      // Hourly distribution chart
-      if (data.productivityMetrics && data.productivityMetrics.hourlyDistribution && data.productivityMetrics.hourlyDistribution.length > 0) {
+              }
+        // Hourly distribution chart
+        if (data.productivityMetrics && data.productivityMetrics.hourlyDistribution && data.productivityMetrics.hourlyDistribution.length > 0) {
         const hours = Array.from({length: 24}, (_, i) => i);
         const distribution = data.productivityMetrics.hourlyDistribution;
         const hourData = hours.map(h => {
@@ -2320,8 +2349,8 @@ handleSaveTemplate() {
         };
       }
       
-      // Focus vs Break time chart
-      if (data.productivityMetrics) {
+        // Focus vs Break time chart - only if productivity metrics are included
+        if (this.settings.includeProductivity && data.productivityMetrics) {
         const focusTime = this.sanitizeChartValue(data.productivityMetrics.focusTime || 0);
         const breakTime = this.sanitizeChartValue(data.productivityMetrics.breakTime || 0);
         
