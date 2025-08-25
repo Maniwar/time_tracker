@@ -25,35 +25,79 @@ Time doesn't just slip through our fingers—it gets absorbed by meetings, "quic
 
 ## 📸 Screenshots
 
+### 🎯 Key Features
 <table>
   <tr>
-    <td align="center">
-      <a href="screenshots/screen_timetrackerpop.png">
-        <img src="screenshots/screen_timetrackerpop.png" alt="Tracker Popup" width="260">
+    <td align="center" colspan="2">
+      <a href="screenshots/screen0.png">
+        <img src="screenshots/screen0.png" alt="Main Timer Interface" width="600">
       </a><br>
-      <sub><b>Tracker Popup</b></sub>
+      <sub><b>⏱️ Main Timer Interface with Quick Actions</b></sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <a href="screenshots/screen1.png">
+        <img src="screenshots/screen1.png" alt="Multi-tasking Tracking" width="400">
+      </a><br>
+      <sub><b>🔄 Multi-tasking Intelligence</b></sub>
     </td>
     <td align="center">
-      <a href="screenshots/screen_addgoals.png">
-        <img src="screenshots/screen_addgoals.png" alt="Add Goals" width="260">
+      <a href="screenshots/screen2.png">
+        <img src="screenshots/screen2.png" alt="Goals & Deliverables" width="400">
       </a><br>
-      <sub><b>Add Goals</b></sub>
+      <sub><b>🎯 Goals & Impact Tracking</b></sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <a href="screenshots/screen3.png">
+        <img src="screenshots/screen3.png" alt="AI-Powered Reports" width="400">
+      </a><br>
+      <sub><b>🤖 AI-Powered Report Generation</b></sub>
     </td>
     <td align="center">
-      <a href="screenshots/screen_timeentries.png">
-        <img src="screenshots/screen_timeentries.png" alt="Time Entries" width="260">
+      <a href="screenshots/screen4.png">
+        <img src="screenshots/screen4.png" alt="Calendar Integration" width="400">
       </a><br>
-      <sub><b>Time Entries</b></sub>
+      <sub><b>📅 Calendar Sync & Analytics</b></sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" colspan="2">
+      <a href="screenshots/screen5.png">
+        <img src="screenshots/screen5.png" alt="Export & Analysis" width="600">
+      </a><br>
+      <sub><b>📊 Professional Export & Analysis</b></sub>
     </td>
   </tr>
 </table>
 
+### 📱 Interface Details
 <details>
-  <summary align="right">▶ More screenshots</summary>
-
+  <summary>▶ View detailed interface screenshots</summary>
   <br>
-
   <table>
+    <tr>
+      <td align="center">
+        <a href="screenshots/screen_timetrackerpop.png">
+          <img src="screenshots/screen_timetrackerpop.png" alt="Tracker Popup" width="260">
+        </a><br>
+        <sub><b>Tracker Popup</b></sub>
+      </td>
+      <td align="center">
+        <a href="screenshots/screen_addgoals.png">
+          <img src="screenshots/screen_addgoals.png" alt="Add Goals" width="260">
+        </a><br>
+        <sub><b>Add Goals</b></sub>
+      </td>
+      <td align="center">
+        <a href="screenshots/screen_timeentries.png">
+          <img src="screenshots/screen_timeentries.png" alt="Time Entries" width="260">
+        </a><br>
+        <sub><b>Time Entries</b></sub>
+      </td>
+    </tr>
     <tr>
       <td align="center">
         <a href="screenshots/screen_timebycategorysummary.png">
@@ -72,7 +116,6 @@ Time doesn't just slip through our fingers—it gets absorbed by meetings, "quic
       </td>
     </tr>
   </table>
-
 </details>
 
 ## ✨ Features
