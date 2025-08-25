@@ -1239,7 +1239,7 @@ function updateTimers() {
         }
       }
     }
-    
+
     // Task timer
     if (result.runningTimer) {
       const taskElapsed = Date.now() - result.runningTimer.startTimeStamp;
@@ -1247,19 +1247,19 @@ function updateTimers() {
         const hours = Math.floor(taskElapsed / 3600000);
         const minutes = Math.floor((taskElapsed % 3600000) / 60000);
         const seconds = Math.floor((taskElapsed % 60000) / 1000);
-        
+
         const taskTime = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-        
+
         if (displayText) {
           // Both timers running - show dual display
-          displayText += ` | 💼 ${taskTime}`;
+          displayText += `<br>💼 ${taskTime}`;
           updateDualTimerDisplay(result.runningMeetingTimer, result.runningTimer);
         } else {
           displayText = taskTime;
         }
       }
     }
-    
+
     // Update display
     const timerDisplay = document.getElementById('timerDisplay');
     if (displayText) {
