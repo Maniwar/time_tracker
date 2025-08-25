@@ -25,28 +25,28 @@ Time doesn't just slip through our fingers—it gets absorbed by meetings, "quic
 
 ## 📸 Screenshots
 
-### 🎯 Key Features
+### 🎯 Chrome Web Store Featured Screenshots
 <table>
   <tr>
     <td align="center" colspan="2">
       <a href="screenshots/screen0.png">
-        <img src="screenshots/screen0.png" alt="Main Timer Interface" width="600">
+        <img src="screenshots/screen0.png" alt="Multi-tasking Tracking" width="600">
       </a><br>
-      <sub><b>⏱️ Main Timer Interface with Quick Actions</b></sub>
+      <sub><b>🔄 Track Multiple Activities Simultaneously - Dual timers for meetings and tasks</b></sub>
     </td>
   </tr>
   <tr>
     <td align="center">
       <a href="screenshots/screen1.png">
-        <img src="screenshots/screen1.png" alt="Multi-tasking Tracking" width="400">
+        <img src="screenshots/screen1.png" alt="Main Timer Interface" width="400">
       </a><br>
-      <sub><b>🔄 Multi-tasking Intelligence</b></sub>
+      <sub><b>⏱️ Quick Action Timer with One-Click Tracking</b></sub>
     </td>
     <td align="center">
       <a href="screenshots/screen2.png">
-        <img src="screenshots/screen2.png" alt="Goals & Deliverables" width="400">
+        <img src="screenshots/screen2.png" alt="Complete Integration & Analytics" width="400">
       </a><br>
-      <sub><b>🎯 Goals & Impact Tracking</b></sub>
+      <sub><b>📊 Calendar Sync, Analytics & Goal Progress</b></sub>
     </td>
   </tr>
   <tr>
@@ -54,21 +54,13 @@ Time doesn't just slip through our fingers—it gets absorbed by meetings, "quic
       <a href="screenshots/screen3.png">
         <img src="screenshots/screen3.png" alt="AI-Powered Reports" width="400">
       </a><br>
-      <sub><b>🤖 AI-Powered Report Generation</b></sub>
+      <sub><b>🤖 Generate Professional AI Reports</b></sub>
     </td>
     <td align="center">
       <a href="screenshots/screen4.png">
-        <img src="screenshots/screen4.png" alt="Calendar Integration" width="400">
+        <img src="screenshots/screen4.png" alt="Goals & Impact Tracking" width="400">
       </a><br>
-      <sub><b>📅 Calendar Sync & Analytics</b></sub>
-    </td>
-  </tr>
-  <tr>
-    <td align="center" colspan="2">
-      <a href="screenshots/screen5.png">
-        <img src="screenshots/screen5.png" alt="Export & Analysis" width="600">
-      </a><br>
-      <sub><b>📊 Professional Export & Analysis</b></sub>
+      <sub><b>🎯 Goals & Deliverables Management</b></sub>
     </td>
   </tr>
 </table>
