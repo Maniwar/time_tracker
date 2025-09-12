@@ -273,11 +273,191 @@ async testGoogle(apiKey, prompt) {
 
   return true;
 }
+formatDataAsTable(data) {
+  let tableOutput = '';
+  
+  // Helper function to format duration intelligently
+  const formatDuration = (milliseconds) => {
+    const minutes = Math.round(milliseconds / 60000);
+    const hours = minutes / 60;
+    
+    // Use hours for 2+ hours, minutes for under 2 hours
+    if (minutes >= 120) {
+      return hours.toFixed(1) + 'h';
+    } else if (minutes > 0) {
+      return minutes + 'min';
+    } else {
+      return '0min';
+    }
+  };
 
-  // Main method to generate report with any LLM
-  async generateReport(options) {
-    // Reload custom models before generating
-    await this.loadCustomModels();
+  // Helper to format hours (from the data which stores as hours)
+  const formatHours = (hours) => {
+    if (!hours && hours !== 0) return '0h';
+    const minutes = Math.round(hours * 60);
+    
+    // Use hours for 2+ hours, minutes for under 2 hours  
+    if (minutes >= 120) {
+      return hours.toFixed(1) + 'h';
+    } else if (minutes > 0) {
+      return minutes + 'min';
+    } else {
+      return '0min';
+    }
+  };
+  
+  // Summary section - use hours for totals
+  if (data.summary) {
+    tableOutput += '=== SUMMARY ===\n';
+    tableOutput += `Total Time: ${(data.summary.totalHours || 0).toFixed(1)}h\n`;
+    tableOutput += `Total Entries: ${data.summary.totalEntries || 0}\n`;
+    tableOutput += `Unique Tasks: ${data.summary.uniqueTasks || 0}\n`;
+    tableOutput += `Average Session: ${data.summary.averageSessionLength || 0}min\n`;
+    tableOutput += `Unique Categories: ${data.summary.uniqueCategories || 0}\n\n`;
+  }
+  
+  // Time entries table - use smart formatting
+  if (data.entries && data.entries.length > 0) {
+    tableOutput += '=== TIME ENTRIES ===\n';
+    tableOutput += 'Date|Time|Duration|Type|Category|Description|MT\n';
+    
+    data.entries.forEach(entry => {
+      const date = entry.startTime ? new Date(entry.startTime).toLocaleDateString('en-US', {month:'2-digit',day:'2-digit'}) : 'N/A';
+      const time = entry.startTime ? new Date(entry.startTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }) : 'N/A';
+      const duration = formatDuration(entry.duration || 0);
+      const type = entry.type === 'meeting' ? 'Mtg' : 'Task';
+      const cat = (entry.category || '').substring(0, 12);
+      const desc = (entry.description || '').replace(/[\n\r|]/g, ' ').substring(0, 40);
+      const mt = entry.wasMultitasking ? 'Y' : 'N';
+      
+      tableOutput += `${date}|${time}|${duration}|${type}|${cat}|${desc}|${mt}\n`;
+    });
+    tableOutput += '\n';
+  }
+  
+  // Category breakdown - use hours for totals
+  if (data.categoryBreakdown) {
+    tableOutput += '=== CATEGORIES ===\n';
+    
+    // Calculate total for percentage
+    let totalHours = 0;
+    Object.values(data.categoryBreakdown).forEach(stats => {
+      totalHours += stats.totalHours || 0;
+    });
+    
+    Object.entries(data.categoryBreakdown).forEach(([cat, stats]) => {
+      const hours = formatHours(stats.totalHours);
+      const entries = stats.entries || 0;
+      const percentage = totalHours > 0 ? ((stats.totalHours / totalHours) * 100).toFixed(1) : '0.0';
+      tableOutput += `${cat}: ${hours} (${percentage}%), ${entries} entries\n`;
+    });
+    tableOutput += '\n';
+  }
+  
+  // Deliverables - use smart formatting
+  if (data.deliverableBreakdown) {
+    tableOutput += '=== DELIVERABLES ===\n';
+    Object.entries(data.deliverableBreakdown).forEach(([delivId, stats]) => {
+      const name = (stats.name || delivId).substring(0, 40);
+      const time = formatHours(stats.totalHours);
+      const sessions = stats.entries || 0;
+      const status = stats.status || 'Active';
+      const goalName = stats.goalName || (data.goals && data.goals.find(g => g.id === stats.goalId)?.name) || '';
+      
+      tableOutput += `${name}: ${time}, ${sessions} sessions`;
+      if (goalName) tableOutput += ` (Goal: ${goalName})`;
+      tableOutput += ` [${status}]\n`;
+    });
+    tableOutput += '\n';
+  }
+  
+  // Goals - use hours for daily targets
+  if (data.goals && data.goals.length > 0) {
+    tableOutput += '=== GOALS ===\n';
+    data.goals.forEach(goal => {
+      const status = goal.completed ? 'Complete' : 'Active';
+      tableOutput += `${goal.name} [${status}]: `;
+      if (goal.dailyTarget) tableOutput += `${goal.dailyTarget}h/day | `;
+      if (goal.impact) tableOutput += `Impact: ${goal.impact}`;
+      if (goal.targetDate) tableOutput += ` | Target: ${goal.targetDate}`;
+      tableOutput += '\n';
+    });
+    tableOutput += '\n';
+  }
+  
+  // Daily patterns - use smart formatting
+  if (data.dailyPatterns) {
+    tableOutput += '=== DAILY TOTALS ===\n';
+    Object.entries(data.dailyPatterns).forEach(([date, p]) => {
+      const time = formatHours(p.totalHours);
+      const entries = p.entries || 0;
+      const categories = p.uniqueCategories || 0;
+      tableOutput += `${date}: ${time} (${entries} entries, ${categories} categories)\n`;
+    });
+    tableOutput += '\n';
+  }
+  
+  // Productivity metrics - use hours for major metrics
+  if (data.productivityMetrics) {
+    const pm = data.productivityMetrics;
+    tableOutput += '=== PRODUCTIVITY ===\n';
+    
+    if (pm.focusTime !== undefined && pm.focusTime !== null) {
+      tableOutput += `Focus Time (>25min): ${pm.focusTime.toFixed(1)}h\n`;
+    }
+    if (pm.breakTime !== undefined && pm.breakTime !== null) {
+      tableOutput += `Break Time (<25min): ${pm.breakTime.toFixed(1)}h\n`;
+    }
+    if (pm.longestSession !== undefined) {
+      tableOutput += `Longest Session: ${pm.longestSession}min\n`;
+    }
+    if (pm.averageSessionsPerDay !== undefined && pm.averageSessionsPerDay !== null) {
+      tableOutput += `Avg Sessions/Day: ${pm.averageSessionsPerDay.toFixed(1)}\n`;
+    }
+    if (pm.hourlyDistribution && pm.hourlyDistribution.length > 0) {
+      tableOutput += 'Peak Hours: ';
+      const topHours = pm.hourlyDistribution
+        .filter(h => h.hours > 0)
+        .sort((a, b) => b.hours - a.hours)
+        .slice(0, 3)
+        .map(h => `${h.hour}:00 (${formatHours(h.hours)})`);
+      tableOutput += topHours.join(', ') + '\n';
+    }
+    tableOutput += '\n';
+  }
+  
+  // Meeting summary - use hours for total
+  if (data.meetings && data.meetings.count > 0) {
+    tableOutput += '=== MEETINGS ===\n';
+    tableOutput += `Total: ${data.meetings.count} meetings, ${(data.meetings.totalHours || 0).toFixed(1)}h\n`;
+    
+    if (data.meetings.list && data.meetings.list.length > 0) {
+      tableOutput += 'Recent Meetings:\n';
+      data.meetings.list.slice(0, 5).forEach(meeting => {
+        const duration = meeting.duration || 0;
+        const formattedDuration = duration >= 120 ? (duration/60).toFixed(1) + 'h' : duration + 'min';
+        tableOutput += `- ${meeting.date}: ${meeting.title} (${formattedDuration})\n`;
+      });
+    }
+    tableOutput += '\n';
+  }
+  
+  // Allocation summary - use smart formatting
+  if (data.allocationSummary) {
+    tableOutput += '=== ALLOCATIONS ===\n';
+    tableOutput += `Allocated Entries: ${data.allocationSummary.totalAllocatedEntries || 0}\n`;
+    const allocatedHours = parseFloat(data.allocationSummary.totalAllocatedHours || 0);
+    const allocatedTime = formatHours(allocatedHours);
+    tableOutput += `Allocated Time: ${allocatedTime}\n`;
+    tableOutput += `Meetings with Allocations: ${data.allocationSummary.meetingsWithAllocations || 0}\n\n`;
+  }
+  
+  return tableOutput;
+}
+// Main method to generate report with any LLM
+async generateReport(options) {
+  // Reload custom models before generating
+  await this.loadCustomModels();
     
     const {
       provider,
@@ -295,9 +475,9 @@ async testGoogle(apiKey, prompt) {
       throw new Error(`No API key found for ${provider}. Please add your API key in the settings.`);
     }
 
-    // Format data for the prompt
-    const formattedData = JSON.stringify(data, null, 2);
-    const fullPrompt = `${userPrompt}\n\nData:\n\`\`\`json\n${formattedData}\n\`\`\``;
+    // Format data as compact tables for efficiency
+    const formattedData = this.formatDataAsTable(data);
+    const fullPrompt = `${userPrompt}\n\nData:\n${formattedData}`;
 
     let response;
     

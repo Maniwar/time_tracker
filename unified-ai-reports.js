@@ -2136,34 +2136,218 @@ async gatherDataFromStorage() {
       });
     }
     
-    // Copy prompt and data to clipboard
-    async copyPromptAndData() {
-      try {
-        this.showLoading(true);
+
+    formatDataAsTable(data) {
+      let tableOutput = '';
+      
+      // Helper function to format duration intelligently
+      const formatDuration = (milliseconds) => {
+        const minutes = Math.round(milliseconds / 60000);
+        const hours = minutes / 60;
         
-        const data = await this.gatherData();
-        
-        // Add chart data if enabled
-        if (this.settings.includeCharts) {
-          data.chartData = this.generateChartData(data);
+        // Use hours for 2+ hours, minutes for under 2 hours
+        if (minutes >= 120) {
+          return hours.toFixed(1) + 'h';
+        } else if (minutes > 0) {
+          return minutes + 'min';
+        } else {
+          return '0min';
         }
+      };
+    
+      // Helper to format hours (from the data which stores as hours)
+      const formatHours = (hours) => {
+        if (!hours && hours !== 0) return '0h';
+        const minutes = Math.round(hours * 60);
         
-        const systemPrompt = document.getElementById('systemPrompt')?.value || '';
-        const userPrompt = document.getElementById('userPrompt')?.value || '';
+        // Use hours for 2+ hours, minutes for under 2 hours  
+        if (minutes >= 120) {
+          return hours.toFixed(1) + 'h';
+        } else if (minutes > 0) {
+          return minutes + 'min';
+        } else {
+          return '0min';
+        }
+      };
+      
+      // Summary section - use hours for totals
+      if (data.summary) {
+        tableOutput += '=== SUMMARY ===\n';
+        tableOutput += `Total Time: ${(data.summary.totalHours || 0).toFixed(1)}h\n`;
+        tableOutput += `Total Entries: ${data.summary.totalEntries || 0}\n`;
+        tableOutput += `Unique Tasks: ${data.summary.uniqueTasks || 0}\n`;
+        tableOutput += `Average Session: ${data.summary.averageSessionLength || 0}min\n`;
+        tableOutput += `Unique Categories: ${data.summary.uniqueCategories || 0}\n\n`;
+      }
+      
+      // Time entries table - use smart formatting
+      if (data.entries && data.entries.length > 0) {
+        tableOutput += '=== TIME ENTRIES ===\n';
+        tableOutput += 'Date|Time|Duration|Type|Category|Description|MT\n';
         
-        // Add instructions about charts if they're included
-        let chartInstructions = '';
-        if (this.settings.includeCharts && data.chartData) {
-          chartInstructions = '\n\nNote: Chart data is included. Please create visualizations for:\n';
+        data.entries.forEach(entry => {
+          const date = entry.startTime ? new Date(entry.startTime).toLocaleDateString('en-US', {month:'2-digit',day:'2-digit'}) : 'N/A';
+          const time = entry.startTime ? new Date(entry.startTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }) : 'N/A';
+          const duration = formatDuration(entry.duration || 0);
+          const type = entry.type === 'meeting' ? 'Mtg' : 'Task';
+          const cat = (entry.category || '').substring(0, 12);
+          const desc = (entry.description || '').replace(/[\n\r|]/g, ' ').substring(0, 40);
+          const mt = entry.wasMultitasking ? 'Y' : 'N';
+          
+          tableOutput += `${date}|${time}|${duration}|${type}|${cat}|${desc}|${mt}\n`;
+        });
+        tableOutput += '\n';
+      }
+      
+      // Category breakdown - use hours for totals
+      if (data.categoryBreakdown) {
+        tableOutput += '=== CATEGORIES ===\n';
+        
+        // Calculate total for percentage
+        let totalHours = 0;
+        Object.values(data.categoryBreakdown).forEach(stats => {
+          totalHours += stats.totalHours || 0;
+        });
+        
+        Object.entries(data.categoryBreakdown).forEach(([cat, stats]) => {
+          const hours = formatHours(stats.totalHours);
+          const entries = stats.entries || 0;
+          const percentage = totalHours > 0 ? ((stats.totalHours / totalHours) * 100).toFixed(1) : '0.0';
+          tableOutput += `${cat}: ${hours} (${percentage}%), ${entries} entries\n`;
+        });
+        tableOutput += '\n';
+      }
+      
+      // Deliverables - use smart formatting
+      if (data.deliverableBreakdown) {
+        tableOutput += '=== DELIVERABLES ===\n';
+        Object.entries(data.deliverableBreakdown).forEach(([delivId, stats]) => {
+          const name = (stats.name || delivId).substring(0, 40);
+          const time = formatHours(stats.totalHours);
+          const sessions = stats.entries || 0;
+          const status = stats.status || 'Active';
+          const goalName = stats.goalName || (data.goals && data.goals.find(g => g.id === stats.goalId)?.name) || '';
+          
+          tableOutput += `${name}: ${time}, ${sessions} sessions`;
+          if (goalName) tableOutput += ` (Goal: ${goalName})`;
+          tableOutput += ` [${status}]\n`;
+        });
+        tableOutput += '\n';
+      }
+      
+      // Goals - use hours for daily targets
+      if (data.goals && data.goals.length > 0) {
+        tableOutput += '=== GOALS ===\n';
+        data.goals.forEach(goal => {
+          const status = goal.completed ? 'Complete' : 'Active';
+          tableOutput += `${goal.name} [${status}]: `;
+          if (goal.dailyTarget) tableOutput += `${goal.dailyTarget}h/day | `;
+          if (goal.impact) tableOutput += `Impact: ${goal.impact}`;
+          if (goal.targetDate) tableOutput += ` | Target: ${goal.targetDate}`;
+          tableOutput += '\n';
+        });
+        tableOutput += '\n';
+      }
+      
+      // Daily patterns - use smart formatting
+      if (data.dailyPatterns) {
+        tableOutput += '=== DAILY TOTALS ===\n';
+        Object.entries(data.dailyPatterns).forEach(([date, p]) => {
+          const time = formatHours(p.totalHours);
+          const entries = p.entries || 0;
+          const categories = p.uniqueCategories || 0;
+          tableOutput += `${date}: ${time} (${entries} entries, ${categories} categories)\n`;
+        });
+        tableOutput += '\n';
+      }
+      
+      // Productivity metrics - use hours for major metrics
+      if (data.productivityMetrics) {
+        const pm = data.productivityMetrics;
+        tableOutput += '=== PRODUCTIVITY ===\n';
+        
+        if (pm.focusTime !== undefined && pm.focusTime !== null) {
+          tableOutput += `Focus Time (>25min): ${pm.focusTime.toFixed(1)}h\n`;
+        }
+        if (pm.breakTime !== undefined && pm.breakTime !== null) {
+          tableOutput += `Break Time (<25min): ${pm.breakTime.toFixed(1)}h\n`;
+        }
+        if (pm.longestSession !== undefined) {
+          tableOutput += `Longest Session: ${pm.longestSession}min\n`;
+        }
+        if (pm.averageSessionsPerDay !== undefined && pm.averageSessionsPerDay !== null) {
+          tableOutput += `Avg Sessions/Day: ${pm.averageSessionsPerDay.toFixed(1)}\n`;
+        }
+        if (pm.hourlyDistribution && pm.hourlyDistribution.length > 0) {
+          tableOutput += 'Peak Hours: ';
+          const topHours = pm.hourlyDistribution
+            .filter(h => h.hours > 0)
+            .sort((a, b) => b.hours - a.hours)
+            .slice(0, 3)
+            .map(h => `${h.hour}:00 (${formatHours(h.hours)})`);
+          tableOutput += topHours.join(', ') + '\n';
+        }
+        tableOutput += '\n';
+      }
+      
+      // Meeting summary - use hours for total
+      if (data.meetings && data.meetings.count > 0) {
+        tableOutput += '=== MEETINGS ===\n';
+        tableOutput += `Total: ${data.meetings.count} meetings, ${(data.meetings.totalHours || 0).toFixed(1)}h\n`;
+        
+        if (data.meetings.list && data.meetings.list.length > 0) {
+          tableOutput += 'Recent Meetings:\n';
+          data.meetings.list.slice(0, 5).forEach(meeting => {
+            const duration = meeting.duration || 0;
+            const formattedDuration = duration >= 120 ? (duration/60).toFixed(1) + 'h' : duration + 'min';
+            tableOutput += `- ${meeting.date}: ${meeting.title} (${formattedDuration})\n`;
+          });
+        }
+        tableOutput += '\n';
+      }
+      
+      // Allocation summary - use smart formatting
+      if (data.allocationSummary) {
+        tableOutput += '=== ALLOCATIONS ===\n';
+        tableOutput += `Allocated Entries: ${data.allocationSummary.totalAllocatedEntries || 0}\n`;
+        const allocatedHours = parseFloat(data.allocationSummary.totalAllocatedHours || 0);
+        const allocatedTime = formatHours(allocatedHours);
+        tableOutput += `Allocated Time: ${allocatedTime}\n`;
+        tableOutput += `Meetings with Allocations: ${data.allocationSummary.meetingsWithAllocations || 0}\n\n`;
+      }
+      
+      return tableOutput;
+    }
+// Copy prompt and data to clipboard
+async copyPromptAndData() {
+  try {
+    this.showLoading(true);
+    
+    const data = await this.gatherData();
+    
+    // Add chart data if enabled
+    if (this.settings.includeCharts) {
+      data.chartData = this.generateChartData(data);
+    }
+    
+    const systemPrompt = document.getElementById('systemPrompt')?.value || '';
+    const userPrompt = document.getElementById('userPrompt')?.value || '';
+    
+    // Add instructions about charts if they're included
+    let chartInstructions = '';
+    if (this.settings.includeCharts && data.chartData) {
+      chartInstructions = '\n\nNote: Chart data is included. Please create visualizations for:\n';
           if (data.chartData.dailyHours) chartInstructions += '- Daily time distribution bar chart\n';
           if (data.chartData.categoryPie) chartInstructions += '- Category breakdown pie chart\n';
           if (data.chartData.hourlyDistribution) chartInstructions += '- Hourly activity pattern line chart\n';
           if (data.chartData.focusBreakdown) chartInstructions += '- Focus vs short sessions doughnut chart\n';
         }
         
-        const fullPrompt = `SYSTEM PROMPT:\n${systemPrompt}\n\nUSER PROMPT:\n${userPrompt}${chartInstructions}\n\nDATA:\n\`\`\`json\n${JSON.stringify(data, null, 2)}\n\`\`\``;
-        
-        await navigator.clipboard.writeText(fullPrompt);
+    // Use compact table format instead of verbose JSON
+    const tableData = this.formatDataAsTable(data);
+    const fullPrompt = `SYSTEM PROMPT:\n${systemPrompt}\n\nUSER PROMPT:\n${userPrompt}${chartInstructions}\n\nDATA:\n${tableData}`;
+
+    await navigator.clipboard.writeText(fullPrompt);
         
         this.showNotification('✅ Prompt and data copied to clipboard! Paste into your preferred AI assistant.', 'success');
         this.showLoading(false);
@@ -3251,62 +3435,65 @@ async copyReportAsHTML() {
     }
   }
   
-  // Preview data
-  async previewData() {
-    try {
-      const data = await this.gatherData();
-      
-      const modal = document.getElementById('dataPreviewModal');
-      const content = document.getElementById('dataPreviewContent');
-      
-      if (modal && content) {
-        content.textContent = JSON.stringify(data, null, 2);
-        modal.style.display = 'flex';
-      }
-    } catch (error) {
-      console.error('Error in previewData:', error);
-      
-      // Show error details in the preview modal
-      const modal = document.getElementById('dataPreviewModal');
-      const content = document.getElementById('dataPreviewContent');
-      
-      if (modal && content) {
-        const errorData = {
-          error: error.message,
-          fallbackData: {
-            dateRange: this.getDateRange(),
-            message: "Error gathering data. Check console for details.",
-            summary: {
-              totalHours: 0,
-              totalEntries: 0,
-              uniqueTasks: 0,
-              uniqueCategories: 0
-            },
-            entries: []
-          }
-        };
-        content.textContent = JSON.stringify(errorData, null, 2);
-        modal.style.display = 'flex';
-        this.showNotification('Error loading data. Showing fallback structure.', 'warning');
-      }
+// Preview data
+async previewData() {
+  try {
+    const data = await this.gatherData();
+    
+    const modal = document.getElementById('dataPreviewModal');
+    const content = document.getElementById('dataPreviewContent');
+    
+    if (modal && content) {
+      // Use table format instead of JSON for preview
+      const tableData = this.formatDataAsTable(data);
+      content.textContent = tableData;
+      modal.style.display = 'flex';
+    }
+  } catch (error) {
+    console.error('Error in previewData:', error);
+    
+    // Show error details in the preview modal
+    const modal = document.getElementById('dataPreviewModal');
+    const content = document.getElementById('dataPreviewContent');
+    
+    if (modal && content) {
+      const errorData = `=== ERROR ===
+Error: ${error.message}
+
+=== FALLBACK DATA ===
+Date Range: ${JSON.stringify(this.getDateRange())}
+Message: Error gathering data. Check console for details.
+
+=== SUMMARY ===
+Total Hours: 0
+Total Entries: 0
+Unique Tasks: 0
+Unique Categories: 0
+
+No entries available.`;
+      content.textContent = errorData;
+      modal.style.display = 'flex';
+      this.showNotification('Error loading data. Showing fallback structure.', 'warning');
     }
   }
-  
-  // Copy data only
-  async copyDataOnly() {
-    try {
-      const data = await this.gatherData();
-      await navigator.clipboard.writeText(JSON.stringify(data, null, 2));
-      this.showNotification('✅ Data copied to clipboard!', 'success');
-      
-      // Close the preview modal
-      const modal = document.getElementById('dataPreviewModal');
-      if (modal) modal.style.display = 'none';
-    } catch (error) {
-      console.error('Error copying data:', error);
-      this.showNotification('❌ Failed to copy data', 'error');
-    }
+}
+// Copy data only
+async copyDataOnly() {
+  try {
+    const data = await this.gatherData();
+    // Use table format for better efficiency
+    const tableData = this.formatDataAsTable(data);
+    await navigator.clipboard.writeText(tableData);
+    this.showNotification('✅ Data copied to clipboard in table format!', 'success');
+    
+    // Close the preview modal
+    const modal = document.getElementById('dataPreviewModal');
+    if (modal) modal.style.display = 'none';
+  } catch (error) {
+    console.error('Error copying data:', error);
+    this.showNotification('❌ Failed to copy data', 'error');
   }
+}
   
   // Show/hide loading state
   showLoading(show) {
