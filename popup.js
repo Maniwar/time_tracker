@@ -1252,7 +1252,7 @@ function updateTimers() {
         
         if (displayText) {
           // Both timers running - show dual display
-          displayText += ` | 💼 ${taskTime}`;
+          displayText += `<br>💼 ${taskTime}`;
           updateDualTimerDisplay(result.runningMeetingTimer, result.runningTimer);
         } else {
           displayText = taskTime;
@@ -1267,7 +1267,7 @@ function updateTimers() {
       timerDisplay.innerHTML = baseDisplay + timerDisplay.innerHTML.substring(timerDisplay.innerHTML.indexOf('<div'));
       
       // Add visual indicator for multi-tasking
-      if (displayText.includes('|')) {
+      if (displayText.includes('💼')) {
         timerDisplay.classList.add('multitasking');
       } else {
         timerDisplay.classList.remove('multitasking');
