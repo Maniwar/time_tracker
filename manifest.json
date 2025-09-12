@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Universal Time Tracker with AI Reports",
-  "version": "2.3.2",
+  "version": "2.3.3",
   "description": "Advanced time tracking with calendar sync, multi-tasking support, AI-powered reports, and comprehensive analytics.",
   
   "permissions": [
