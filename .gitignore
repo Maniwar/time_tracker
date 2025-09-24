@@ -1,3 +1,35 @@
-New Tab_files/saved_resource.html
-New Tab.html
+# OS generated files
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Temporary files
+*.tmp
+*.temp
+*.log
+
+# New Tab files (not needed for extension)
+New Tab.html
+New Tab_files/
+
+# Node modules (if any)
+node_modules/
+
+# Private/local configuration
+*.local
+.env
+
+# Build artifacts (if any)
+dist/
+build/

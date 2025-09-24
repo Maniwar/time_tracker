@@ -2517,8 +2517,23 @@ function getDateRange() {
       break;
       
     case 'custom':
-      startDate = new Date(customStartDate);
-      endDate = new Date(customEndDate);
+      // Parse dates properly to avoid timezone issues
+      // customStartDate and customEndDate are in YYYY-MM-DD format
+      if (customStartDate) {
+        const [year, month, day] = customStartDate.split('-').map(Number);
+        startDate = new Date(year, month - 1, day);
+      } else {
+        startDate = new Date(today);
+      }
+
+      if (customEndDate) {
+        const [year, month, day] = customEndDate.split('-').map(Number);
+        endDate = new Date(year, month - 1, day);
+      } else {
+        endDate = new Date(today);
+      }
+
+      startDate.setHours(0, 0, 0, 0);
       endDate.setHours(23, 59, 59, 999);
       break;
       

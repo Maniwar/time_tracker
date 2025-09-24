@@ -944,6 +944,16 @@ handleSaveTemplate() {
           dateRange.value = this.settings.dateRange;
           this.handleDateRangeChange(this.settings.dateRange);
         }
+
+        // Load saved custom dates if they exist
+        const aiStartDate = document.getElementById('aiStartDate');
+        const aiEndDate = document.getElementById('aiEndDate');
+        if (aiStartDate && this.settings.customStartDate) {
+          aiStartDate.value = this.settings.customStartDate;
+        }
+        if (aiEndDate && this.settings.customEndDate) {
+          aiEndDate.value = this.settings.customEndDate;
+        }
         
         const tempSlider = document.getElementById('temperature');
         const tempValue = document.getElementById('temperatureValue');
@@ -1102,6 +1112,26 @@ handleSaveTemplate() {
           this.settings.dateRange = e.target.value;
           this.handleDateRangeChange(e.target.value);
           this.saveSettings();
+        });
+      }
+
+      // Custom date inputs for AI report
+      const aiStartDate = document.getElementById('aiStartDate');
+      const aiEndDate = document.getElementById('aiEndDate');
+
+      if (aiStartDate) {
+        aiStartDate.addEventListener('change', (e) => {
+          this.settings.customStartDate = e.target.value;
+          this.saveSettings();
+          console.log('AI Report custom start date set:', e.target.value);
+        });
+      }
+
+      if (aiEndDate) {
+        aiEndDate.addEventListener('change', (e) => {
+          this.settings.customEndDate = e.target.value;
+          this.saveSettings();
+          console.log('AI Report custom end date set:', e.target.value);
         });
       }
   
@@ -1683,12 +1713,55 @@ async gatherDataFromStorage() {
             break;
             
           case 'custom':
-            const customStart = document.getElementById('customStartDate')?.value;
-            const customEnd = document.getElementById('customEndDate')?.value;
-            start = customStart ? new Date(customStart) : new Date(now);
-            end = customEnd ? new Date(customEnd) : new Date(now);
+            // Try to get dates from the input fields first, then fall back to saved settings
+            let customStart = document.getElementById('aiStartDate')?.value;
+            let customEnd = document.getElementById('aiEndDate')?.value;
+
+            // If inputs are empty or not found, use saved values
+            if (!customStart && this.settings.customStartDate) {
+              customStart = this.settings.customStartDate;
+            }
+            if (!customEnd && this.settings.customEndDate) {
+              customEnd = this.settings.customEndDate;
+            }
+
+            // Debug logging for custom date range
+            console.log('Custom date range selected:', {
+              customStart,
+              customEnd,
+              savedStart: this.settings.customStartDate,
+              savedEnd: this.settings.customEndDate,
+              startElement: document.getElementById('aiStartDate'),
+              endElement: document.getElementById('aiEndDate')
+            });
+
+            // Parse dates properly to avoid timezone issues
+            // HTML date inputs give YYYY-MM-DD format which JS interprets as UTC
+            // We need to parse as local date instead
+            if (customStart) {
+              const [year, month, day] = customStart.split('-').map(Number);
+              start = new Date(year, month - 1, day); // month is 0-indexed
+            } else {
+              start = new Date(now);
+            }
+
+            if (customEnd) {
+              const [year, month, day] = customEnd.split('-').map(Number);
+              end = new Date(year, month - 1, day);
+            } else {
+              end = new Date(now);
+            }
+
+            // Set time boundaries for the dates
             start.setHours(0, 0, 0, 0);
             end.setHours(23, 59, 59, 999);
+
+            console.log('Custom date range parsed:', {
+              startDate: start.toLocaleDateString(),
+              startTime: start.toLocaleString(),
+              endDate: end.toLocaleDateString(),
+              endTime: end.toLocaleString()
+            });
             break;
             
           default:
