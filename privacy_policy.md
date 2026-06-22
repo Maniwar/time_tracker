@@ -21,6 +21,7 @@ Collected data is used solely for:
 
 ## Third-Party Access
 We do not sell, transfer, or share your data with any third parties.
+If you generate an AI report directly via an API, you are choosing to share your data with that AI provider. Please check their respective privacy policy before you do that.
 
 ## Data Security
 Data is stored locally in your browser and protected by Chrome's security mechanisms.
